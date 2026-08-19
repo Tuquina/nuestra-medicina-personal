@@ -76,3 +76,22 @@ PostgreSQL:
   }
 }
 ```
+
+## Biblioteca y archivos protegidos
+
+`GET /api/v1/me/books` requiere sesión y devuelve una sola entrada por libro
+adquirido mediante una orden `PAID`. `downloadAvailable` indica si el
+administrador ya cargó el archivo correspondiente.
+
+`GET /api/v1/books/{id}/download` vuelve a comprobar en PostgreSQL que el libro
+pertenece al usuario y que la orden sigue pagada. Una compra inexistente y un
+archivo no disponible producen el mismo `404`, evitando revelar compras de
+otros usuarios. La respuesta no contiene el archivo ni su path: entrega un
+`X-Accel-Redirect` hacia `/_protected/ebooks/{storageKey}`, ubicación marcada
+como `internal` en Nginx.
+
+`PUT /api/v1/admin/books/{identifier}/ebook` requiere administrador, `Origin`
+válido y un formulario `multipart/form-data` con el campo `file`. Se aceptan
+únicamente PDF y EPUB con extensión, MIME y contenido coherentes. El nombre
+físico es un UUID; nunca se reutiliza el nombre suministrado por el usuario.
+El límite predeterminado es 50 MiB.

@@ -11,11 +11,13 @@ import (
 
 	"github.com/nuestra-medicina-personal/backend/internal/application/authentication"
 	"github.com/nuestra-medicina-personal/backend/internal/application/books"
+	"github.com/nuestra-medicina-personal/backend/internal/application/library"
 	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/google"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/mercadopago"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/postgres"
+	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/storage"
 	"github.com/nuestra-medicina-personal/backend/internal/interfaces/httpapi"
 )
 
@@ -50,11 +52,18 @@ func run(logger *slog.Logger) error {
 	orderRepository := postgres.NewOrderRepository(pool)
 	mercadoPagoClient := mercadopago.NewClient(cfg.MercadoPagoToken, cfg.MercadoPagoPublicBaseURL)
 	orderService := orders.NewService(bookService, orderRepository, mercadoPagoClient)
+	ebookStorage, err := storage.NewLocalEbookStorage(cfg.EbookStoragePath)
+	if err != nil {
+		return err
+	}
+	libraryRepository := postgres.NewLibraryRepository(pool)
+	libraryService := library.NewService(libraryRepository, bookService, ebookStorage, cfg.EbookMaxUploadBytes)
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService,
+		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService,
 		WebhookValidator: webhookValidator, Database: pool, AdminAuthorizer: authorizer,
 		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie, SecureCookies: cfg.SecureCookies(),
+		EbookInternalPrefix: cfg.EbookInternalPrefix, EbookMaxUploadBytes: cfg.EbookMaxUploadBytes,
 	})
 	server := &http.Server{
 		Addr: cfg.HTTPAddress, Handler: router, ReadTimeout: cfg.ReadTimeout,

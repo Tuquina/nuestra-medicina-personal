@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,6 +22,9 @@ type Config struct {
 	MercadoPagoToken         string
 	MercadoPagoWebhookSecret string
 	MercadoPagoPublicBaseURL string
+	EbookStoragePath         string
+	EbookInternalPrefix      string
+	EbookMaxUploadBytes      int64
 	SessionCookie            string
 	SessionTTL               time.Duration
 	ShutdownTimeout          time.Duration
@@ -44,6 +48,9 @@ func Load() (Config, error) {
 		MercadoPagoToken:         os.Getenv("MERCADOPAGO_ACCESS_TOKEN"),
 		MercadoPagoWebhookSecret: os.Getenv("MERCADOPAGO_WEBHOOK_SECRET"),
 		MercadoPagoPublicBaseURL: os.Getenv("MERCADOPAGO_PUBLIC_BASE_URL"),
+		EbookStoragePath:         envOrDefault("EBOOK_STORAGE_PATH", "/data/ebooks"),
+		EbookInternalPrefix:      envOrDefault("EBOOK_INTERNAL_PREFIX", "/_protected/ebooks"),
+		EbookMaxUploadBytes:      int64OrDefault("EBOOK_MAX_UPLOAD_BYTES", 50<<20),
 		SessionCookie:            envOrDefault("SESSION_COOKIE_NAME", "nmp_session"),
 		SessionTTL:               durationOrDefault("SESSION_TTL", 30*24*time.Hour),
 		ShutdownTimeout:          durationOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
@@ -63,6 +70,16 @@ func Load() (Config, error) {
 	}
 	if cfg.BaseURL == "" {
 		validationErrors = append(validationErrors, errors.New("APP_BASE_URL is required"))
+	}
+	if cfg.EbookStoragePath == "" {
+		validationErrors = append(validationErrors, errors.New("EBOOK_STORAGE_PATH is required"))
+	}
+	if cfg.EbookInternalPrefix == "" || cfg.EbookInternalPrefix[0] != '/' ||
+		strings.Contains(cfg.EbookInternalPrefix, "..") || strings.HasSuffix(cfg.EbookInternalPrefix, "/") {
+		validationErrors = append(validationErrors, errors.New("EBOOK_INTERNAL_PREFIX must be an absolute URL path without traversal or a trailing slash"))
+	}
+	if cfg.EbookMaxUploadBytes < 1<<20 || cfg.EbookMaxUploadBytes > 200<<20 {
+		validationErrors = append(validationErrors, errors.New("EBOOK_MAX_UPLOAD_BYTES must be between 1 MiB and 200 MiB"))
 	}
 	googleValues := 0
 	for _, value := range []string{cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect} {
@@ -127,6 +144,18 @@ func int32OrDefault(key string, fallback int32) int32 {
 		return fallback
 	}
 	return int32(parsed)
+}
+
+func int64OrDefault(key string, fallback int64) int64 {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }
 
 func (c Config) String() string {

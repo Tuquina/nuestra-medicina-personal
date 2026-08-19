@@ -11,6 +11,7 @@ tags:
   - name: Authentication
   - name: Books
   - name: Orders
+  - name: Library
   - name: Webhooks
   - name: Admin books
 paths:
@@ -109,6 +110,42 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Book'}
         '404': {$ref: '#/components/responses/BookNotFound'}
+  /api/v1/me/books:
+    get:
+      tags: [Library]
+      operationId: listPurchasedBooks
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Libros asociados a órdenes pagadas del usuario.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LibraryBookList'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+  /api/v1/books/{id}/download:
+    get:
+      tags: [Library]
+      operationId: downloadPurchasedBook
+      description: Autoriza la compra y delega el archivo a una ubicación interna de Nginx.
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Descarga protegida resuelta internamente por Nginx.
+          headers:
+            Content-Disposition: {schema: {type: string}}
+            X-Accel-Redirect: {schema: {type: string}}
+          content:
+            application/pdf: {}
+            application/epub+zip: {}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '404':
+          description: El usuario no compró el libro o el archivo no está disponible.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
   /api/v1/orders:
     post:
       tags: [Orders]
@@ -262,6 +299,40 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {$ref: '#/components/responses/BookNotFound'}
+  /api/v1/admin/books/{identifier}/ebook:
+    parameters:
+      - $ref: '#/components/parameters/BookIdentifier'
+    put:
+      tags: [Admin books]
+      operationId: uploadBookEbook
+      description: Reemplaza el archivo privado del libro después de validar extensión, MIME y contenido.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        '200':
+          description: Archivo almacenado con una clave física opaca.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EbookUpload'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+        '413':
+          description: El archivo supera el límite configurado.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '422':
+          description: El archivo no es un PDF o EPUB válido.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
 components:
   securitySchemes:
     sessionCookie:
@@ -375,6 +446,34 @@ components:
           type: array
           items: {$ref: '#/components/schemas/Book'}
         total: {type: integer, minimum: 0}
+    LibraryBook:
+      type: object
+      required: [id, slug, title, format, purchasedAt, downloadAvailable]
+      properties:
+        id: {type: string, format: uuid}
+        slug: {type: string}
+        title: {type: string}
+        coverMediaId: {type: [string, 'null'], format: uuid}
+        format: {type: string}
+        fileSizeBytes: {type: [integer, 'null'], format: int64, minimum: 0}
+        purchasedAt: {type: string, format: date-time}
+        downloadAvailable: {type: boolean}
+    LibraryBookList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/LibraryBook'}
+        total: {type: integer, minimum: 0}
+    EbookUpload:
+      type: object
+      required: [bookId, filename, mediaType, sizeBytes]
+      properties:
+        bookId: {type: string, format: uuid}
+        filename: {type: string}
+        mediaType: {type: string, enum: [application/pdf, application/epub+zip]}
+        sizeBytes: {type: integer, format: int64, minimum: 1}
     Error:
       type: object
       required: [error]

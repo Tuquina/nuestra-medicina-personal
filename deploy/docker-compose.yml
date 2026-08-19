@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: ${BACKEND_IMAGE}
+    command: ['migrate']
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      MIGRATIONS_PATH: /app/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    image: ${BACKEND_IMAGE}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_BASE_URL: https://${APP_DOMAIN}
+      HTTP_ADDRESS: :8080
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-5}
+      ADMIN_GOOGLE_SUB: ${ADMIN_GOOGLE_SUB}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URL: https://${APP_DOMAIN}/api/v1/auth/google/callback
+      SESSION_TTL: ${SESSION_TTL:-720h}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN}
+      MERCADOPAGO_WEBHOOK_SECRET: ${MERCADOPAGO_WEBHOOK_SECRET}
+      MERCADOPAGO_PUBLIC_BASE_URL: https://${APP_DOMAIN}
+      EBOOK_STORAGE_PATH: /data/ebooks
+      EBOOK_INTERNAL_PREFIX: /_protected/ebooks
+      EBOOK_MAX_UPLOAD_BYTES: ${EBOOK_MAX_UPLOAD_BYTES:-52428800}
+    volumes:
+      - ebooks_data:/data/ebooks
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost:8080/health/ready']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  nginx:
+    image: ${WEB_IMAGE}
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: ${APP_DOMAIN}
+      EBOOK_CLIENT_MAX_BODY_SIZE: ${EBOOK_CLIENT_MAX_BODY_SIZE:-51m}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ebooks_data:/data/ebooks:ro
+      - ${TLS_CERTIFICATE_PATH}:/etc/nginx/tls/fullchain.pem:ro
+      - ${TLS_PRIVATE_KEY_PATH}:/etc/nginx/tls/privkey.pem:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  ebooks_data:

@@ -49,6 +49,11 @@ services:
       MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
       MERCADOPAGO_WEBHOOK_SECRET: ${MERCADOPAGO_WEBHOOK_SECRET:-}
       MERCADOPAGO_PUBLIC_BASE_URL: ${MERCADOPAGO_PUBLIC_BASE_URL:-}
+      EBOOK_STORAGE_PATH: /data/ebooks
+      EBOOK_INTERNAL_PREFIX: /_protected/ebooks
+      EBOOK_MAX_UPLOAD_BYTES: ${EBOOK_MAX_UPLOAD_BYTES:-52428800}
+    volumes:
+      - ebooks_data:/data/ebooks
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -75,3 +80,4 @@ services:
 
 volumes:
   postgres_data:
+  ebooks_data:

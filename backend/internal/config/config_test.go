@@ -33,6 +33,15 @@ func TestCompleteMercadoPagoConfigurationLoads(t *testing.T) {
 	}
 }
 
+func TestEbookUploadConfigurationValidation(t *testing.T) {
+	setRequiredTestEnvironment(t)
+	t.Setenv("EBOOK_INTERNAL_PREFIX", "../public")
+	t.Setenv("EBOOK_MAX_UPLOAD_BYTES", "100")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "EBOOK_INTERNAL_PREFIX") || !strings.Contains(err.Error(), "EBOOK_MAX_UPLOAD_BYTES") {
+		t.Fatalf("expected ebook configuration errors, got %v", err)
+	}
+}
+
 func setRequiredTestEnvironment(t *testing.T) {
 	t.Helper()
 	t.Setenv("DATABASE_URL", "postgres://test")

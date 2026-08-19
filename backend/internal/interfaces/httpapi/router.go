@@ -12,22 +12,26 @@ type DatabaseHealth interface {
 }
 
 type Dependencies struct {
-	Logger           *slog.Logger
-	Books            BookService
-	Authentication   AuthenticationService
-	Orders           OrderService
-	WebhookValidator MercadoPagoWebhookValidator
-	Database         DatabaseHealth
-	AdminAuthorizer  AdminAuthorizer
-	BaseURL          string
-	SessionCookie    string
-	SecureCookies    bool
+	Logger              *slog.Logger
+	Books               BookService
+	Authentication      AuthenticationService
+	Orders              OrderService
+	Library             LibraryService
+	WebhookValidator    MercadoPagoWebhookValidator
+	Database            DatabaseHealth
+	AdminAuthorizer     AdminAuthorizer
+	BaseURL             string
+	SessionCookie       string
+	SecureCookies       bool
+	EbookInternalPrefix string
+	EbookMaxUploadBytes int64
 }
 
 func NewRouter(dependencies Dependencies) http.Handler {
 	booksHandler := NewBookHandler(dependencies.Books, dependencies.Logger)
 	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies)
 	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
+	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -50,6 +54,8 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	userOrderCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Create))
 	root.Handle("POST /api/v1/orders", requireSameOrigin(dependencies.BaseURL, userOrderCreation))
 	root.Handle("GET /api/v1/orders/{id}", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Get)))
+	root.Handle("GET /api/v1/me/books", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(libraryHandler.List)))
+	root.Handle("GET /api/v1/books/{id}/download", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(libraryHandler.Download)))
 	root.HandleFunc("POST /api/v1/webhooks/mercadopago", orderHandler.MercadoPagoWebhook)
 
 	admin := http.NewServeMux()
@@ -58,6 +64,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("GET /api/v1/admin/books/{identifier}", booksHandler.GetAdmin)
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}", booksHandler.Update)
 	admin.HandleFunc("DELETE /api/v1/admin/books/{identifier}", booksHandler.Archive)
+	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/ebook", libraryHandler.Upload)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
 		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, admin))
 	root.Handle("/api/v1/admin/", adminHandler)

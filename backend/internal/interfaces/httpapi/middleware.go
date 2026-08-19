@@ -85,11 +85,16 @@ func requireJSON(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch) && r.ContentLength != 0 {
 			contentType := r.Header.Get("Content-Type")
-			if !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
-				writeError(w, http.StatusUnsupportedMediaType, "JSON_REQUIRED", "Content-Type must be application/json", nil)
+			lowerContentType := strings.ToLower(contentType)
+			switch {
+			case strings.HasPrefix(lowerContentType, "application/json"):
+				r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+			case strings.HasPrefix(lowerContentType, "multipart/form-data"):
+				// Upload handlers apply their own task-specific limits.
+			default:
+				writeError(w, http.StatusUnsupportedMediaType, "UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json or multipart/form-data", nil)
 				return
 			}
-			r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		}
 		next.ServeHTTP(w, r)
 	})

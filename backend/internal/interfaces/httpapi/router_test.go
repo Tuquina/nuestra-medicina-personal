@@ -1,11 +1,13 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,8 +15,10 @@ import (
 	"time"
 
 	"github.com/nuestra-medicina-personal/backend/internal/application/authentication"
+	libraryapp "github.com/nuestra-medicina-personal/backend/internal/application/library"
 	"github.com/nuestra-medicina-personal/backend/internal/domain/auth"
 	"github.com/nuestra-medicina-personal/backend/internal/domain/book"
+	librarydomain "github.com/nuestra-medicina-personal/backend/internal/domain/library"
 )
 
 type bookServiceStub struct{}
@@ -45,6 +49,21 @@ func (a authorizerStub) AuthorizeAdmin(context.Context, string) (string, error) 
 	return "user-1", a.err
 }
 
+type libraryServiceStub struct {
+	download librarydomain.Download
+	err      error
+}
+
+func (s libraryServiceStub) List(context.Context, string) ([]librarydomain.Book, error) {
+	return []librarydomain.Book{}, s.err
+}
+func (s libraryServiceStub) Download(context.Context, string, string) (librarydomain.Download, error) {
+	return s.download, s.err
+}
+func (s libraryServiceStub) Upload(context.Context, string, string, string, libraryapp.UploadFile) (librarydomain.StoredEbook, error) {
+	return librarydomain.StoredEbook{}, s.err
+}
+
 type authServiceStub struct {
 	logoutToken string
 }
@@ -72,7 +91,72 @@ func testRouter(authorizer AdminAuthorizer) http.Handler {
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Books: bookServiceStub{},
 		Authentication: &authServiceStub{}, Database: healthStub{}, AdminAuthorizer: authorizer,
 		BaseURL: "http://localhost:5173", SessionCookie: "nmp_session",
+		Library: libraryServiceStub{}, EbookInternalPrefix: "/_protected/ebooks", EbookMaxUploadBytes: 50 << 20,
 	})
+}
+
+func TestProtectedDownloadUsesInternalNginxRedirect(t *testing.T) {
+	t.Parallel()
+	router := NewRouter(Dependencies{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Books: bookServiceStub{},
+		Authentication: &authServiceStub{}, Library: libraryServiceStub{download: librarydomain.Download{
+			StorageKey: "opaque-id.epub", Filename: "Mi libro.epub", MediaType: "application/epub+zip",
+		}}, Database: healthStub{}, AdminAuthorizer: authorizerStub{}, BaseURL: "http://localhost:5173",
+		SessionCookie: "nmp_session", EbookInternalPrefix: "/_protected/ebooks", EbookMaxUploadBytes: 50 << 20,
+	})
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/books/20000000-0000-4000-8000-000000000001/download", nil)
+	request.AddCookie(&http.Cookie{Name: "nmp_session", Value: "opaque-token"})
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected download authorization, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Header().Get("X-Accel-Redirect") != "/_protected/ebooks/opaque-id.epub" {
+		t.Fatalf("unexpected internal redirect: %q", recorder.Header().Get("X-Accel-Redirect"))
+	}
+	if strings.Contains(recorder.Body.String(), "opaque-id") {
+		t.Fatal("storage key leaked in response body")
+	}
+}
+
+func TestProtectedDownloadHidesUnauthorizedBook(t *testing.T) {
+	t.Parallel()
+	router := NewRouter(Dependencies{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Books: bookServiceStub{},
+		Authentication: &authServiceStub{}, Library: libraryServiceStub{err: librarydomain.ErrBookNotAvailable},
+		Database: healthStub{}, AdminAuthorizer: authorizerStub{}, BaseURL: "http://localhost:5173",
+		SessionCookie: "nmp_session", EbookInternalPrefix: "/_protected/ebooks", EbookMaxUploadBytes: 50 << 20,
+	})
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/books/not-owned/download", nil)
+	request.AddCookie(&http.Cookie{Name: "nmp_session", Value: "opaque-token"})
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected hidden download, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestAdminEbookUploadAcceptsMultipartAfterAuthorization(t *testing.T) {
+	t.Parallel()
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "book.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = part.Write([]byte("%PDF-1.7\ncontent"))
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPut, "/api/v1/admin/books/book-id/ebook", &body)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	request.Header.Set("Origin", "http://localhost:5173")
+	request.AddCookie(&http.Cookie{Name: "nmp_session", Value: "opaque-token"})
+	testRouter(authorizerStub{}).ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected multipart upload to reach handler, got %d: %s", recorder.Code, recorder.Body.String())
+	}
 }
 
 func TestAdminRoutesRequireSessionAndAdmin(t *testing.T) {

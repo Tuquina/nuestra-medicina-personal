@@ -41,6 +41,9 @@ El contrato disponible y las decisiones de seguridad de esta fase están en
 - órdenes con precio histórico y Checkout Pro de Mercado Pago;
 - webhook HMAC que reconsulta y valida pago, monto, moneda y referencia;
 - persistencia idempotente de pagos separada de las órdenes;
+- biblioteca del comprador derivada exclusivamente de órdenes pagadas;
+- carga administrativa validada de PDF/EPUB en almacenamiento privado;
+- descarga autorizada mediante `X-Accel-Redirect`, sin revelar paths físicos;
 - validación de origen, cuerpos JSON limitados, request IDs y logs JSON;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 
@@ -52,3 +55,12 @@ Para habilitar cobros, definir juntas `MERCADOPAGO_ACCESS_TOKEN`,
 `MERCADOPAGO_WEBHOOK_SECRET` y `MERCADOPAGO_PUBLIC_BASE_URL`. Esta última debe
 ser un origen HTTPS público; Mercado Pago no admite `localhost` en las URLs de
 retorno de Checkout Pro.
+
+Los eBooks se almacenan en el volumen privado `ebooks_data`. El límite por
+defecto es 50 MiB y puede ajustarse con `EBOOK_MAX_UPLOAD_BYTES` dentro del
+rango de 1 a 200 MiB. La API de desarrollo autoriza la descarga y devuelve
+`X-Accel-Redirect`; el streaming real se realiza con el Nginx definido en
+[`deploy/`](deploy/).
+
+La configuración de producción, las imágenes esperadas y los certificados TLS
+están documentados en [`deploy/README.md`](deploy/README.md).
