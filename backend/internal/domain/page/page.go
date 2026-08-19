@@ -12,9 +12,11 @@ import (
 )
 
 var (
-	ErrNotFound     = errors.New("page not found")
-	ErrSlugConflict = errors.New("page slug already exists")
-	ErrVersionGone  = errors.New("page version not found")
+	ErrNotFound        = errors.New("page not found")
+	ErrSlugConflict    = errors.New("page slug already exists")
+	ErrVersionNotFound = errors.New("page version not found")
+	ErrBookNotFound    = errors.New("book not found for page")
+	ErrPageExists      = errors.New("page already exists for target")
 )
 
 type Status string
@@ -65,6 +67,39 @@ type ValidationError struct {
 func (e *ValidationError) Error() string { return "page content is invalid" }
 
 func EmptyContent() Content { return Content{SchemaVersion: 1, Sections: []Block{}} }
+
+func (value Page) Validate() error {
+	fields := make(map[string]string)
+	if value.Type != "HOME" && value.Type != "BOOK" {
+		fields["type"] = "must be HOME or BOOK"
+	}
+	if value.Type == "HOME" && value.BookID != nil {
+		fields["bookId"] = "must be empty for a home page"
+	}
+	if value.Type == "BOOK" && (value.BookID == nil || strings.TrimSpace(*value.BookID) == "") {
+		fields["bookId"] = "is required for a book page"
+	}
+	if strings.TrimSpace(value.Slug) == "" || len(value.Slug) > 160 {
+		fields["slug"] = "must contain between 1 and 160 characters"
+	} else {
+		for _, character := range value.Slug {
+			if (character < 'a' || character > 'z') && (character < '0' || character > '9') && character != '-' {
+				fields["slug"] = "must contain only lowercase letters, numbers and hyphens"
+				break
+			}
+		}
+	}
+	if strings.TrimSpace(value.Title) == "" || len([]rune(value.Title)) > 200 {
+		fields["title"] = "must contain between 1 and 200 characters"
+	}
+	if err := value.DraftContent.Validate(); err != nil {
+		fields["content"] = err.Error()
+	}
+	if len(fields) > 0 {
+		return &ValidationError{Fields: fields}
+	}
+	return nil
+}
 
 func DecodeContent(raw []byte) (Content, error) {
 	var content Content
