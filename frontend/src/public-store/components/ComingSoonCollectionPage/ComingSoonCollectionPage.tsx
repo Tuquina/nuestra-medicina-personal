@@ -21,6 +21,8 @@ interface ComingSoonCollectionPageProps {
   eyebrowColor: string;
   glowColor: string;
   cards: ComingSoonCardData[];
+  /** True when rendering an admin's "Vista previa" of unpublished changes. */
+  preview?: boolean;
 }
 
 /**
@@ -36,11 +38,17 @@ export function ComingSoonCollectionPage({
   eyebrowColor,
   glowColor,
   cards,
+  preview = false,
 }: ComingSoonCollectionPageProps) {
   useDocumentTitle(`${title} · Nuestra Medicina Personal`);
 
   return (
     <div className={styles.page}>
+      {preview && (
+        <div className={styles.previewBanner} role="status">
+          Vista previa — estás viendo cambios sin publicar.
+        </div>
+      )}
       <GradientTopBar />
       <SiteHeader />
 

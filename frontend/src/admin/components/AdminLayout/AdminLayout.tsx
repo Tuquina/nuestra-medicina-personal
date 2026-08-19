@@ -52,11 +52,20 @@ export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = fals
           </NavLink>
 
           <p className={styles.sectionLabel}>Páginas</p>
-          <NavLink to="/admin/paginas" className={navLinkClass}>
+          <NavLink to="/admin/paginas" end className={navLinkClass}>
             Inicio
           </NavLink>
-          <NavLink to="/admin/paginas" className={navLinkClass}>
+          <NavLink to="/admin/paginas" end className={navLinkClass}>
             Páginas de libros
+          </NavLink>
+          <NavLink to="/admin/sobre-el-proyecto" className={navLinkClass}>
+            Sobre el proyecto
+          </NavLink>
+          <NavLink to="/admin/paginas/meditaciones" className={navLinkClass}>
+            Meditaciones
+          </NavLink>
+          <NavLink to="/admin/paginas/herramientas" className={navLinkClass}>
+            Herramientas
           </NavLink>
 
           <NavLink to="/admin/ventas" className={navLinkClassSpaced}>

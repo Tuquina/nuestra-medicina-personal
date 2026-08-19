@@ -15,6 +15,9 @@ import { ClientesPage } from '../admin/pages/ClientesPage/ClientesPage';
 import { MultimediaPage } from '../admin/pages/MultimediaPage/MultimediaPage';
 import { ConfiguracionPage } from '../admin/pages/ConfiguracionPage/ConfiguracionPage';
 import { PageBuilderPage } from '../admin/pages/PageBuilderPage/PageBuilderPage';
+import { MeditacionesEditorPage } from '../admin/pages/CollectionPageEditor/MeditacionesEditorPage';
+import { HerramientasEditorPage } from '../admin/pages/CollectionPageEditor/HerramientasEditorPage';
+import { SobreElProyectoPage } from '../admin/pages/SobreElProyectoPage/SobreElProyectoPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -42,6 +45,9 @@ export function App() {
       <Route path="/admin/multimedia" element={<MultimediaPage />} />
       <Route path="/admin/configuracion" element={<ConfiguracionPage />} />
       <Route path="/admin/paginas" element={<PageBuilderPage />} />
+      <Route path="/admin/paginas/meditaciones" element={<MeditacionesEditorPage />} />
+      <Route path="/admin/paginas/herramientas" element={<HerramientasEditorPage />} />
+      <Route path="/admin/sobre-el-proyecto" element={<SobreElProyectoPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

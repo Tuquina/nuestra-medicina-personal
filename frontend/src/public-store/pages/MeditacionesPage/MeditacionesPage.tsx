@@ -1,34 +1,33 @@
+import { useSearchParams } from 'react-router-dom';
 import { ComingSoonCollectionPage } from '../../components/ComingSoonCollectionPage/ComingSoonCollectionPage';
+import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
+import { buildMeditacionesSeedContent, MEDITACIONES_SLUG, readCollectionProps } from '../../../shared/cms/collectionContent';
 
-/** `/meditaciones` — built from Meditaciones.dc.html. */
+/** Decorative accents rotate by card index — editable content is just
+ * title/description/caption, colors stay a design decision (same
+ * approach as HomePage's Gallery). */
+const CARD_ACCENTS = [
+  { imageAccent: 'var(--color-sky-pale)' },
+  { imageAccent: 'var(--color-accent-amber-soft)' },
+  { imageAccent: 'oklch(32% 0.06 254)', imageBase: 'oklch(45% 0.05 254)' },
+];
+
+/** `/meditaciones` — built from Meditaciones.dc.html. Content comes from
+ * the admin's "Meditaciones" editor via shared/cms. */
 export function MeditacionesPage() {
+  const [searchParams] = useSearchParams();
+  const preview = searchParams.get('preview') === '1';
+  const content = usePublishedContent('MEDITACIONES', MEDITACIONES_SLUG, buildMeditacionesSeedContent, preview);
+  const { title, description, cards } = readCollectionProps(content);
+
   return (
     <ComingSoonCollectionPage
-      title="Meditaciones"
-      description="Prácticas breves para volver a habitar el cuerpo y la respiración."
+      title={title}
+      description={description}
       eyebrowColor="var(--color-sky)"
       glowColor="var(--color-sky)"
-      cards={[
-        {
-          title: 'Respirar y empezar',
-          description: 'Una práctica breve para empezar el día con más calma.',
-          imageAccent: 'var(--color-sky-pale)',
-          imageCaption: 'Foto — amanecer en calma',
-        },
-        {
-          title: 'Volver al cuerpo',
-          description: 'Un ejercicio simple de atención para momentos de tensión.',
-          imageAccent: 'var(--color-accent-amber-soft)',
-          imageCaption: 'Foto — manos y luz cálida',
-        },
-        {
-          title: 'Antes de dormir',
-          description: 'Una pausa para soltar el día antes de descansar.',
-          imageAccent: 'oklch(32% 0.06 254)',
-          imageBase: 'oklch(45% 0.05 254)',
-          imageCaption: 'Foto — cielo nocturno',
-        },
-      ]}
+      cards={cards.map((card, i) => ({ ...card, ...CARD_ACCENTS[i % CARD_ACCENTS.length] }))}
+      preview={preview}
     />
   );
 }

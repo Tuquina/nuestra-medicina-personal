@@ -62,6 +62,74 @@ is unaffected — only this frontend path differs.
 | `Admin Configuracion.dc.html` | `/admin/configuracion` | `admin/pages/ConfiguracionPage` | P2 | ✅ Done |
 | `Admin Page Builder.dc.html` | `/admin/paginas` | `admin/pages/PageBuilderPage` | P3 (most complex; done last) | ✅ Done |
 
+## Post-launch content & admin extensions
+
+Added after the 17-mockup handoff was fully implemented and `shared/cms`
+(the localStorage-backed content store, see its own doc comments) landed
+for Home and each book's landing page. Two kinds of follow-up work:
+
+**A. Extend `shared/cms` editability to Meditaciones, Herramientas, and
+the "Sobre el proyecto" bio** — these already render from
+`ComingSoonCollectionPage` / Home's `about` section, but with hardcoded
+copy. Same pattern as Home/book pages: a seed content builder + a small
+admin form, reading/writing through `contentStore.ts`.
+
+- `PageType` gains `'MEDITACIONES' | 'HERRAMIENTAS'` alongside
+  `'HOME' | 'BOOK'`. **This is wider than the real backend's `pages.type`
+  CHECK constraint** (`migrations/001_initial_schema.up.sql` only allows
+  `'HOME'` and `'BOOK'` today) — whoever wires the real `pages` API needs
+  a migration adding these values (or a generic `'PAGE'` type +
+  slug-based lookup) before this can point at a real endpoint. Flagged
+  with a comment at the `PageType` definition.
+- Each collection page's content = hero copy (title/description) + a
+  list of "coming soon" cards (title/description/imageCaption per card),
+  matching `ComingSoonCollectionPage`'s existing props shape.
+- Admin editors: `/admin/paginas/meditaciones` and
+  `/admin/paginas/herramientas`, structured forms like the book-page
+  editor (not the generic Page Builder — these pages don't have
+  swappable blocks, just a hero and N cards), with add/remove-card
+  support.
+- "Sobre el proyecto": a small dedicated form (not the full Page
+  Builder) editing the Home page's `about` section content directly —
+  reuses `homeContent.ts`'s existing `AboutProps` shape and
+  `contentStore.ts`'s Home record, so it's the same underlying data the
+  Page Builder's "Sobre el proyecto" block already edits, just reached
+  through a simpler, purpose-built form. Lives at
+  `/admin/sobre-el-proyecto`.
+- Sidebar: "Páginas" section gains "Meditaciones", "Herramientas", and
+  "Sobre el proyecto" links (`AdminLayout.tsx`).
+
+**B. Build out the 3 "Próximamente" admin sections** (Cupones, Reseñas,
+Analítica — listed as future extensions in architecture.md §6). None of
+these have a backend yet, same as everything else here — each gets a
+localStorage-backed mock data layer shaped like the eventual REST
+resource, so swapping in real `fetch` calls later is a small, isolated
+change (same principle as `admin/data/sales.ts` / `customers.ts` today,
+just with write operations too since these are admin-editable).
+
+- **Cupones** (`/admin/cupones`): `Coupon { id, code, kind:
+  'percentage'|'fixed', value, status, startDateISO, endDateISO,
+  usageLimit, usageCount, appliesTo: 'all' | string[] (book slugs) }`.
+  List + create/edit dialog, matching the table conventions in
+  `VentasPage`/`ClientesPage`. Store: `admin/data/couponsStore.ts`
+  (localStorage-backed CRUD, mirrors `shared/cms/contentStore.ts`'s
+  shape but for a plain resource list rather than draft/published page
+  content).
+- **Reseñas** (`/admin/resenas`): `Review { id, bookSlug, customerName,
+  rating (1-5), text, status: 'pending'|'approved'|'rejected',
+  createdAtISO }`. List with per-status filter + approve/reject actions.
+  Store: `admin/data/reviewsStore.ts`.
+- **Analítica** (`/admin/analitica`): read-only dashboard extending
+  `DashboardPage`'s stat-card/chart components with more detail (revenue
+  by period, top books, funnel-ish counts) computed from the existing
+  mock `SALES`/`CUSTOMERS` data — architecture.md §60 explicitly says to
+  compute these via Postgres aggregate queries rather than a separate
+  analytics tool, so this page is structured to call one future
+  aggregate endpoint (`GET /api/v1/admin/analytics?range=...`), not
+  several.
+- Sidebar: the three "Próximamente" `<span>` placeholders in
+  `AdminLayout.tsx` become real `NavLink`s once each route exists.
+
 ## Notes for whoever picks this up next
 
 - All of this is **frontend-only, no backend yet**. Pages render with

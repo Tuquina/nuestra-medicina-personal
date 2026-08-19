@@ -14,7 +14,16 @@
  * leak onto the live site (architecture.md §15).
  */
 
-export type PageType = 'HOME' | 'BOOK';
+/**
+ * 'MEDITACIONES' and 'HERRAMIENTAS' are wider than the real backend's
+ * `pages.type` CHECK constraint today (`migrations/001_initial_schema.up.sql`
+ * only allows `'HOME'` / `'BOOK'`) — whoever wires the real `pages` API
+ * needs a migration adding these values (or a generic `'PAGE'` type +
+ * slug-based lookup) before `contentStore.ts` can point at a real
+ * endpoint for these two. See docs/frontend-plan.md "Post-launch content
+ * & admin extensions".
+ */
+export type PageType = 'HOME' | 'BOOK' | 'MEDITACIONES' | 'HERRAMIENTAS';
 export type PageStatus = 'DRAFT' | 'PUBLISHED';
 
 /** A single content block. `props` is intentionally untyped here — each
