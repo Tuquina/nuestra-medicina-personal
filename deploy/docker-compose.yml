@@ -45,8 +45,17 @@ services:
       EBOOK_STORAGE_PATH: /data/ebooks
       EBOOK_INTERNAL_PREFIX: /_protected/ebooks
       EBOOK_MAX_UPLOAD_BYTES: ${EBOOK_MAX_UPLOAD_BYTES:-52428800}
+      GOOGLE_MAIL_SENDER: ${GOOGLE_MAIL_SENDER}
+      GOOGLE_MAIL_CREDENTIALS_PATH: /run/secrets/gmail-service-account.json
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL}
+      EMAIL_WORKER_INTERVAL: ${EMAIL_WORKER_INTERVAL:-10s}
+      EMAIL_LEASE_TIMEOUT: ${EMAIL_LEASE_TIMEOUT:-5m}
+      EMAIL_BATCH_SIZE: ${EMAIL_BATCH_SIZE:-5}
+      EMAIL_MAX_ATTEMPTS: ${EMAIL_MAX_ATTEMPTS:-5}
     volumes:
       - ebooks_data:/data/ebooks
+    secrets:
+      - gmail_service_account
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -76,3 +85,7 @@ services:
 volumes:
   postgres_data:
   ebooks_data:
+
+secrets:
+  gmail_service_account:
+    file: ${GOOGLE_MAIL_CREDENTIALS_FILE}

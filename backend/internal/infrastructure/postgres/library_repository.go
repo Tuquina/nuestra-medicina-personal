@@ -107,6 +107,11 @@ func (r *LibraryRepository) AttachEbook(ctx context.Context, bookID, storageKey,
 	if command.RowsAffected() != 1 {
 		return "", librarydomain.ErrBookNotAvailable
 	}
+	if previous == nil || *previous == "" {
+		if err := enqueueEbookAvailableEmails(ctx, tx, bookID, now); err != nil {
+			return "", fmt.Errorf("enqueue ebook available emails: %w", err)
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return "", fmt.Errorf("commit ebook attachment: %w", err)
 	}
@@ -114,6 +119,70 @@ func (r *LibraryRepository) AttachEbook(ctx context.Context, bookID, storageKey,
 		return "", nil
 	}
 	return *previous, nil
+}
+
+func enqueueEbookAvailableEmails(ctx context.Context, tx pgx.Tx, bookID string, now time.Time) error {
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT ON (users.id)
+		       users.id::text, users.email, orders.id::text, order_items.book_title,
+		       orders.total_minor_units, orders.currency
+		FROM orders
+		JOIN users ON users.id = orders.user_id
+		JOIN order_items ON order_items.order_id = orders.id
+		WHERE order_items.book_id = $1::uuid AND orders.status = 'PAID'
+		ORDER BY users.id, orders.paid_at DESC`, bookID)
+	if err != nil {
+		return fmt.Errorf("list buyers awaiting ebook: %w", err)
+	}
+	type buyer struct {
+		userID, recipient, orderID, bookTitle, currency string
+		amountMinorUnits                                int64
+	}
+	waiting := make([]buyer, 0)
+	for rows.Next() {
+		var value buyer
+		if err := rows.Scan(
+			&value.userID, &value.recipient, &value.orderID, &value.bookTitle,
+			&value.amountMinorUnits, &value.currency,
+		); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan buyer awaiting ebook: %w", err)
+		}
+		waiting = append(waiting, value)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("iterate buyers awaiting ebook: %w", err)
+	}
+	rows.Close()
+
+	for _, value := range waiting {
+		jobID, err := databaseUUID()
+		if err != nil {
+			return fmt.Errorf("generate ebook email job id: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO email_jobs (id, type, recipient, payload, dedupe_key, next_attempt_at, created_at, updated_at)
+			VALUES (
+				$1::uuid, 'ebook.available', $2,
+				jsonb_build_object(
+					'orderId', $3::text,
+					'bookTitle', $4::text,
+					'amountMinorUnits', $5::bigint,
+					'currency', $6::text,
+					'ebookAvailable', true
+				),
+				$7, $8, $8, $8
+			)
+			ON CONFLICT (dedupe_key) DO NOTHING`,
+			jobID, value.recipient, value.orderID, value.bookTitle,
+			value.amountMinorUnits, value.currency,
+			fmt.Sprintf("ebook:%s:%s", bookID, value.userID), now,
+		); err != nil {
+			return fmt.Errorf("insert ebook available email: %w", err)
+		}
+	}
+	return nil
 }
 
 func safeStoredFilename(title, extension string) string {

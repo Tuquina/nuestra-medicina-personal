@@ -1,0 +1,9 @@
+NUESTRA MEDICINA PERSONAL
+
+No pudimos confirmar tu pago
+
+El pago de {{.FormattedAmount}} por {{.BookTitle}} no fue aprobado.
+No se realizó ningún cambio en tu biblioteca. Podés intentar nuevamente desde el sitio.
+
+Orden: {{.OrderID}}
+Ayuda: {{.SupportEmail}}

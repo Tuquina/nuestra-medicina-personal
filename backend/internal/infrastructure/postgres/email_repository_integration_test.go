@@ -20,7 +20,13 @@ func TestEmailRepositoryClaimsAndRetriesJobs(t *testing.T) {
 	defer pool.Close()
 
 	const jobID = "50000000-0000-4000-8000-000000000001"
-	cleanup := func() { _, _ = pool.Exec(ctx, `DELETE FROM email_jobs WHERE id = $1::uuid`, jobID) }
+	cleanup := func() {
+		_, _ = pool.Exec(ctx, `
+			DELETE FROM email_jobs
+			WHERE id = $1::uuid
+			   OR recipient IN ('mail@example.com', 'buyer@example.com', 'owner@example.com')
+		`, jobID)
+	}
 	cleanup()
 	t.Cleanup(cleanup)
 	now := time.Date(2026, 8, 19, 18, 0, 0, 0, time.UTC)

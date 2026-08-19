@@ -1,0 +1,9 @@
+NUESTRA MEDICINA PERSONAL
+
+Tu compra fue confirmada
+
+Recibimos el pago de {{.FormattedAmount}} por {{.BookTitle}}.
+{{if .EbookAvailable}}Tu libro ya está disponible: {{.LibraryURL}}{{else}}Tu libro está asociado a tu cuenta. Te enviaremos otro email en cuanto el archivo esté disponible.{{end}}
+
+Orden: {{.OrderID}}
+Ayuda: {{.SupportEmail}}

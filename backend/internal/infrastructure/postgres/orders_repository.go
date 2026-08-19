@@ -146,12 +146,14 @@ func (r *OrderRepository) ApplyPayment(ctx context.Context, provider string, pay
 			           'orderId', orders.id::text,
 			           'bookTitle', order_items.book_title,
 			           'amountMinorUnits', orders.total_minor_units,
-			           'currency', orders.currency
+			           'currency', orders.currency,
+			           'ebookAvailable', books.ebook_file_path IS NOT NULL AND books.ebook_file_path <> ''
 			       ),
 			       $3, $4, $4, $4
 			FROM orders
 			JOIN users ON users.id = orders.user_id
 			JOIN order_items ON order_items.order_id = orders.id
+			JOIN books ON books.id = order_items.book_id
 			WHERE orders.id::text = $5
 			LIMIT 1
 			ON CONFLICT (dedupe_key) DO NOTHING`,

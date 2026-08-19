@@ -1,0 +1,9 @@
+NUESTRA MEDICINA PERSONAL
+
+Tu pago está pendiente
+
+Mercado Pago todavía está procesando el pago de {{.FormattedAmount}} por {{.BookTitle}}.
+No necesitás volver a comprar. Te avisaremos cuando se confirme.
+
+Orden: {{.OrderID}}
+Ayuda: {{.SupportEmail}}

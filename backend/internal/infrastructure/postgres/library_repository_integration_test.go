@@ -28,6 +28,7 @@ func TestLibraryOnlyExposesPaidBooksOwnedByUser(t *testing.T) {
 		itemID      = "41000000-0000-4000-8000-000000000001"
 	)
 	cleanup := func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM email_jobs WHERE recipient = 'owner@example.com'`)
 		_, _ = pool.Exec(ctx, `DELETE FROM order_items WHERE order_id = $1::uuid`, orderID)
 		_, _ = pool.Exec(ctx, `DELETE FROM orders WHERE id = $1::uuid`, orderID)
 		_, _ = pool.Exec(ctx, `DELETE FROM books WHERE id = $1::uuid`, bookID)
@@ -74,5 +75,24 @@ func TestLibraryOnlyExposesPaidBooksOwnedByUser(t *testing.T) {
 	previous, err := repository.AttachEbook(ctx, bookID, "new.epub", "epub", 42, paidAt.Add(time.Minute))
 	if err != nil || previous != "old.pdf" {
 		t.Fatalf("replace ebook: previous=%q err=%v", previous, err)
+	}
+	var emailJobCount int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM email_jobs WHERE recipient = 'owner@example.com'`).Scan(&emailJobCount); err != nil {
+		t.Fatalf("count ebook emails: %v", err)
+	}
+	if emailJobCount != 0 {
+		t.Fatalf("replacement of an existing ebook should not notify buyers, got %d jobs", emailJobCount)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE books SET ebook_file_path = NULL WHERE id = $1::uuid`, bookID); err != nil {
+		t.Fatalf("clear ebook for availability test: %v", err)
+	}
+	if _, err := repository.AttachEbook(ctx, bookID, "available.epub", "epub", 50, paidAt.Add(2*time.Minute)); err != nil {
+		t.Fatalf("attach initially available ebook: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM email_jobs WHERE recipient = 'owner@example.com' AND type = 'ebook.available'`).Scan(&emailJobCount); err != nil {
+		t.Fatalf("count ebook available emails: %v", err)
+	}
+	if emailJobCount != 1 {
+		t.Fatalf("expected one ebook available email, got %d", emailJobCount)
 	}
 }

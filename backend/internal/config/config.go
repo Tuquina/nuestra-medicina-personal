@@ -25,6 +25,13 @@ type Config struct {
 	EbookStoragePath         string
 	EbookInternalPrefix      string
 	EbookMaxUploadBytes      int64
+	GoogleMailCredentials    string
+	GoogleMailSender         string
+	SupportEmail             string
+	EmailWorkerInterval      time.Duration
+	EmailLeaseTimeout        time.Duration
+	EmailBatchSize           int
+	EmailMaxAttempts         int
 	SessionCookie            string
 	SessionTTL               time.Duration
 	ShutdownTimeout          time.Duration
@@ -51,6 +58,13 @@ func Load() (Config, error) {
 		EbookStoragePath:         envOrDefault("EBOOK_STORAGE_PATH", "/data/ebooks"),
 		EbookInternalPrefix:      envOrDefault("EBOOK_INTERNAL_PREFIX", "/_protected/ebooks"),
 		EbookMaxUploadBytes:      int64OrDefault("EBOOK_MAX_UPLOAD_BYTES", 50<<20),
+		GoogleMailCredentials:    os.Getenv("GOOGLE_MAIL_CREDENTIALS_PATH"),
+		GoogleMailSender:         os.Getenv("GOOGLE_MAIL_SENDER"),
+		SupportEmail:             os.Getenv("SUPPORT_EMAIL"),
+		EmailWorkerInterval:      durationOrDefault("EMAIL_WORKER_INTERVAL", 10*time.Second),
+		EmailLeaseTimeout:        durationOrDefault("EMAIL_LEASE_TIMEOUT", 5*time.Minute),
+		EmailBatchSize:           intOrDefault("EMAIL_BATCH_SIZE", 5),
+		EmailMaxAttempts:         intOrDefault("EMAIL_MAX_ATTEMPTS", 5),
 		SessionCookie:            envOrDefault("SESSION_COOKIE_NAME", "nmp_session"),
 		SessionTTL:               durationOrDefault("SESSION_TTL", 30*24*time.Hour),
 		ShutdownTimeout:          durationOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
@@ -80,6 +94,30 @@ func Load() (Config, error) {
 	}
 	if cfg.EbookMaxUploadBytes < 1<<20 || cfg.EbookMaxUploadBytes > 200<<20 {
 		validationErrors = append(validationErrors, errors.New("EBOOK_MAX_UPLOAD_BYTES must be between 1 MiB and 200 MiB"))
+	}
+	mailValues := 0
+	for _, value := range []string{cfg.GoogleMailCredentials, cfg.GoogleMailSender} {
+		if value != "" {
+			mailValues++
+		}
+	}
+	if mailValues != 0 && mailValues != 2 {
+		validationErrors = append(validationErrors, errors.New("GOOGLE_MAIL_CREDENTIALS_PATH and GOOGLE_MAIL_SENDER must be configured together"))
+	}
+	if cfg.SupportEmail == "" {
+		cfg.SupportEmail = cfg.GoogleMailSender
+	}
+	if cfg.EmailWorkerInterval < time.Second || cfg.EmailWorkerInterval > time.Hour {
+		validationErrors = append(validationErrors, errors.New("EMAIL_WORKER_INTERVAL must be between 1s and 1h"))
+	}
+	if cfg.EmailLeaseTimeout < 30*time.Second || cfg.EmailLeaseTimeout > time.Hour {
+		validationErrors = append(validationErrors, errors.New("EMAIL_LEASE_TIMEOUT must be between 30s and 1h"))
+	}
+	if cfg.EmailBatchSize < 1 || cfg.EmailBatchSize > 50 {
+		validationErrors = append(validationErrors, errors.New("EMAIL_BATCH_SIZE must be between 1 and 50"))
+	}
+	if cfg.EmailMaxAttempts < 1 || cfg.EmailMaxAttempts > 10 {
+		validationErrors = append(validationErrors, errors.New("EMAIL_MAX_ATTEMPTS must be between 1 and 10"))
 	}
 	googleValues := 0
 	for _, value := range []string{cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect} {
@@ -152,6 +190,18 @@ func int64OrDefault(key string, fallback int64) int64 {
 		return fallback
 	}
 	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func intOrDefault(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
 	if err != nil {
 		return fallback
 	}

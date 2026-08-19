@@ -42,6 +42,23 @@ func TestEbookUploadConfigurationValidation(t *testing.T) {
 	}
 }
 
+func TestGoogleMailConfigurationIsAllOrNothing(t *testing.T) {
+	setRequiredTestEnvironment(t)
+	t.Setenv("GOOGLE_MAIL_SENDER", "ventas@example.com")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "GOOGLE_MAIL_CREDENTIALS_PATH") {
+		t.Fatalf("expected partial Google mail configuration error, got %v", err)
+	}
+}
+
+func TestEmailWorkerConfigurationValidation(t *testing.T) {
+	setRequiredTestEnvironment(t)
+	t.Setenv("EMAIL_BATCH_SIZE", "100")
+	t.Setenv("EMAIL_MAX_ATTEMPTS", "0")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "EMAIL_BATCH_SIZE") || !strings.Contains(err.Error(), "EMAIL_MAX_ATTEMPTS") {
+		t.Fatalf("expected email worker configuration errors, got %v", err)
+	}
+}
+
 func setRequiredTestEnvironment(t *testing.T) {
 	t.Helper()
 	t.Setenv("DATABASE_URL", "postgres://test")
@@ -51,4 +68,7 @@ func setRequiredTestEnvironment(t *testing.T) {
 	t.Setenv("MERCADOPAGO_ACCESS_TOKEN", "")
 	t.Setenv("MERCADOPAGO_WEBHOOK_SECRET", "")
 	t.Setenv("MERCADOPAGO_PUBLIC_BASE_URL", "")
+	t.Setenv("GOOGLE_MAIL_CREDENTIALS_PATH", "")
+	t.Setenv("GOOGLE_MAIL_SENDER", "")
+	t.Setenv("SUPPORT_EMAIL", "")
 }

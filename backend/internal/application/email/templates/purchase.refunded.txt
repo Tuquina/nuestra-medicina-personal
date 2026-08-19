@@ -1,0 +1,9 @@
+NUESTRA MEDICINA PERSONAL
+
+Tu compra fue reembolsada
+
+Mercado Pago informó el reembolso de {{.FormattedAmount}} correspondiente a {{.BookTitle}}.
+El acceso asociado a esta compra fue retirado.
+
+Orden: {{.OrderID}}
+Ayuda: {{.SupportEmail}}

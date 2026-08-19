@@ -41,6 +41,7 @@ type PaymentPayload struct {
 	BookTitle        string `json:"bookTitle"`
 	AmountMinorUnits int64  `json:"amountMinorUnits"`
 	Currency         string `json:"currency"`
+	EbookAvailable   bool   `json:"ebookAvailable"`
 }
 
 type Message struct {

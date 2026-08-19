@@ -1,0 +1,9 @@
+NUESTRA MEDICINA PERSONAL
+
+Tu eBook ya está disponible
+
+Ya podés descargar {{.BookTitle}} desde tu biblioteca:
+{{.LibraryURL}}
+
+Orden: {{.OrderID}}
+Ayuda: {{.SupportEmail}}

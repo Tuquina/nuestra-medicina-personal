@@ -11,9 +11,11 @@ import (
 
 	"github.com/nuestra-medicina-personal/backend/internal/application/authentication"
 	"github.com/nuestra-medicina-personal/backend/internal/application/books"
+	emailapp "github.com/nuestra-medicina-personal/backend/internal/application/email"
 	"github.com/nuestra-medicina-personal/backend/internal/application/library"
 	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
+	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/gmail"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/google"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/mercadopago"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/postgres"
@@ -58,6 +60,25 @@ func run(logger *slog.Logger) error {
 	}
 	libraryRepository := postgres.NewLibraryRepository(pool)
 	libraryService := library.NewService(libraryRepository, bookService, ebookStorage, cfg.EbookMaxUploadBytes)
+	emailRenderer, err := emailapp.NewRenderer(cfg.BaseURL, cfg.SupportEmail)
+	if err != nil {
+		return err
+	}
+	gmailClient, err := gmail.NewClient(cfg.GoogleMailCredentials, cfg.GoogleMailSender)
+	if err != nil {
+		return err
+	}
+	emailRepository := postgres.NewEmailRepository(pool)
+	emailWorker := emailapp.NewWorker(
+		emailRepository, gmailClient, emailRenderer, logger,
+		cfg.EmailWorkerInterval, cfg.EmailLeaseTimeout, cfg.EmailBatchSize, cfg.EmailMaxAttempts,
+	)
+	if gmailClient.Configured() {
+		go emailWorker.Run(ctx)
+		logger.Info("transactional email worker enabled", "sender", cfg.GoogleMailSender)
+	} else {
+		logger.Info("transactional email worker disabled")
+	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
 		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService,
