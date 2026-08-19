@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PageContent, PageType } from './types';
 import { getDraftContent, getPublishedContent, subscribeToContentStore } from './contentStore';
+
+/** Module-level (not recreated per render) so it's never flagged as an
+ * unstable hook dependency — only the real params (type/slug/seed/preview)
+ * matter for `useEffect`'s dependency array below. */
+function readContent(type: PageType, slug: string, seed: () => PageContent, preview: boolean): PageContent {
+  return preview ? getDraftContent(type, slug, seed) : getPublishedContent(type, slug, seed);
+}
 
 /**
  * Reads a page's live content for public rendering (Home / a book landing
@@ -13,27 +20,29 @@ import { getDraftContent, getPublishedContent, subscribeToContentStore } from '.
  * visitors (docs/architecture.md §15) while still letting admins see what
  * they're about to publish.
  *
- * `seed` must be a stable function reference (a module-level export, not
- * an inline arrow) — it's only invoked the very first time a page has no
- * stored record yet.
+ * `seed` can be a fresh inline arrow every render (e.g. `() =>
+ * buildBookLandingSeedContent(slug)`, needed for per-book pages) — the
+ * "did the page change" check below compares a plain string key, not a
+ * memoized reader function's identity, so an unstable `seed` can't turn
+ * into a render loop.
  */
 export function usePublishedContent(type: PageType, slug: string, seed: () => PageContent, preview = false): PageContent {
-  const read = useCallback(
-    () => (preview ? getDraftContent(type, slug, seed) : getPublishedContent(type, slug, seed)),
-    [type, slug, seed, preview],
-  );
+  const identity = `${type}:${slug}:${preview ? 'draft' : 'published'}`;
 
   // Re-read when the page identity changes, without a redundant extra
   // effect-driven render on first mount (the "adjusting state during
   // rendering" pattern — https://react.dev/learn/you-might-not-need-an-effect).
-  const [loadedRead, setLoadedRead] = useState(() => read);
-  const [content, setContent] = useState<PageContent>(read);
-  if (loadedRead !== read) {
-    setLoadedRead(() => read);
-    setContent(read());
+  const [loadedFor, setLoadedFor] = useState(identity);
+  const [content, setContent] = useState<PageContent>(() => readContent(type, slug, seed, preview));
+  if (loadedFor !== identity) {
+    setLoadedFor(identity);
+    setContent(readContent(type, slug, seed, preview));
   }
 
-  useEffect(() => subscribeToContentStore(() => setContent(read())), [read]);
+  useEffect(
+    () => subscribeToContentStore(() => setContent(readContent(type, slug, seed, preview))),
+    [type, slug, seed, preview],
+  );
 
   return content;
 }

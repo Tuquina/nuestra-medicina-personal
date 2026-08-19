@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { GradientTopBar } from '../../../shared/components/GradientTopBar/GradientTopBar';
 import { SiteHeader } from '../../../shared/components/SiteHeader/SiteHeader';
 import { SiteFooter } from '../../../shared/components/SiteFooter/SiteFooter';
@@ -14,43 +14,49 @@ import { RelatedBooks } from '../../../shared/components/RelatedBooks/RelatedBoo
 import { FinalCta } from '../../../shared/components/FinalCta/FinalCta';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { PUBLISHED_BOOKS as BOOKS } from '../../data/books';
-import { BOOK_LANDINGS } from '../../data/bookLandings';
 import { formatPrice } from '../../../shared/utils/money';
+import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
+import { buildBookLandingSeedContent, readBookLandingProps } from '../../../shared/cms/bookLandingContent';
 import { NotFoundPage } from '../NotFoundPage/NotFoundPage';
 import styles from './BookLandingPage.module.css';
 
 /**
  * `/libros/:slug` — a single book's landing page.
  *
- * The two existing mockups diverge in their middle section and whether
- * they have an FAQ (see bookLandings.ts) — this renders whichever pieces
- * that book's content actually has, rather than forcing one fixed shape.
+ * Storytelling content (tagline, synopsis, quote, FAQ, etc.) comes from
+ * the admin's book-page editor via `shared/cms` — see
+ * admin/pages/LibroFormPage/PaginaVentaTab.tsx. The catalog fields (title,
+ * price, format, status) still come from `books.ts`, edited on the
+ * "Información" tab — that split mirrors how the data has always been
+ * modeled here (books.ts vs. bookLandings.ts).
  */
 export function BookLandingPage() {
   const { slug } = useParams<{ slug: string }>();
   const book = BOOKS.find((entry) => entry.slug === slug);
-  const landing = slug ? BOOK_LANDINGS[slug] : undefined;
 
-  if (!book || !landing) {
+  if (!book || !slug) {
     return <NotFoundPage />;
   }
 
-  return <BookLandingContent book={book} landing={landing} />;
+  return <BookLandingContent book={book} slug={slug} />;
 }
 
-function BookLandingContent({
-  book,
-  landing,
-}: {
-  book: (typeof BOOKS)[number];
-  landing: (typeof BOOK_LANDINGS)[string];
-}) {
+function BookLandingContent({ book, slug }: { book: (typeof BOOKS)[number]; slug: string }) {
   useDocumentTitle(`${book.title} · Nuestra Medicina Personal`);
+  const [searchParams] = useSearchParams();
+  const preview = searchParams.get('preview') === '1';
+  const content = usePublishedContent('BOOK', slug, () => buildBookLandingSeedContent(slug), preview);
+  const landing = readBookLandingProps(content);
 
   const relatedBook = BOOKS.find((entry) => entry.slug === landing.relatedSlug);
 
   return (
     <div className={styles.page}>
+      {preview && (
+        <div className={styles.previewBanner} role="status">
+          Vista previa — estás viendo cambios sin publicar.
+        </div>
+      )}
       <GradientTopBar />
       <SiteHeader />
       <BackLink to="/libros">Volver a libros</BackLink>
@@ -89,7 +95,7 @@ function BookLandingContent({
         ]}
       />
 
-      {landing.faqs && <FaqAccordion faqs={landing.faqs} />}
+      {landing.faqs && landing.faqs.length > 0 && <FaqAccordion faqs={landing.faqs} />}
 
       <RelatedBooks books={relatedBook ? [relatedBook] : []} />
 

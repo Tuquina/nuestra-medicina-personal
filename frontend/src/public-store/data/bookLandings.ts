@@ -12,7 +12,7 @@
  */
 import type { Book } from './books';
 
-interface ImageTextSection {
+export interface ImageTextSection {
   type: 'image-text';
   heading: string;
   text: string;
@@ -20,7 +20,7 @@ interface ImageTextSection {
   imageCaption: string;
 }
 
-interface BenefitsSection {
+export interface BenefitsSection {
   type: 'benefits';
   heading: string;
   items: { title: string; description: string }[];

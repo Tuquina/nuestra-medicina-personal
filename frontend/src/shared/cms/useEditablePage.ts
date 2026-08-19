@@ -7,6 +7,11 @@ import { discardDraft, getPageRecord, isDraftDirty, publishPage, saveDraft } fro
  * loads the current draft, and exposes save/publish/discard actions that
  * write straight through `contentStore`. Local React state is the working
  * copy while editing; nothing touches the store until an explicit save.
+ *
+ * `seed` may be a fresh inline arrow every render (parameterized by e.g.
+ * a book's slug) — it's only actually invoked the first time a page has
+ * no stored record yet, via the lazy `useState` initializers and the
+ * save/publish/discard actions below, never on every render.
  */
 export function useEditablePage(type: PageType, slug: string, seed: () => PageContent) {
   const [content, setContentState] = useState<PageContent>(() => getPageRecord(type, slug, seed).draftContent);

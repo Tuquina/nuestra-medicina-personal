@@ -157,7 +157,7 @@ function LibroFormContent({ existingBook }: { existingBook: (typeof BOOKS)[numbe
           />
         )}
         {activeTab === 'manuscript' && <ManuscritoTab bookTitle={form.title || 'Nuevo libro'} />}
-        {activeTab === 'page' && <PaginaVentaTab />}
+        {activeTab === 'page' && <PaginaVentaTab slug={form.slug} bookTitle={form.title || 'Nuevo libro'} />}
         {activeTab === 'seo' && <SeoTab form={form} onChange={updateField} />}
       </div>
     </AdminLayout>
