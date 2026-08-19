@@ -46,6 +46,7 @@ El contrato disponible y las decisiones de seguridad de esta fase están en
 - descarga autorizada mediante `X-Accel-Redirect`, sin revelar paths físicos;
 - outbox transaccional e idempotente para eventos de pago y disponibilidad;
 - worker con reintentos exponenciales y envío por Gmail API/Google Workspace;
+- CMS con borradores aislados, publicación transaccional e historial de versiones;
 - validación de origen, cuerpos JSON limitados, request IDs y logs JSON;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 

@@ -101,3 +101,21 @@ válido y un formulario `multipart/form-data` con el campo `file`. Se aceptan
 únicamente PDF y EPUB con extensión, MIME y contenido coherentes. El nombre
 físico es un UUID; nunca se reutiliza el nombre suministrado por el usuario.
 El límite predeterminado es 50 MiB.
+
+## CMS y versiones de páginas
+
+`POST /api/v1/admin/pages` crea una página `HOME` o `BOOK`. El borrador se
+guarda con `PUT /api/v1/admin/pages/{identifier}/draft`; esta operación nunca
+modifica `published_content`, por lo que la web pública conserva la versión
+anterior hasta recibir `POST .../publish`.
+
+Cada publicación copia el borrador a una fila inmutable de `page_versions` y
+actualiza la versión pública en la misma transacción. Restaurar una versión
+histórica sólo la copia al borrador: requiere una publicación posterior para
+hacerse visible. `GET /api/v1/pages/{slug}` devuelve exclusivamente el contenido
+publicado.
+
+El esquema inicial admite `hero`, `richText`, `imageText`, `features`, `faq`,
+`cta` y `buyButton`. Cada bloque tiene propiedades cerradas; rich text usa
+nodos y marcas controladas, no HTML. Los enlaces sólo aceptan rutas relativas o
+URLs `http`/`https`.

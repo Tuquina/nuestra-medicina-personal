@@ -12,8 +12,10 @@ tags:
   - name: Books
   - name: Orders
   - name: Library
+  - name: Pages
   - name: Webhooks
   - name: Admin books
+  - name: Admin pages
 paths:
   /health/live:
     get:
@@ -110,6 +112,18 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Book'}
         '404': {$ref: '#/components/responses/BookNotFound'}
+  /api/v1/pages/{slug}:
+    get:
+      tags: [Pages]
+      operationId: getPublishedPage
+      description: Devuelve únicamente la versión publicada; nunca expone el borrador.
+      parameters:
+        - {name: slug, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Página publicada.
+          content: {application/json: {schema: {$ref: '#/components/schemas/PublishedPage'}}}
+        '404': {$ref: '#/components/responses/PageNotFound'}
   /api/v1/me/books:
     get:
       tags: [Library]
@@ -287,6 +301,100 @@ paths:
         '404': {$ref: '#/components/responses/BookNotFound'}
         '409': {$ref: '#/components/responses/BookSlugConflict'}
         '422': {$ref: '#/components/responses/BookValidationFailed'}
+  /api/v1/admin/pages:
+    post:
+      tags: [Admin pages]
+      operationId: createPage
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PageCreateInput'}}}
+      responses:
+        '201':
+          description: Página creada como borrador.
+          content: {application/json: {schema: {$ref: '#/components/schemas/AdminPage'}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '409': {description: El slug o destino de la página ya existe., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '422': {$ref: '#/components/responses/PageValidationFailed'}
+  /api/v1/admin/pages/{identifier}:
+    get:
+      tags: [Admin pages]
+      operationId: getAdminPage
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageIdentifier'
+      responses:
+        '200': {description: Página con borrador y publicación., content: {application/json: {schema: {$ref: '#/components/schemas/AdminPage'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/PageNotFound'}
+  /api/v1/admin/pages/{identifier}/draft:
+    put:
+      tags: [Admin pages]
+      operationId: savePageDraft
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageIdentifier'
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [content]
+              properties:
+                content: {$ref: '#/components/schemas/PageContent'}
+      responses:
+        '200': {description: Borrador guardado sin cambiar la publicación., content: {application/json: {schema: {$ref: '#/components/schemas/AdminPage'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/PageNotFound'}
+        '422': {$ref: '#/components/responses/PageValidationFailed'}
+  /api/v1/admin/pages/{identifier}/publish:
+    post:
+      tags: [Admin pages]
+      operationId: publishPage
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageIdentifier'
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200': {description: Borrador publicado como una nueva versión inmutable., content: {application/json: {schema: {$ref: '#/components/schemas/AdminPage'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/PageNotFound'}
+  /api/v1/admin/pages/{identifier}/versions:
+    get:
+      tags: [Admin pages]
+      operationId: listPageVersions
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageIdentifier'
+      responses:
+        '200': {description: Historial descendente de publicaciones., content: {application/json: {schema: {$ref: '#/components/schemas/PageVersionList'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/PageNotFound'}
+  /api/v1/admin/pages/{identifier}/versions/{versionId}/restore:
+    post:
+      tags: [Admin pages]
+      operationId: restorePageVersion
+      description: Copia una versión al borrador; no cambia el contenido público hasta volver a publicar.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/PageIdentifier'
+        - {name: versionId, in: path, required: true, schema: {type: string, format: uuid}}
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200': {description: Versión restaurada como borrador., content: {application/json: {schema: {$ref: '#/components/schemas/AdminPage'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {description: Página o versión inexistente., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
     delete:
       tags: [Admin books]
       operationId: archiveBook
@@ -350,6 +458,12 @@ components:
       in: path
       required: true
       description: UUID o slug del libro.
+      schema: {type: string}
+    PageIdentifier:
+      name: identifier
+      in: path
+      required: true
+      description: UUID o slug de la página.
       schema: {type: string}
     Origin:
       name: Origin
@@ -474,6 +588,208 @@ components:
         filename: {type: string}
         mediaType: {type: string, enum: [application/pdf, application/epub+zip]}
         sizeBytes: {type: integer, format: int64, minimum: 1}
+    PageContent:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, sections]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        sections:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/PageBlock'}
+    PageBlock:
+      type: object
+      additionalProperties: false
+      required: [id, type, props]
+      properties:
+        id: {type: string, minLength: 1, maxLength: 100}
+        type: {type: string, enum: [hero, richText, imageText, features, faq, cta, buyButton]}
+        props:
+          oneOf:
+            - $ref: '#/components/schemas/HeroProps'
+            - $ref: '#/components/schemas/RichTextProps'
+            - $ref: '#/components/schemas/ImageTextProps'
+            - $ref: '#/components/schemas/FeaturesProps'
+            - $ref: '#/components/schemas/FAQProps'
+            - $ref: '#/components/schemas/CTAProps'
+            - $ref: '#/components/schemas/BuyButtonProps'
+    SafeLink:
+      type: object
+      additionalProperties: false
+      required: [label, href]
+      properties:
+        label: {type: string, minLength: 1, maxLength: 80}
+        href:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Ruta relativa o URL con esquema http/https; javascript y otros esquemas se rechazan.
+    HeroProps:
+      type: object
+      additionalProperties: false
+      required: [title, subtitle, imageId, alignment, cta]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        subtitle: {type: string, maxLength: 500}
+        imageId: {type: [string, 'null']}
+        alignment: {type: string, enum: [left, center]}
+        cta:
+          oneOf:
+            - $ref: '#/components/schemas/SafeLink'
+            - {type: 'null'}
+    RichTextProps:
+      type: object
+      additionalProperties: false
+      required: [nodes]
+      properties:
+        nodes:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items: {$ref: '#/components/schemas/RichTextNode'}
+    RichTextNode:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: {type: string, enum: [paragraph, heading, bulletList, orderedList]}
+        level: {type: integer, minimum: 2, maximum: 4}
+        content:
+          type: array
+          items: {$ref: '#/components/schemas/RichTextSpan'}
+        items:
+          type: array
+          items:
+            type: array
+            items: {$ref: '#/components/schemas/RichTextSpan'}
+    RichTextSpan:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: {type: string, minLength: 1, maxLength: 2000}
+        marks:
+          type: array
+          uniqueItems: true
+          items: {type: string, enum: [bold, italic]}
+        link:
+          type: [string, 'null']
+          description: Ruta relativa o URL http/https.
+    ImageTextProps:
+      type: object
+      additionalProperties: false
+      required: [heading, text, imageId, imagePosition]
+      properties:
+        heading: {type: string, minLength: 1, maxLength: 200}
+        text: {type: string, minLength: 1, maxLength: 2000}
+        imageId: {type: string, minLength: 1}
+        imagePosition: {type: string, enum: [left, right]}
+    FeaturesProps:
+      type: object
+      additionalProperties: false
+      required: [heading, items]
+      properties:
+        heading: {type: string, maxLength: 200}
+        items:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items:
+            type: object
+            additionalProperties: false
+            required: [title, text, imageId]
+            properties:
+              title: {type: string, minLength: 1, maxLength: 120}
+              text: {type: string, minLength: 1, maxLength: 500}
+              imageId: {type: [string, 'null']}
+    FAQProps:
+      type: object
+      additionalProperties: false
+      required: [heading, items]
+      properties:
+        heading: {type: string, maxLength: 200}
+        items:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items:
+            type: object
+            additionalProperties: false
+            required: [question, answer]
+            properties:
+              question: {type: string, minLength: 1, maxLength: 300}
+              answer: {type: string, minLength: 1, maxLength: 2000}
+    CTAProps:
+      type: object
+      additionalProperties: false
+      required: [heading, text, link]
+      properties:
+        heading: {type: string, minLength: 1, maxLength: 200}
+        text: {type: string, maxLength: 500}
+        link: {$ref: '#/components/schemas/SafeLink'}
+    BuyButtonProps:
+      type: object
+      additionalProperties: false
+      required: [label]
+      properties:
+        label: {type: string, minLength: 1, maxLength: 80}
+    PageCreateInput:
+      type: object
+      additionalProperties: false
+      required: [type, slug, title]
+      properties:
+        type: {type: string, enum: [HOME, BOOK]}
+        bookId: {type: [string, 'null'], format: uuid}
+        slug: {type: string, minLength: 1, maxLength: 160, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+        title: {type: string, minLength: 1, maxLength: 200}
+        content: {$ref: '#/components/schemas/PageContent'}
+    PublishedPage:
+      type: object
+      required: [id, type, bookId, slug, title, content, publishedAt]
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string, enum: [HOME, BOOK]}
+        bookId: {type: [string, 'null'], format: uuid}
+        slug: {type: string}
+        title: {type: string}
+        content: {$ref: '#/components/schemas/PageContent'}
+        publishedAt: {type: [string, 'null'], format: date-time}
+    AdminPage:
+      type: object
+      required: [id, type, bookId, slug, title, status, draftContent, publishedContent, createdAt, updatedAt, publishedAt]
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string, enum: [HOME, BOOK]}
+        bookId: {type: [string, 'null'], format: uuid}
+        slug: {type: string}
+        title: {type: string}
+        status: {type: string, enum: [DRAFT, PUBLISHED]}
+        draftContent: {$ref: '#/components/schemas/PageContent'}
+        publishedContent:
+          oneOf:
+            - $ref: '#/components/schemas/PageContent'
+            - {type: 'null'}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        publishedAt: {type: [string, 'null'], format: date-time}
+    PageVersion:
+      type: object
+      required: [id, versionNumber, content, createdBy, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        versionNumber: {type: integer, minimum: 1}
+        content: {$ref: '#/components/schemas/PageContent'}
+        createdBy: {type: string, format: uuid}
+        createdAt: {type: string, format: date-time}
+    PageVersionList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/PageVersion'}
+        total: {type: integer, minimum: 0}
     Error:
       type: object
       required: [error]
@@ -503,4 +819,10 @@ components:
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
     BookValidationFailed:
       description: Los datos del libro no cumplen el contrato.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    PageNotFound:
+      description: La página no existe o no está publicada en una ruta pública.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    PageValidationFailed:
+      description: La página o alguno de sus bloques no cumple el contrato seguro.
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
