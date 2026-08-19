@@ -43,7 +43,7 @@
 }
 
 .danger {
-  background: oklch(45% 0.13 25);
+  background: var(--color-status-danger-icon);
   color: var(--color-surface);
 }
 

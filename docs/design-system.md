@@ -122,6 +122,14 @@ placeholder with no visible caption pill (small thumbnails, e.g. the
 now a `NavLink` too, so it gets the same active-state treatment as the
 main nav on `/biblioteca`.
 
+Added while implementing Checkout: `--color-status-success/-pending/-danger-bg/-icon`
+— the first pull from the green (hue ~145) family flagged below, plus
+two new hues (pending's amber-70 and danger's red-25, the latter now
+shared with `Button`'s `danger` variant instead of duplicating the same
+literal). These are named by *status role*, not by page, because
+architecture.md §26/§7 mean order/payment status badges will need the
+same three colors in the admin dashboard and sales list later.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all

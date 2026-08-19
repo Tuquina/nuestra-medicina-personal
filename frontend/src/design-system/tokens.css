@@ -40,6 +40,14 @@
   --color-neutral-badge-bg: oklch(92% 0.01 90);
   --color-neutral-badge-text: oklch(45% 0.01 90);
 
+  /* ---- Color: order/payment status (checkout result, future admin badges) ---- */
+  --color-status-success-bg: oklch(88% 0.09 145);
+  --color-status-success-icon: oklch(35% 0.1 145);
+  --color-status-pending-bg: oklch(88% 0.1 70);
+  --color-status-pending-icon: oklch(45% 0.1 60);
+  --color-status-danger-bg: oklch(90% 0.08 25);
+  --color-status-danger-icon: oklch(45% 0.13 25);
+
   /* ---- Color: deep blue (brand / links / primary ink accents) ---- */
   --color-deep-blue: oklch(32% 0.07 254);
 

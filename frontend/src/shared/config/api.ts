@@ -25,3 +25,11 @@ export const LOGOUT_URL = `${API_PREFIX}/auth/logout`;
 export function downloadUrl(bookId: string): string {
   return `${API_PREFIX}/books/${bookId}/download`;
 }
+
+/**
+ * Creates an order and (per architecture.md §23) a Mercado Pago
+ * preference to redirect to. A `success` redirect from this flow is
+ * never treated as proof of payment on its own (§24) — only the
+ * webhook-confirmed order status is.
+ */
+export const ORDERS_URL = `${API_PREFIX}/orders`;

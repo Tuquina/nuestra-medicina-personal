@@ -6,6 +6,7 @@ import { MeditacionesPage } from '../public-store/pages/MeditacionesPage/Meditac
 import { HerramientasPage } from '../public-store/pages/HerramientasPage/HerramientasPage';
 import { MiCuentaPage } from '../public-store/pages/MiCuentaPage/MiCuentaPage';
 import { BibliotecaPage } from '../public-store/pages/BibliotecaPage/BibliotecaPage';
+import { CheckoutPage } from '../public-store/pages/CheckoutPage/CheckoutPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -23,6 +24,7 @@ export function App() {
       <Route path="/herramientas" element={<HerramientasPage />} />
       <Route path="/cuenta" element={<MiCuentaPage />} />
       <Route path="/biblioteca" element={<BibliotecaPage />} />
+      <Route path="/checkout/:slug" element={<CheckoutPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
