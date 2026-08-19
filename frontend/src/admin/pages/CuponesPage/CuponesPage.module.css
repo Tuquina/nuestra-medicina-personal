@@ -33,8 +33,13 @@
   font-family: var(--font-sans);
 }
 
+.tableScroll {
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
@@ -101,7 +106,13 @@
 
 .formRow2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, 1fr), not a bare 1fr: a bare 1fr track still respects its
+     content's intrinsic min-width, and native <input type="date"> /
+     type="number"> refuse to shrink below a browser-defined minimum —
+     inside this 380px-wide dialog that pushes the second column past
+     the card's edge. minmax(0, ...) lets the track (and the input
+     inside it, which is width: 100%) shrink to fit instead. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
 }
 

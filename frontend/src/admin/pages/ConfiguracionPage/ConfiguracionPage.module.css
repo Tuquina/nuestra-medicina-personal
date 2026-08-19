@@ -36,6 +36,27 @@
   min-width: 0;
 }
 
+/* Below this, "180px nav + flex:1 content" leaves too little room for the
+   form fields — turn the vertical section nav into a horizontal, wrapping
+   tab row above the content instead of a fixed-width side column. */
+@media (max-width: 700px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sectionNav {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .navButton {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-admin-border);

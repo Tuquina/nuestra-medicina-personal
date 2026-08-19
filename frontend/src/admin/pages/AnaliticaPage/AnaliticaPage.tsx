@@ -112,26 +112,28 @@ export function AnaliticaPage() {
         {revenueByBook.length === 0 ? (
           <p className={dashboardStyles.emptyRow}>Sin ventas aprobadas en este período.</p>
         ) : (
-          <table className={dashboardStyles.table}>
-            <thead>
-              <tr>
-                <th>Libro</th>
-                <th>Ventas</th>
-                <th>Ingresos</th>
-                <th>% del total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {revenueByBook.map((row) => (
-                <tr key={row.slug}>
-                  <td>{row.title}</td>
-                  <td>{row.salesCount}</td>
-                  <td>{formatPrice(row.revenueMinorUnits)}</td>
-                  <td>{row.pct}%</td>
+          <div className={dashboardStyles.tableScroll}>
+            <table className={dashboardStyles.table}>
+              <thead>
+                <tr>
+                  <th>Libro</th>
+                  <th>Ventas</th>
+                  <th>Ingresos</th>
+                  <th>% del total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {revenueByBook.map((row) => (
+                  <tr key={row.slug}>
+                    <td>{row.title}</td>
+                    <td>{row.salesCount}</td>
+                    <td>{formatPrice(row.revenueMinorUnits)}</td>
+                    <td>{row.pct}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </AdminLayout>

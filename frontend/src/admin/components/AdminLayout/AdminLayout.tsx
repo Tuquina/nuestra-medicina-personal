@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { BrandMark } from '../../../shared/components/BrandMark/BrandMark';
 import styles from './AdminLayout.module.css';
@@ -28,11 +28,23 @@ interface AdminLayoutProps {
  * one Page Builder route today (that's what the mockups themselves do;
  * see docs/frontend-plan.md for the Page Builder's own route once it
  * needs to distinguish which page it's editing).
+ *
+ * Below ~900px the sidebar becomes an off-canvas drawer (hamburger
+ * button in the header, backdrop to dismiss) instead of the fixed
+ * always-visible column — a fixed 240px sidebar plus a 240px content
+ * margin doesn't fit in a 375px-wide phone viewport at all. `menuOpen`
+ * naturally resets to closed on every navigation since each admin page
+ * mounts its own `<AdminLayout>` instance.
  */
 export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = false, children }: AdminLayoutProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className={styles.shell}>
-      <aside className={styles.sidebar}>
+      {menuOpen && (
+        <div className={styles.backdrop} onClick={() => setMenuOpen(false)} aria-hidden="true" />
+      )}
+      <aside className={[styles.sidebar, menuOpen ? styles.sidebarOpen : ''].join(' ')}>
         <Link to="/admin" className={styles.logo}>
           <BrandMark />
           <span className={styles.logoText}>Nuestra Medicina Personal</span>
@@ -117,7 +129,17 @@ export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = fals
 
       <div className={styles.main}>
         <header className={styles.header}>
-          {titleSlot ?? <h1 className={styles.title}>{title}</h1>}
+          <div className={styles.headerLeft}>
+            <button
+              type="button"
+              className={styles.menuButton}
+              aria-label="Abrir menú"
+              onClick={() => setMenuOpen(true)}
+            >
+              ☰
+            </button>
+            {titleSlot ?? <h1 className={styles.title}>{title}</h1>}
+          </div>
           <div className={styles.headerRight}>
             {headerActions}
             {!hideAvatar && <span className={styles.avatar}>AD</span>}

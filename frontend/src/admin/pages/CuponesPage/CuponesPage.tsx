@@ -118,37 +118,39 @@ export function CuponesPage() {
         {filtered.length === 0 ? (
           <p className={styles.emptyState}>Ningún cupón coincide con estos filtros.</p>
         ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Valor</th>
-                <th>Vigencia</th>
-                <th>Usos</th>
-                <th>Aplica a</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((coupon) => (
-                <tr key={coupon.id} className={styles.row} onClick={() => setEditing(coupon)}>
-                  <td className={styles.codeCell}>{coupon.code}</td>
-                  <td>{valueLabel(coupon)}</td>
-                  <td className={styles.mutedCell}>
-                    {coupon.startDateISO} – {coupon.endDateISO}
-                  </td>
-                  <td className={styles.mutedCell}>
-                    {coupon.usageCount}
-                    {coupon.usageLimit !== null ? ` / ${coupon.usageLimit}` : ''}
-                  </td>
-                  <td className={styles.mutedCell}>{appliesToLabel(coupon)}</td>
-                  <td>
-                    <StatusBadge tone={toneForStatus(computeStatus(coupon))}>{computeStatus(coupon)}</StatusBadge>
-                  </td>
+          <div className={styles.tableScroll}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Valor</th>
+                  <th>Vigencia</th>
+                  <th>Usos</th>
+                  <th>Aplica a</th>
+                  <th>Estado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((coupon) => (
+                  <tr key={coupon.id} className={styles.row} onClick={() => setEditing(coupon)}>
+                    <td className={styles.codeCell}>{coupon.code}</td>
+                    <td>{valueLabel(coupon)}</td>
+                    <td className={styles.mutedCell}>
+                      {coupon.startDateISO} – {coupon.endDateISO}
+                    </td>
+                    <td className={styles.mutedCell}>
+                      {coupon.usageCount}
+                      {coupon.usageLimit !== null ? ` / ${coupon.usageLimit}` : ''}
+                    </td>
+                    <td className={styles.mutedCell}>{appliesToLabel(coupon)}</td>
+                    <td>
+                      <StatusBadge tone={toneForStatus(computeStatus(coupon))}>{computeStatus(coupon)}</StatusBadge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

@@ -70,60 +70,62 @@ export function LibrosListPage() {
         {filtered.length === 0 ? (
           <p className={styles.emptyState}>Ningún libro coincide con "{query}".</p>
         ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Portada</th>
-                <th>Título</th>
-                <th>Precio</th>
-                <th>Formato</th>
-                <th>Estado</th>
-                <th>Última actualización</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((book) => (
-                <tr key={book.slug}>
-                  <td className={styles.cover}>
-                    {book.hasCover ? (
-                      <ImagePlaceholder
-                        accent={VARIANT_ACCENT[book.variant]}
-                        alt={book.coverCaption}
-                        aspectRatio="2 / 3"
-                        borderRadius="3px"
-                      />
-                    ) : (
-                      <div className={styles.coverPlaceholder} title="Sin portada" />
-                    )}
-                  </td>
-                  <td className={styles.titleCell}>{book.title}</td>
-                  <td>{book.priceMinorUnits ? formatPrice(book.priceMinorUnits, book.currency) : '—'}</td>
-                  <td className={styles.formatCell}>{book.format}</td>
-                  <td>
-                    <StatusBadge tone={toneForStatus(STATUS_LABEL[book.status])}>
-                      {STATUS_LABEL[book.status]}
-                    </StatusBadge>
-                  </td>
-                  <td className={styles.dateCell}>{relativeDaysEs(book.updatedAtISO, ADMIN_NOW)}</td>
-                  <td className={styles.actions}>
-                    <Link to={`/admin/libros/${book.slug}/editar`} className={styles.editLink}>
-                      Editar
-                    </Link>
-                    {book.status === 'PUBLISHED' ? (
-                      <Link to="/admin/paginas" className={styles.secondaryLink}>
-                        Editar página
-                      </Link>
-                    ) : (
-                      <button type="button" className={styles.secondaryLink} onClick={() => handleArchive(book)}>
-                        Archivar
-                      </button>
-                    )}
-                  </td>
+          <div className={styles.tableScroll}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Portada</th>
+                  <th>Título</th>
+                  <th>Precio</th>
+                  <th>Formato</th>
+                  <th>Estado</th>
+                  <th>Última actualización</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((book) => (
+                  <tr key={book.slug}>
+                    <td className={styles.cover}>
+                      {book.hasCover ? (
+                        <ImagePlaceholder
+                          accent={VARIANT_ACCENT[book.variant]}
+                          alt={book.coverCaption}
+                          aspectRatio="2 / 3"
+                          borderRadius="3px"
+                        />
+                      ) : (
+                        <div className={styles.coverPlaceholder} title="Sin portada" />
+                      )}
+                    </td>
+                    <td className={styles.titleCell}>{book.title}</td>
+                    <td>{book.priceMinorUnits ? formatPrice(book.priceMinorUnits, book.currency) : '—'}</td>
+                    <td className={styles.formatCell}>{book.format}</td>
+                    <td>
+                      <StatusBadge tone={toneForStatus(STATUS_LABEL[book.status])}>
+                        {STATUS_LABEL[book.status]}
+                      </StatusBadge>
+                    </td>
+                    <td className={styles.dateCell}>{relativeDaysEs(book.updatedAtISO, ADMIN_NOW)}</td>
+                    <td className={styles.actions}>
+                      <Link to={`/admin/libros/${book.slug}/editar`} className={styles.editLink}>
+                        Editar
+                      </Link>
+                      {book.status === 'PUBLISHED' ? (
+                        <Link to="/admin/paginas" className={styles.secondaryLink}>
+                          Editar página
+                        </Link>
+                      ) : (
+                        <button type="button" className={styles.secondaryLink} onClick={() => handleArchive(book)}>
+                          Archivar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </AdminLayout>

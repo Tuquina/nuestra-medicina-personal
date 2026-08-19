@@ -26,33 +26,35 @@ export function RecentSalesTable({ title, sales }: RecentSalesTableProps) {
       {sales.length === 0 ? (
         <p className={styles.emptyRow}>Todavía no hay ventas para mostrar en este período.</p>
       ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Cliente</th>
-              <th>Libro</th>
-              <th>Importe</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sales.map((sale) => {
-              const book = saleBook(sale);
-              return (
-                <tr key={sale.id}>
-                  <td>{formatSaleDate(sale.dateISO)}</td>
-                  <td>{sale.client}</td>
-                  <td>{book?.title ?? '—'}</td>
-                  <td>{book ? formatPrice(book.priceMinorUnits, book.currency) : '—'}</td>
-                  <td>
-                    <StatusBadge tone={toneForStatus(sale.status)}>{sale.status}</StatusBadge>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Libro</th>
+                <th>Importe</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sales.map((sale) => {
+                const book = saleBook(sale);
+                return (
+                  <tr key={sale.id}>
+                    <td>{formatSaleDate(sale.dateISO)}</td>
+                    <td>{sale.client}</td>
+                    <td>{book?.title ?? '—'}</td>
+                    <td>{book ? formatPrice(book.priceMinorUnits, book.currency) : '—'}</td>
+                    <td>
+                      <StatusBadge tone={toneForStatus(sale.status)}>{sale.status}</StatusBadge>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

@@ -123,6 +123,24 @@
   overflow-y: auto;
 }
 
+/* Below this, "300px drawer + flex:1 main" leaves too little room for the
+   grid — stack the drawer under the grid as a normal-height panel instead
+   of a viewport-tall sticky sidebar. */
+@media (max-width: 860px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .drawer {
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    position: static;
+    border-left: none;
+    border-top: 1px solid var(--color-admin-border);
+  }
+}
+
 .drawerThumb {
   width: 100%;
   aspect-ratio: 1;

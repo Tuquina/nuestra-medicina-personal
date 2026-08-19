@@ -47,30 +47,32 @@ export function ClientesPage() {
           {filtered.length === 0 ? (
             <p className={styles.emptyState}>Ningún cliente coincide con "{query}".</p>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Correo</th>
-                  <th>Libros comprados</th>
-                  <th>Última compra</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((customer) => (
-                  <tr
-                    key={customer.id}
-                    onClick={() => setSelectedId(customer.id)}
-                    className={[styles.row, customer.id === selectedId ? styles.rowSelected : ''].join(' ')}
-                  >
-                    <td className={styles.nameCell}>{customer.name}</td>
-                    <td className={styles.emailCell}>{customer.email}</td>
-                    <td>{customer.bookSlugs.length}</td>
-                    <td className={styles.emailCell}>{formatSaleDate(customer.lastPurchaseISO)}</td>
+            <div className={styles.tableScroll}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Libros comprados</th>
+                    <th>Última compra</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.map((customer) => (
+                    <tr
+                      key={customer.id}
+                      onClick={() => setSelectedId(customer.id)}
+                      className={[styles.row, customer.id === selectedId ? styles.rowSelected : ''].join(' ')}
+                    >
+                      <td className={styles.nameCell}>{customer.name}</td>
+                      <td className={styles.emailCell}>{customer.email}</td>
+                      <td>{customer.bookSlugs.length}</td>
+                      <td className={styles.emailCell}>{formatSaleDate(customer.lastPurchaseISO)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 

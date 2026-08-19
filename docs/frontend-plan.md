@@ -179,6 +179,52 @@ sidebar sections separate from "Páginas": **Ayuda**
   closed content schemas are accepted by the backend. Replacing the local store
   with API calls remains a later integration task.
 
+## Responsive audit (tablet/mobile)
+
+A full pass over every public and admin route at 768px (tablet) and
+375px (mobile), fixing what was actually broken rather than guessing
+from CSS alone. Real bugs found and fixed:
+
+- **`AdminLayout`'s sidebar had zero responsive handling** — a fixed
+  240px column plus a 240px content margin doesn't fit in a 375px
+  viewport at all, so every single `/admin/*` page was unusable on
+  phones. Now an off-canvas drawer below 900px: a hamburger button in
+  the header, a backdrop to dismiss, `menuOpen` state that naturally
+  resets closed on every navigation since each admin page mounts its
+  own `<AdminLayout>`.
+- **Every admin table clipped its own columns instead of scrolling to
+  them** (`LibrosListPage`, `VentasPage`, `ClientesPage`, `CuponesPage`,
+  the Dashboard's "Ventas recientes", `AnaliticaPage`'s "Ingresos por
+  libro") — their shared `.panel { overflow: hidden }` silently hid
+  whatever columns didn't fit (Estado, Acciones, etc. were completely
+  inaccessible, not just visually cramped). Fixed by wrapping each
+  `<table>` in its own `overflow-x: auto` scroll container with a
+  `min-width` on the table, instead of letting the panel clip it.
+- **`CuponesPage`'s new-coupon dialog**: the "Desde"/"Hasta" date row
+  used a bare `1fr 1fr` grid, which still respects each native
+  `<input type="date">`'s intrinsic minimum width — inside the 380px
+  dialog that pushed the second date input past the card's edge (at
+  any viewport, not just mobile — the dialog's width doesn't change
+  with the page). Fixed with `minmax(0, 1fr)` tracks.
+- **`MultimediaPage`'s detail drawer and `ConfiguracionPage`'s section
+  nav** both used a fixed-width side column (`300px` / `180px`) next
+  to a `flex: 1` content area with no breakpoint — below ~860/700px
+  the content area was squeezed to a sliver while the side column kept
+  its full width. Both now stack (drawer full-width below the grid;
+  section nav becomes a wrapping horizontal tab row) below their
+  breakpoint.
+- **`ContactoPage`**: a long email address in a fixed-row layout
+  overflowed its card on narrow screens. Fixed with `flex-wrap` +
+  `overflow-wrap: anywhere` on the value.
+
+**Deliberately left as-is**: `PageBuilderPage`'s 3-pane visual builder
+(block library / canvas / inspector) and `ManuscritoTab`'s
+physical-page-simulating editor aren't mobile-optimized — both work
+tolerably at tablet width (verified), but a phone-width redesign would
+need a different interaction model entirely (tabs instead of panes),
+not a CSS fix, matching how every comparable visual-builder product
+(Webflow, Framer, WordPress's block editor) treats small screens.
+
 ## Notes for whoever picks this up next
 
 - All of this is **frontend-only, no backend yet**. Pages render with

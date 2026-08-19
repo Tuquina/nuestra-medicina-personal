@@ -142,35 +142,37 @@ export function VentasPage() {
         {filtered.length === 0 ? (
           <p className={styles.emptyState}>Ninguna venta coincide con estos filtros.</p>
         ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Cliente</th>
-                <th>Libro</th>
-                <th>Importe</th>
-                <th>Pago</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((sale) => {
-                const book = saleBook(sale);
-                return (
-                  <tr key={sale.id} className={styles.row} onClick={() => setSelectedId(sale.id)}>
-                    <td>{formatSaleDate(sale.dateISO)}</td>
-                    <td className={styles.clientCell}>{sale.client}</td>
-                    <td>{book?.title ?? '—'}</td>
-                    <td>{book ? formatPrice(book.priceMinorUnits, book.currency) : '—'}</td>
-                    <td className={styles.paymentCell}>Mercado Pago</td>
-                    <td>
-                      <StatusBadge tone={toneForStatus(sale.status)}>{sale.status}</StatusBadge>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className={styles.tableScroll}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Libro</th>
+                  <th>Importe</th>
+                  <th>Pago</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((sale) => {
+                  const book = saleBook(sale);
+                  return (
+                    <tr key={sale.id} className={styles.row} onClick={() => setSelectedId(sale.id)}>
+                      <td>{formatSaleDate(sale.dateISO)}</td>
+                      <td className={styles.clientCell}>{sale.client}</td>
+                      <td>{book?.title ?? '—'}</td>
+                      <td>{book ? formatPrice(book.priceMinorUnits, book.currency) : '—'}</td>
+                      <td className={styles.paymentCell}>Mercado Pago</td>
+                      <td>
+                        <StatusBadge tone={toneForStatus(sale.status)}>{sale.status}</StatusBadge>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </AdminLayout>
