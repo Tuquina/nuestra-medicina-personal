@@ -115,6 +115,13 @@ one page): `Button` (primary/secondary/danger/accent), `Switch`, `Dialog`
 (a small confirmation modal, Escape-to-close + backdrop-click-to-close).
 These will get reused heavily once the admin backoffice starts.
 
+Added while implementing Biblioteca: `ImagePlaceholder`'s `caption` prop
+is now optional — pass `alt` instead when the mockup shows a plain
+placeholder with no visible caption pill (small thumbnails, e.g. the
+90px-wide library covers here). `SiteHeader`'s "Mi biblioteca" link is
+now a `NavLink` too, so it gets the same active-state treatment as the
+main nav on `/biblioteca`.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all

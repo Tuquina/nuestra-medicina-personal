@@ -7,8 +7,15 @@ interface ImagePlaceholderProps {
   accent: string;
   /** Second stripe color. Defaults to the neutral placeholder base token. */
   base?: string;
-  /** Caption pill describing the real photo this will become. */
-  caption: string;
+  /**
+   * Caption pill describing the real photo this will become. Omit for
+   * small thumbnails where the mockup doesn't show one (e.g. the
+   * Biblioteca cover thumbnails) — pass `alt` instead so it's still
+   * accessible.
+   */
+  caption?: string;
+  /** Accessible label when there's no visible caption. Defaults to `caption`. */
+  alt?: string;
   aspectRatio?: string;
   borderRadius?: string;
   className?: string;
@@ -24,6 +31,7 @@ export function ImagePlaceholder({
   accent,
   base,
   caption,
+  alt,
   aspectRatio,
   borderRadius,
   className,
@@ -43,11 +51,13 @@ export function ImagePlaceholder({
       className={[styles.placeholder, className].filter(Boolean).join(' ')}
       style={style}
       role="img"
-      aria-label={caption}
+      aria-label={alt ?? caption ?? ''}
     >
-      <span className={styles.caption} aria-hidden="true">
-        {caption}
-      </span>
+      {caption && (
+        <span className={styles.caption} aria-hidden="true">
+          {caption}
+        </span>
+      )}
     </div>
   );
 }

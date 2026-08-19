@@ -19,7 +19,7 @@ verifiable steps rather than "build the whole app").
 | `Libro - El poder de tu historia.dc.html` | `/libros/el-poder-de-tu-historia` | `public-store/pages/BookLandingPage` (shared, data-driven) | P0 | ✅ Done |
 | `Libro - La escritura terapeutica entra a la escuela.dc.html` | `/libros/la-escritura-terapeutica-entra-a-la-escuela` | same as above | P0 | ✅ Done |
 | `Mi Cuenta.dc.html` | `/cuenta` | `public-store/pages/MiCuentaPage` | P1 | ✅ Done |
-| `Biblioteca.dc.html` | `/biblioteca` | `public-store/pages/BibliotecaPage` | P1 | ⬜ Pending |
+| `Biblioteca.dc.html` | `/biblioteca` | `public-store/pages/BibliotecaPage` | P1 | ✅ Done |
 | `Checkout.dc.html` | `/checkout` | `public-store/pages/CheckoutPage` | P1 | ⬜ Pending |
 | `Meditaciones.dc.html` | `/meditaciones` | `public-store/pages/MeditacionesPage` | P1 | ✅ Done |
 | `Herramientas.dc.html` | `/herramientas` | `public-store/pages/HerramientasPage` | P1 | ✅ Done |

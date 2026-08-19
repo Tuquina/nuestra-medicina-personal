@@ -16,3 +16,12 @@ export const GOOGLE_AUTH_URL = `${API_PREFIX}/auth/google`;
 
 /** `POST` to end the session (architecture.md §20, §34). */
 export const LOGOUT_URL = `${API_PREFIX}/auth/logout`;
+
+/**
+ * Protected eBook download (architecture.md §28) — never a direct file
+ * URL. `bookId` is the book's slug here since the mock data has no
+ * numeric id; the real endpoint takes whatever id the backend assigns.
+ */
+export function downloadUrl(bookId: string): string {
+  return `${API_PREFIX}/books/${bookId}/download`;
+}

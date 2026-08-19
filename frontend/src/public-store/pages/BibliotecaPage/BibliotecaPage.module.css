@@ -1,0 +1,112 @@
+.page {
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-gradient-start) 0%,
+    var(--color-bg-gradient-mid) 45%,
+    var(--color-bg-gradient-end) 100%
+  );
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+.hero {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(48px, 7vw, 72px) var(--space-section-x) clamp(32px, 5vw, 40px);
+  position: relative;
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  top: -50px;
+  right: 4%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-accent-amber-soft) 0%, transparent 70%);
+  filter: blur(40px);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heroRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.eyebrow {
+  margin: 0 0 16px;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(34px, 4.4vw, 48px);
+  margin: 0;
+}
+
+.demoToggle {
+  background: none;
+  border: 1px solid var(--color-surface-border-strong);
+  color: var(--color-ink-subtle);
+  font-size: 13px;
+  padding: 9px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-section-x) clamp(80px, 10vw, 120px);
+  min-height: 320px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 32px;
+}
+
+.empty {
+  text-align: center;
+  padding: 72px 20px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  margin: 0 0 8px;
+}
+
+.emptyHint {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-ink-subtle);
+  margin: 0 0 22px;
+}
+
+.emptyCta {
+  display: inline-block;
+  background: var(--color-deep-blue);
+  color: var(--color-surface);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 4px;
+}

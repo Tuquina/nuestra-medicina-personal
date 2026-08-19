@@ -14,6 +14,9 @@ const NAV_LINKS = [
 const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
   isActive ? styles.navActive : undefined;
 
+const libraryLinkClassName = ({ isActive }: { isActive: boolean }) =>
+  [styles.libraryLink, isActive ? styles.libraryActive : ''].filter(Boolean).join(' ');
+
 interface SiteHeaderProps {
   /** Pass the mock signed-in user (see data/currentUser.ts) to render the
    * avatar state instead of "Iniciar sesión" — used by Mi Cuenta and
@@ -57,9 +60,9 @@ export function SiteHeader({ user }: SiteHeaderProps) {
         </nav>
 
         <div className={styles.authRow}>
-          <Link to="/biblioteca" className={styles.libraryLink}>
+          <NavLink to="/biblioteca" className={libraryLinkClassName}>
             Mi biblioteca
-          </Link>
+          </NavLink>
           {user ? (
             <Link to="/cuenta" className={styles.avatar} aria-label="Mi cuenta">
               {user.initials}
@@ -98,9 +101,9 @@ export function SiteHeader({ user }: SiteHeaderProps) {
             {link.label}
           </NavLink>
         ))}
-        <Link to="/biblioteca" className={styles.libraryLink} onClick={closeMenu}>
+        <NavLink to="/biblioteca" className={libraryLinkClassName} onClick={closeMenu}>
           Mi biblioteca
-        </Link>
+        </NavLink>
         {user ? (
           <Link to="/cuenta" className={styles.navActive} onClick={closeMenu}>
             Mi cuenta
