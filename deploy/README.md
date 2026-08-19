@@ -36,3 +36,27 @@ accesible directamente desde Internet.
 Los volúmenes `postgres_data` y `ebooks_data` requieren backups externos al
 Netcup VPS y pruebas periódicas de restauración. Los snapshots del proveedor
 son una capa adicional, no reemplazan esos backups.
+
+## Google Workspace y Gmail API
+
+El backend usa OAuth 2.0 server-to-server, no SMTP ni App Passwords:
+
+1. Crear el mailbox remitente en Google Workspace, por ejemplo
+   `ventas@nuestramedicinapersonal.com`.
+2. Crear un proyecto de Google Cloud, habilitar Gmail API y crear un service
+   account con delegación de dominio.
+3. En Admin Console de Workspace, autorizar el Client ID numérico del service
+   account con el único scope
+   `https://www.googleapis.com/auth/gmail.send`.
+4. Descargar la credencial JSON, guardarla fuera del repositorio con permisos
+   restrictivos y configurar su path host en `GOOGLE_MAIL_CREDENTIALS_FILE`.
+5. Configurar `GOOGLE_MAIL_SENDER` con el usuario Workspace que será
+   impersonado y `SUPPORT_EMAIL` con la dirección pública de soporte.
+
+Compose monta la credencial read-only como
+`/run/secrets/gmail-service-account.json`. La API falla al iniciar si se declara
+Gmail pero la credencial no existe o no es válida. Si Gmail está temporalmente
+caído, la compra permanece confirmada y `email_jobs` reintenta con backoff.
+
+SPF, DKIM y DMARC deben configurarse con los valores vigentes entregados por
+Google Workspace; no copiar registros DNS de ejemplo.

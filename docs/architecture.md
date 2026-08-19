@@ -2387,6 +2387,18 @@ por lo que no depende de la política de puertos SMTP del proveedor del VPS.
 
 La aplicación construye el mensaje MIME y utiliza la API de Gmail para enviarlo.
 
+Autenticación elegida:
+
+```text
+Service account de Google Cloud
+    + delegación de dominio en Google Workspace
+    + impersonación de GOOGLE_MAIL_SENDER
+    + scope exclusivo https://www.googleapis.com/auth/gmail.send
+```
+
+La clave JSON se monta como secreto read-only fuera del repositorio. No se
+almacena en variables de entorno ni en PostgreSQL.
+
 ### Integración Go
 
 Implementar un adapter:

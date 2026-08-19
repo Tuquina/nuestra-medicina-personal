@@ -44,6 +44,8 @@ El contrato disponible y las decisiones de seguridad de esta fase están en
 - biblioteca del comprador derivada exclusivamente de órdenes pagadas;
 - carga administrativa validada de PDF/EPUB en almacenamiento privado;
 - descarga autorizada mediante `X-Accel-Redirect`, sin revelar paths físicos;
+- outbox transaccional e idempotente para eventos de pago y disponibilidad;
+- worker con reintentos exponenciales y envío por Gmail API/Google Workspace;
 - validación de origen, cuerpos JSON limitados, request IDs y logs JSON;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 
@@ -64,3 +66,7 @@ rango de 1 a 200 MiB. La API de desarrollo autoriza la descarga y devuelve
 
 La configuración de producción, las imágenes esperadas y los certificados TLS
 están documentados en [`deploy/README.md`](deploy/README.md).
+
+El worker de email queda deshabilitado en desarrollo mientras
+`GOOGLE_MAIL_CREDENTIALS_PATH` y `GOOGLE_MAIL_SENDER` estén vacíos. Los jobs se
+persisten igualmente y pueden enviarse cuando se configure Gmail API.

@@ -51,6 +51,12 @@ HMAC, reconsulta el pago por API y comprueba `external_reference`, monto y
 moneda dentro de la transacción. `payments` usa `UPSERT` por proveedor e ID de
 pago, por lo que repetir la notificación no duplica ventas.
 
+La misma transacción agrega un job idempotente a `email_jobs` para pagos
+aprobados, pendientes, fallidos o reembolsados. El worker envía después de
+confirmar la transacción; una falla de Gmail nunca revierte el pago. Cuando un
+eBook se carga por primera vez después de una compra, se agenda además
+`ebook.available` para cada comprador con una orden pagada.
+
 Para activar el módulo deben configurarse juntas:
 
 ```env
