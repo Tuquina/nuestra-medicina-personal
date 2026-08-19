@@ -14,7 +14,7 @@ docker build -f backend/Dockerfile -t registry.example/nmp-backend:tag .
 docker build -f deploy/nginx/Dockerfile -t registry.example/nmp-web:tag .
 ```
 
-Publicar ambas imágenes desde CI; no compilarlas normalmente en el Droplet.
+Publicar ambas imágenes desde CI; no compilarlas normalmente en el VPS.
 
 ## Configuración
 
@@ -34,4 +34,5 @@ mediante la ubicación interna `/_protected/ebooks/`. Esa ubicación nunca es
 accesible directamente desde Internet.
 
 Los volúmenes `postgres_data` y `ebooks_data` requieren backups externos al
-Droplet y pruebas periódicas de restauración.
+Netcup VPS y pruebas periódicas de restauración. Los snapshots del proveedor
+son una capa adicional, no reemplazan esos backups.

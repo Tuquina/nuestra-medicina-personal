@@ -256,18 +256,18 @@ El texto legal definitivo dependerá del contenido real publicado y de las juris
 | Proxy / Web Server | Nginx | HTTPS, archivos estáticos, reverse proxy y descargas protegidas |
 | Autenticación | Google OpenID Connect | Evita almacenar y gestionar contraseñas |
 | Pagos | Mercado Pago Checkout Pro | Simplifica el flujo de pago y reduce superficie sensible |
-| Email de aplicación | Gmail API + Google Workspace (opción Google recomendada) | HTTPS, dominio propio y sin depender de SMTP saliente del Droplet |
+| Email de aplicación | Gmail API + Google Workspace | HTTPS, dominio propio y autenticación OAuth server-to-server |
 | Deploy | Docker Compose | Todo en un único servidor |
-| Archivos | Disco local del Droplet | Suficiente para pocos eBooks e imágenes |
-| CI/CD | GitHub Actions | Build/test fuera del Droplet y despliegue automatizado |
-| Infraestructura | DigitalOcean Basic Droplet ~USD 6/mes | Suficiente para la escala prevista |
+| Archivos | Disco local del VPS | Suficiente para pocos eBooks e imágenes |
+| CI/CD | GitHub Actions | Build/test fuera del VPS y despliegue automatizado |
+| Infraestructura | Netcup VPS 500 G12 | 2 vCore, 4 GB DDR5 ECC y 128 GB NVMe |
 | SSL | Let's Encrypt | Certificados HTTPS gratuitos |
 
 ---
 
 # 3. Arquitectura de infraestructura
 
-La aplicación completa vivirá inicialmente en **un único Droplet de DigitalOcean**.
+La aplicación completa vivirá inicialmente en **un único Netcup VPS 500 G12**.
 
 ```text
                         INTERNET
@@ -348,21 +348,21 @@ Nginx
 Servidor previsto:
 
 ```text
-DigitalOcean Basic Droplet
-≈ USD 6 / mes
+Netcup VPS 500 G12
 
-1 vCPU
-1 GB RAM
-≈ 25 GB SSD
+2 vCore x86
+4 GB DDR5 RAM ECC
+128 GB NVMe
 ```
 
 Para el tráfico previsto es ampliamente suficiente.
 
-La limitación principal será la memoria, no la CPU.
+Los recursos permiten márgenes conservadores sin cambiar la arquitectura de
+monolito modular ni justificar servicios adicionales.
 
 ## Reglas de operación
 
-- No compilar normalmente en el Droplet.
+- No compilar normalmente en el VPS.
 - Compilar frontend/backend e imágenes Docker en CI/CD.
 - Mantener PostgreSQL con límites conservadores.
 - Limitar el pool de conexiones de Go.
@@ -1822,7 +1822,7 @@ No introducir Prometheus/Grafana salvo que exista una necesidad real.
 
 # 44. Backups
 
-Este es uno de los puntos más importantes porque toda la infraestructura vive inicialmente en un único Droplet.
+Este es uno de los puntos más importantes porque toda la infraestructura vive inicialmente en un único VPS.
 
 Nunca depender exclusivamente de backups almacenados dentro del mismo servidor.
 
@@ -1831,7 +1831,7 @@ Nunca depender exclusivamente de backups almacenados dentro del mismo servidor.
 ```text
 pg_dump diario
     ↓
-copia fuera del Droplet
+copia fuera del VPS
 ```
 
 ## Archivos
@@ -1847,8 +1847,8 @@ fuera del servidor.
 
 ## Opciones
 
-- Backups del Droplet.
-- DigitalOcean Spaces.
+- Snapshots del VPS como complemento, nunca como único backup.
+- Storage externo compatible con S3.
 - S3-compatible storage.
 - Otro servidor/storage externo.
 
@@ -1878,13 +1878,13 @@ GitHub Actions
           ↓
     Container Registry
           ↓
-      DigitalOcean
+      Netcup VPS
           ↓
 docker compose pull
 docker compose up -d
 ```
 
-Evitar compilar en el Droplet de 1 GB.
+Evitar compilar en el VPS; publicar imágenes construidas por CI.
 
 ---
 
@@ -2001,7 +2001,7 @@ Contenido sugerido:
 - Mantener tests de reglas críticas.
 - Actualizar documentación si cambia un contrato.
 - Mantener la identidad visual de Nuestra Medicina Personal en cualquier frontend generado.
-- No implementar servidor SMTP propio en el Droplet.
+- No implementar servidor SMTP propio en el VPS.
 - El módulo de dominio no debe depender directamente de Gmail; usar EmailSender.
 ```
 
@@ -2313,19 +2313,9 @@ novedades@... → remitente de comunicaciones editoriales
 
 ---
 
-## 59.2 SMTP directo desde el Droplet
+## 59.2 SMTP directo desde el VPS
 
-No diseñar la solución alrededor de un servidor SMTP propio alojado en el mismo Droplet.
-
-Al momento de definir esta arquitectura, DigitalOcean bloquea por defecto en Droplets los puertos SMTP:
-
-```text
-25
-465
-587
-```
-
-Esto afecta tanto el envío directo hacia servidores de correo como el uso convencional de un relay SMTP externo por esos puertos.
+No diseñar la solución alrededor de un servidor SMTP propio alojado en el mismo VPS.
 
 Además de la restricción de infraestructura, operar un MTA propio implicaría administrar:
 
@@ -2347,7 +2337,7 @@ Para la escala de esta aplicación no se justifica.
 ### Regla arquitectónica
 
 ```text
-NO montar Postfix/Exim/Mailcow/etc. dentro del Droplet del MVP.
+NO montar Postfix/Exim/Mailcow/etc. dentro del VPS del MVP.
 ```
 
 ---
@@ -2358,10 +2348,10 @@ Técnicamente Go puede utilizar un cliente SMTP para conectarse a Gmail.
 
 Sin embargo, esta estrategia no es la recomendada para el despliegue actual porque:
 
-1. DigitalOcean bloquea los puertos SMTP estándar del Droplet.
-2. Google desaconseja App Passwords como mecanismo general cuando existe una integración OAuth adecuada.
-3. Una cuenta Gmail gratuita no ofrece por sí sola correo profesional nativo con el dominio comercial.
-4. Los límites y políticas de Gmail no deben tratarse como una infraestructura transaccional garantizada.
+1. Gmail API permite autenticación OAuth server-to-server con permisos mínimos.
+2. Las App Passwords agregan un secreto de larga duración innecesario.
+3. Google Workspace permite que el remitente sea una identidad del dominio comercial.
+4. La aplicación no necesita operar conexiones SMTP ni un MTA propio.
 
 Por estas razones, no utilizar como arquitectura principal:
 
@@ -2393,7 +2383,7 @@ Ventaja importante:
 Gmail API usa HTTPS
 ```
 
-por lo que no depende de los puertos SMTP bloqueados por DigitalOcean.
+por lo que no depende de la política de puertos SMTP del proveedor del VPS.
 
 La aplicación construye el mensaje MIME y utiliza la API de Gmail para enviarlo.
 
@@ -2808,32 +2798,35 @@ Google Workspace
 +
 Gmail API
 +
+service account con delegación de dominio
++
 dominio propio
 ```
 
 ### No recomendado
 
 ```text
-SMTP directo desde Droplet
+SMTP directo desde VPS
 ```
 
 ```text
-servidor SMTP propio en DigitalOcean
+servidor SMTP propio en Netcup
 ```
 
 ```text
-smtp.gmail.com desde el Droplet como dependencia principal
+smtp.gmail.com desde el VPS como dependencia principal
 ```
 
 ### Motivo
 
-La Gmail API opera sobre HTTPS y encaja mejor con las restricciones del Droplet y con una aplicación web moderna de muy bajo volumen.
+La Gmail API opera sobre HTTPS, permite alcance mínimo `gmail.send` y evita
+acoplar la aplicación a SMTP. El service account impersonará exclusivamente
+el mailbox remitente configurado mediante delegación de dominio de Workspace.
 
-### Decisión pendiente de costo
+### Decisión confirmada
 
-Antes de producción comparar el costo real de Google Workspace con un proveedor transaccional gratuito/barato.
-
-Si el objetivo prioritario continúa siendo minimizar costo, un proveedor transaccional con free tier podría seguir siendo económicamente superior.
+Google Workspace + Gmail API es el proveedor inicial de email transaccional.
+Mantener `EmailSender` como boundary para conservar reemplazabilidad.
 # 60. Analítica
 
 Opcional.
@@ -3014,7 +3007,7 @@ Nunca rutas físicas.
 Inicial:
 
 ```text
-Droplet
+Netcup VPS
 ├── app
 ├── PostgreSQL
 ├── ebooks
@@ -3024,7 +3017,7 @@ Droplet
 Cuando sea necesario:
 
 ```text
-Droplet
+Netcup VPS
 ├── app
 └── PostgreSQL
 
@@ -3050,7 +3043,7 @@ Evitar acoplar todo el dominio a paths locales.
 ## Etapa 1
 
 ```text
-1 Droplet
+1 Netcup VPS
 Docker Compose
 Todo junto
 ```
@@ -3060,7 +3053,7 @@ Todo junto
 Si archivos crecen:
 
 ```text
-Droplet
+Netcup VPS
 +
 Object Storage
 ```
@@ -3070,7 +3063,7 @@ Object Storage
 Si la DB necesita aislamiento:
 
 ```text
-Droplet
+Netcup VPS
 +
 Managed PostgreSQL
 +
@@ -3116,7 +3109,7 @@ No implementar sin requisito explícito:
 - afiliados;
 - multi-moneda compleja;
 - impuestos internacionales automáticos.
-- servidor SMTP/MTA propio dentro del Droplet.
+- servidor SMTP/MTA propio dentro del VPS.
 
 ---
 
@@ -3465,8 +3458,8 @@ No aumentar infraestructura sin métricas o necesidad real.
 Infraestructura inicial:
 
 ```text
-DigitalOcean Basic Droplet
-≈ USD 6 / mes
+Netcup VPS 500 G12
+2 vCore / 4 GB RAM / 128 GB NVMe
 
 Docker Compose
 ├── nginx
@@ -3530,7 +3523,7 @@ Estas decisiones dependen de servicios externos cuyas políticas pueden cambiar.
 
 Antes del deploy productivo verificar documentación oficial vigente de:
 
-- DigitalOcean: restricciones SMTP para Droplets.
+- Netcup: recursos, snapshots, red y condiciones del VPS contratado.
 - Google Workspace: planes y soporte de dominio propio.
 - Gmail API: autenticación, scopes y método `users.messages.send`.
 - Google: políticas y límites de envío.
@@ -3539,8 +3532,9 @@ Antes del deploy productivo verificar documentación oficial vigente de:
 Estado considerado al redactar esta versión:
 
 ```text
-DigitalOcean:
-- puertos SMTP 25, 465 y 587 bloqueados por defecto en Droplets.
+Netcup VPS 500 G12:
+- 2 vCore x86, 4 GB DDR5 ECC y 128 GB NVMe.
+- snapshots Copy-On-Write y tráfico incluido según la ficha comercial.
 
 Google:
 - Gmail API permite envío mediante HTTPS.
@@ -3548,4 +3542,3 @@ Google:
 ```
 
 No hardcodear límites comerciales o cuotas en lógica de negocio.
-

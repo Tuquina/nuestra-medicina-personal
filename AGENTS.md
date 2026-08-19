@@ -42,7 +42,8 @@ architecture.md §3 — that belongs under `deploy/` once the backend exists.
 - **No new dependencies "just in case."** Every new package needs a
   concrete reason tied to a task at hand.
 - **No microservices, no Redis/Kafka/queues** unless a real, measured
-  requirement shows up. This app runs on a 1 vCPU / 1 GB droplet.
+  requirement shows up. This app runs on a Netcup VPS 500 G12 with 2 vCore
+  and 4 GB RAM.
 - **Every DB schema change is a migration** under `migrations/`. Never
   hand-edit a production schema.
 - **Every `/api/v1/admin/*` route must check authorization server-side.**
