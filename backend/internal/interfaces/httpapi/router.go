@@ -19,6 +19,7 @@ type Dependencies struct {
 	Library             LibraryService
 	Pages               PageService
 	Media               MediaService
+	Backoffice          BackofficeService
 	WebhookValidator    MercadoPagoWebhookValidator
 	Database            DatabaseHealth
 	AdminAuthorizer     AdminAuthorizer
@@ -37,6 +38,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
 	pageHandler := NewPageHandler(dependencies.Pages, dependencies.Logger)
 	mediaHandler := NewMediaHandler(dependencies.Media, dependencies.Logger, dependencies.MediaMaxUploadBytes)
+	backofficeHandler := NewBackofficeHandler(dependencies.Backoffice, dependencies.Logger)
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -81,6 +83,9 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("GET /api/v1/admin/media", mediaHandler.List)
 	admin.HandleFunc("POST /api/v1/admin/media", mediaHandler.Upload)
 	admin.HandleFunc("DELETE /api/v1/admin/media/{id}", mediaHandler.Delete)
+	admin.HandleFunc("GET /api/v1/admin/dashboard", backofficeHandler.Dashboard)
+	admin.HandleFunc("GET /api/v1/admin/sales", backofficeHandler.Sales)
+	admin.HandleFunc("GET /api/v1/admin/customers", backofficeHandler.Customers)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
 		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, admin))
 	root.Handle("/api/v1/admin/", adminHandler)
