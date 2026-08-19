@@ -23,12 +23,14 @@ const maxImageDimension = 8_000
 
 type Repository interface {
 	List(context.Context) ([]mediadomain.Asset, error)
+	Get(context.Context, string) (mediadomain.Asset, error)
 	Create(context.Context, mediadomain.Asset) (mediadomain.Asset, error)
 	Delete(context.Context, string) (mediadomain.Asset, error)
 }
 
 type Storage interface {
 	Save(context.Context, string, io.Reader) error
+	Open(context.Context, string) (mediadomain.ReadSeekCloser, error)
 	Delete(context.Context, string) error
 }
 
@@ -49,6 +51,18 @@ func NewService(repository Repository, storage Storage, maxUploadBytes int64) *S
 
 func (s *Service) List(ctx context.Context) ([]mediadomain.Asset, error) {
 	return s.repository.List(ctx)
+}
+
+func (s *Service) Open(ctx context.Context, identifier string) (mediadomain.Asset, mediadomain.ReadSeekCloser, error) {
+	asset, err := s.repository.Get(ctx, identifier)
+	if err != nil {
+		return mediadomain.Asset{}, nil, err
+	}
+	file, err := s.storage.Open(ctx, asset.StoragePath)
+	if err != nil {
+		return mediadomain.Asset{}, nil, fmt.Errorf("open image file: %w", err)
+	}
+	return asset, file, nil
 }
 
 func (s *Service) Upload(ctx context.Context, originalFilename, declaredType string, content io.Reader) (mediadomain.Asset, error) {

@@ -2,8 +2,15 @@ package media
 
 import (
 	"errors"
+	"io"
 	"time"
 )
+
+type ReadSeekCloser interface {
+	io.Reader
+	io.Seeker
+	io.Closer
+}
 
 var (
 	ErrNotFound       = errors.New("media not found")

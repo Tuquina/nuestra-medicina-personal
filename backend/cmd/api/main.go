@@ -13,6 +13,7 @@ import (
 	"github.com/nuestra-medicina-personal/backend/internal/application/books"
 	emailapp "github.com/nuestra-medicina-personal/backend/internal/application/email"
 	"github.com/nuestra-medicina-personal/backend/internal/application/library"
+	mediaapp "github.com/nuestra-medicina-personal/backend/internal/application/media"
 	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
 	"github.com/nuestra-medicina-personal/backend/internal/application/pages"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
@@ -63,6 +64,12 @@ func run(logger *slog.Logger) error {
 	libraryService := library.NewService(libraryRepository, bookService, ebookStorage, cfg.EbookMaxUploadBytes)
 	pageRepository := postgres.NewPageRepository(pool)
 	pageService := pages.NewService(pageRepository)
+	mediaStorage, err := storage.NewLocalMediaStorage(cfg.MediaStoragePath)
+	if err != nil {
+		return err
+	}
+	mediaRepository := postgres.NewMediaRepository(pool)
+	mediaService := mediaapp.NewService(mediaRepository, mediaStorage, cfg.MediaMaxUploadBytes)
 	emailRenderer, err := emailapp.NewRenderer(cfg.BaseURL, cfg.SupportEmail)
 	if err != nil {
 		return err
@@ -84,10 +91,11 @@ func run(logger *slog.Logger) error {
 	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService,
+		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService,
 		WebhookValidator: webhookValidator, Database: pool, AdminAuthorizer: authorizer,
 		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie, SecureCookies: cfg.SecureCookies(),
 		EbookInternalPrefix: cfg.EbookInternalPrefix, EbookMaxUploadBytes: cfg.EbookMaxUploadBytes,
+		MediaMaxUploadBytes: cfg.MediaMaxUploadBytes,
 	})
 	server := &http.Server{
 		Addr: cfg.HTTPAddress, Handler: router, ReadTimeout: cfg.ReadTimeout,

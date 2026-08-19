@@ -25,6 +25,8 @@ type Config struct {
 	EbookStoragePath         string
 	EbookInternalPrefix      string
 	EbookMaxUploadBytes      int64
+	MediaStoragePath         string
+	MediaMaxUploadBytes      int64
 	GoogleMailCredentials    string
 	GoogleMailSender         string
 	SupportEmail             string
@@ -58,6 +60,8 @@ func Load() (Config, error) {
 		EbookStoragePath:         envOrDefault("EBOOK_STORAGE_PATH", "/data/ebooks"),
 		EbookInternalPrefix:      envOrDefault("EBOOK_INTERNAL_PREFIX", "/_protected/ebooks"),
 		EbookMaxUploadBytes:      int64OrDefault("EBOOK_MAX_UPLOAD_BYTES", 50<<20),
+		MediaStoragePath:         envOrDefault("MEDIA_STORAGE_PATH", "/data/media"),
+		MediaMaxUploadBytes:      int64OrDefault("MEDIA_MAX_UPLOAD_BYTES", 10<<20),
 		GoogleMailCredentials:    os.Getenv("GOOGLE_MAIL_CREDENTIALS_PATH"),
 		GoogleMailSender:         os.Getenv("GOOGLE_MAIL_SENDER"),
 		SupportEmail:             os.Getenv("SUPPORT_EMAIL"),
@@ -94,6 +98,12 @@ func Load() (Config, error) {
 	}
 	if cfg.EbookMaxUploadBytes < 1<<20 || cfg.EbookMaxUploadBytes > 200<<20 {
 		validationErrors = append(validationErrors, errors.New("EBOOK_MAX_UPLOAD_BYTES must be between 1 MiB and 200 MiB"))
+	}
+	if cfg.MediaStoragePath == "" {
+		validationErrors = append(validationErrors, errors.New("MEDIA_STORAGE_PATH is required"))
+	}
+	if cfg.MediaMaxUploadBytes < 1<<20 || cfg.MediaMaxUploadBytes > 25<<20 {
+		validationErrors = append(validationErrors, errors.New("MEDIA_MAX_UPLOAD_BYTES must be between 1 MiB and 25 MiB"))
 	}
 	mailValues := 0
 	for _, value := range []string{cfg.GoogleMailCredentials, cfg.GoogleMailSender} {

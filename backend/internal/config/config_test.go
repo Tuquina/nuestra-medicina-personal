@@ -42,6 +42,14 @@ func TestEbookUploadConfigurationValidation(t *testing.T) {
 	}
 }
 
+func TestMediaUploadConfigurationValidation(t *testing.T) {
+	setRequiredTestEnvironment(t)
+	t.Setenv("MEDIA_MAX_UPLOAD_BYTES", "100")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "MEDIA_MAX_UPLOAD_BYTES") {
+		t.Fatalf("expected media configuration errors, got %v", err)
+	}
+}
+
 func TestGoogleMailConfigurationIsAllOrNothing(t *testing.T) {
 	setRequiredTestEnvironment(t)
 	t.Setenv("GOOGLE_MAIL_SENDER", "ventas@example.com")

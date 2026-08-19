@@ -12,8 +12,8 @@ FROM alpine:3.22
 RUN apk add --no-cache ca-certificates \
     && addgroup -S app \
     && adduser -S -G app app \
-    && mkdir -p /data/ebooks \
-    && chown app:app /data/ebooks
+    && mkdir -p /data/ebooks /data/media \
+    && chown app:app /data/ebooks /data/media
 WORKDIR /app
 COPY --from=build /out/api /usr/local/bin/api
 COPY --from=build /out/migrate /usr/local/bin/migrate

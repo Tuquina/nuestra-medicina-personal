@@ -40,6 +40,11 @@ func (r *MediaRepository) List(ctx context.Context) ([]mediadomain.Asset, error)
 	return items, nil
 }
 
+func (r *MediaRepository) Get(ctx context.Context, identifier string) (mediadomain.Asset, error) {
+	return scanMedia(r.pool.QueryRow(ctx, `
+		SELECT `+mediaColumns+` FROM media WHERE id::text = $1`, identifier))
+}
+
 func (r *MediaRepository) Create(ctx context.Context, value mediadomain.Asset) (mediadomain.Asset, error) {
 	return scanMedia(r.pool.QueryRow(ctx, `
 		INSERT INTO media (

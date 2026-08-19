@@ -18,6 +18,7 @@ type Dependencies struct {
 	Orders              OrderService
 	Library             LibraryService
 	Pages               PageService
+	Media               MediaService
 	WebhookValidator    MercadoPagoWebhookValidator
 	Database            DatabaseHealth
 	AdminAuthorizer     AdminAuthorizer
@@ -26,6 +27,7 @@ type Dependencies struct {
 	SecureCookies       bool
 	EbookInternalPrefix string
 	EbookMaxUploadBytes int64
+	MediaMaxUploadBytes int64
 }
 
 func NewRouter(dependencies Dependencies) http.Handler {
@@ -34,6 +36,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
 	pageHandler := NewPageHandler(dependencies.Pages, dependencies.Logger)
+	mediaHandler := NewMediaHandler(dependencies.Media, dependencies.Logger, dependencies.MediaMaxUploadBytes)
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -50,6 +53,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.HandleFunc("GET /api/v1/books", booksHandler.ListPublished)
 	root.HandleFunc("GET /api/v1/books/{slug}", booksHandler.GetPublished)
 	root.HandleFunc("GET /api/v1/pages/{slug}", pageHandler.GetPublished)
+	root.HandleFunc("GET /api/v1/media/{id}", mediaHandler.Get)
 	root.HandleFunc("GET /api/v1/auth/google", authHandler.Start)
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
 	root.HandleFunc("GET /api/v1/me", authHandler.Me)
@@ -74,6 +78,9 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("POST /api/v1/admin/pages/{identifier}/publish", pageHandler.Publish)
 	admin.HandleFunc("GET /api/v1/admin/pages/{identifier}/versions", pageHandler.ListVersions)
 	admin.HandleFunc("POST /api/v1/admin/pages/{identifier}/versions/{versionID}/restore", pageHandler.Restore)
+	admin.HandleFunc("GET /api/v1/admin/media", mediaHandler.List)
+	admin.HandleFunc("POST /api/v1/admin/media", mediaHandler.Upload)
+	admin.HandleFunc("DELETE /api/v1/admin/media/{id}", mediaHandler.Delete)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
 		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, admin))
 	root.Handle("/api/v1/admin/", adminHandler)

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	mediadomain "github.com/nuestra-medicina-personal/backend/internal/domain/media"
 )
 
 type LocalMediaStorage struct {
@@ -55,6 +57,18 @@ func (s *LocalMediaStorage) Save(ctx context.Context, key string, content io.Rea
 		return fmt.Errorf("commit media: %w", err)
 	}
 	return nil
+}
+
+func (s *LocalMediaStorage) Open(_ context.Context, key string) (mediadomain.ReadSeekCloser, error) {
+	target, err := s.resolve(key)
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.Open(target)
+	if err != nil {
+		return nil, fmt.Errorf("open media: %w", err)
+	}
+	return file, nil
 }
 
 func (s *LocalMediaStorage) Delete(_ context.Context, key string) error {

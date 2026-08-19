@@ -19,6 +19,9 @@ type repositoryStub struct {
 }
 
 func (*repositoryStub) List(context.Context) ([]mediadomain.Asset, error) { return nil, nil }
+func (repository *repositoryStub) Get(context.Context, string) (mediadomain.Asset, error) {
+	return repository.created, nil
+}
 func (repository *repositoryStub) Create(_ context.Context, asset mediadomain.Asset) (mediadomain.Asset, error) {
 	repository.created = asset
 	return asset, nil
@@ -37,6 +40,9 @@ func (storage *storageStub) Save(_ context.Context, key string, content io.Reade
 	storage.key = key
 	storage.payload, _ = io.ReadAll(content)
 	return nil
+}
+func (*storageStub) Open(context.Context, string) (mediadomain.ReadSeekCloser, error) {
+	return nil, nil
 }
 func (storage *storageStub) Delete(_ context.Context, key string) error {
 	storage.deleted = key
