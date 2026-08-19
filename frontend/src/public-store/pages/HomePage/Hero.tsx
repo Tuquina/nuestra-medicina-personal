@@ -14,7 +14,9 @@ export function Hero() {
 
           <h1 className={styles.heading}>
             <span className={styles.headingLine1}>Nuestra</span>
-            <span className={styles.headingLine2}>medicina personal</span>
+            <span className={`${styles.headingLine2} gradient-text`}>
+              medicina personal
+            </span>
           </h1>
 
           <p className={styles.lede}>

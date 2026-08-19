@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { BrandMark } from '../BrandMark/BrandMark';
 import styles from './SiteHeader.module.css';
 
 const NAV_LINKS = [
-  { label: 'Inicio', to: '/' },
-  { label: 'Libros', to: '/libros' },
-  { label: 'Meditaciones', to: '/meditaciones' },
-  { label: 'Herramientas', to: '/herramientas' },
+  { label: 'Inicio', to: '/', end: true },
+  { label: 'Libros', to: '/libros', end: false },
+  { label: 'Meditaciones', to: '/meditaciones', end: false },
+  { label: 'Herramientas', to: '/herramientas', end: false },
 ];
+
+const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
+  isActive ? styles.navActive : undefined;
 
 /**
  * Full site navigation header: sticky, gains a shadow past a small scroll
- * threshold, collapses to a hamburger menu below ~1040px. Used on every
- * public page except Login (which uses the bare `PublicHeader` on
- * purpose — see its doc comment).
+ * threshold, collapses to a hamburger menu below ~1040px, and highlights
+ * the current section (e.g. "Libros" on `/libros`). Used on every public
+ * page except Login (which uses the bare `PublicHeader` on purpose — see
+ * its doc comment).
  */
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
@@ -38,9 +42,9 @@ export function SiteHeader() {
 
         <nav className={styles.nav} aria-label="Principal">
           {NAV_LINKS.map((link) => (
-            <Link key={link.to} to={link.to}>
+            <NavLink key={link.to} to={link.to} end={link.end} className={navLinkClassName}>
               {link.label}
-            </Link>
+            </NavLink>
           ))}
         </nav>
 
@@ -70,9 +74,15 @@ export function SiteHeader() {
         aria-label="Principal (móvil)"
       >
         {NAV_LINKS.map((link) => (
-          <Link key={link.to} to={link.to} onClick={closeMenu}>
+          <NavLink
+            key={link.to}
+            to={link.to}
+            end={link.end}
+            className={navLinkClassName}
+            onClick={closeMenu}
+          >
             {link.label}
-          </Link>
+          </NavLink>
         ))}
         <Link to="/biblioteca" className={styles.libraryLink} onClick={closeMenu}>
           Mi biblioteca

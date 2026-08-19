@@ -38,6 +38,21 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/* The warm "sunrise" gradient-text treatment used on hero-style headings
+   (Home's <h1>, the Catálogo page title, and likely future collection
+   headers). Combine with a page-specific class for font-size/weight. */
+.gradient-text {
+  background: linear-gradient(
+    100deg,
+    var(--color-deep-blue) 0%,
+    var(--color-accent-gold-dark) 55%,
+    var(--color-accent-amber) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* Visually hidden but announced by screen readers — for labels whose
    visible equivalent is a placeholder or icon (architecture.md §61). */
 .sr-only {

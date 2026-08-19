@@ -1,0 +1,80 @@
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.cover {
+  margin-bottom: 22px;
+}
+
+.badge {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.badgeGold {
+  background: color-mix(in oklch, var(--color-accent-gold) 14%, transparent);
+  color: var(--color-accent-gold-dark);
+}
+
+.badgeBlue {
+  background: color-mix(in oklch, var(--color-deep-blue) 12%, transparent);
+  color: var(--color-deep-blue);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 24px;
+  margin: 0 0 10px;
+  color: var(--color-ink);
+}
+
+.card.compact .title {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.description {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  margin: 0 0 20px;
+}
+
+.card.compact .description {
+  font-size: 14.5px;
+  margin-bottom: 10px;
+}
+
+.format {
+  font-size: 12.5px;
+  color: var(--color-ink-subtle);
+  margin: 0 0 18px;
+  letter-spacing: 0.02em;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.price {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.link {
+  color: var(--color-deep-blue);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-deep-blue);
+}

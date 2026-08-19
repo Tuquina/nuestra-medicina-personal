@@ -55,6 +55,18 @@
   color: var(--color-ink);
 }
 
+.nav a.navActive {
+  color: var(--color-deep-blue);
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-accent-amber);
+  padding-bottom: 2px;
+}
+
+.mobileMenu a.navActive {
+  color: var(--color-deep-blue);
+  font-weight: 600;
+}
+
 .authRow {
   display: flex;
   align-items: center;
