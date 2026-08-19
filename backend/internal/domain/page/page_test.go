@@ -64,3 +64,19 @@ func TestContentRejectsDuplicateBlockIDs(t *testing.T) {
 		t.Fatalf("expected validation error, got %v", err)
 	}
 }
+
+func TestPageRejectsInvalidBookAndSlugIdentifiers(t *testing.T) {
+	bookID := "not-a-uuid"
+	value := Page{
+		Type: "BOOK", BookID: &bookID, Slug: "-invalid--slug", Title: "Libro",
+		DraftContent: EmptyContent(),
+	}
+	err := value.Validate()
+	var validationError *ValidationError
+	if !errors.As(err, &validationError) {
+		t.Fatalf("expected validation error, got %v", err)
+	}
+	if validationError.Fields["bookId"] == "" || validationError.Fields["slug"] == "" {
+		t.Fatalf("expected identifier details, got %#v", validationError.Fields)
+	}
+}

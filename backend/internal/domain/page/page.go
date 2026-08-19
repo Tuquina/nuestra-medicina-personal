@@ -78,9 +78,13 @@ func (value Page) Validate() error {
 	}
 	if value.Type == "BOOK" && (value.BookID == nil || strings.TrimSpace(*value.BookID) == "") {
 		fields["bookId"] = "is required for a book page"
+	} else if value.Type == "BOOK" && value.BookID != nil && !validUUID(*value.BookID) {
+		fields["bookId"] = "must be a UUID"
 	}
 	if strings.TrimSpace(value.Slug) == "" || len(value.Slug) > 160 {
 		fields["slug"] = "must contain between 1 and 160 characters"
+	} else if strings.HasPrefix(value.Slug, "-") || strings.HasSuffix(value.Slug, "-") || strings.Contains(value.Slug, "--") {
+		fields["slug"] = "must use single hyphens between words"
 	} else {
 		for _, character := range value.Slug {
 			if (character < 'a' || character > 'z') && (character < '0' || character > '9') && character != '-' {
@@ -99,6 +103,21 @@ func (value Page) Validate() error {
 		return &ValidationError{Fields: fields}
 	}
 	return nil
+}
+
+func validUUID(value string) bool {
+	if len(value) != 36 || value[8] != '-' || value[13] != '-' || value[18] != '-' || value[23] != '-' {
+		return false
+	}
+	for index, character := range value {
+		if index == 8 || index == 13 || index == 18 || index == 23 {
+			continue
+		}
+		if (character < '0' || character > '9') && (character < 'a' || character > 'f') && (character < 'A' || character > 'F') {
+			return false
+		}
+	}
+	return true
 }
 
 func DecodeContent(raw []byte) (Content, error) {
