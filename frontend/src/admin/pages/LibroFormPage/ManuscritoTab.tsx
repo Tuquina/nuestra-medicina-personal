@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../shared/components/Button/Button';
+import { PageBreakOverlay } from './PageBreakOverlay';
+import { DEFAULT_PAGE_SIZE_ID, PAGE_MARGIN_MM, PAGE_SIZES, findPageSize, pageContentHeightPx } from './pageSizes';
 import styles from './ManuscritoTab.module.css';
 
 interface Chapter {
@@ -47,10 +49,14 @@ export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
   const [activeChapter, setActiveChapter] = useState(0);
   const [exportMessage, setExportMessage] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [pageSizeId, setPageSizeId] = useState(DEFAULT_PAGE_SIZE_ID);
+  const [contentHeightPx, setContentHeightPx] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const previousChapterRef = useRef(activeChapter);
+
+  const pageSize = findPageSize(pageSizeId);
 
   // Sync the contentEditable DOM only when the active chapter changes —
   // never on every keystroke, or the caret would jump on each input.
@@ -60,6 +66,20 @@ export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
     }
     previousChapterRef.current = activeChapter;
   }, [activeChapter, chapters]);
+
+  // Tracks the editable region's real height so the page-break overlay
+  // (and the page count shown below it) stay accurate as the author
+  // types, switches chapters, changes font size, or picks a different
+  // page size — anything that changes how much text fits per line.
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const measure = () => setContentHeightPx(el.scrollHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [manuscriptStarted, activeChapter, pageSizeId]);
 
   const handleFileUpload = (file: File) => {
     setIsConverting(true);
@@ -132,12 +152,35 @@ export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
   }
 
   const active = chapters[activeChapter];
+  const contentPerPage = pageContentHeightPx(pageSize);
+  const pageCount = Math.max(1, Math.ceil(contentHeightPx / contentPerPage));
 
   return (
     <>
       <div className={styles.editorLayout}>
         {/* CHAPTER LIST */}
         <div className={styles.chapterList}>
+          <div className={styles.pageSizeBlock}>
+            <label htmlFor="pageSize" className={styles.chapterListTitle} style={{ margin: 0 }}>
+              Tamaño de hoja
+            </label>
+            <select
+              id="pageSize"
+              className={styles.pageSizeSelect}
+              value={pageSizeId}
+              onChange={(e) => setPageSizeId(e.target.value)}
+            >
+              {PAGE_SIZES.map((size) => (
+                <option key={size.id} value={size.id}>
+                  {size.label}
+                </option>
+              ))}
+            </select>
+            <p className={styles.pageCountHint}>
+              {pageCount} hoja{pageCount === 1 ? '' : 's'} en este capítulo
+            </p>
+          </div>
+
           <p className={styles.chapterListTitle}>Capítulos</p>
           {chapters.map((chapter, index) => (
             <button
@@ -243,16 +286,21 @@ export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
           </div>
 
           <div className={styles.canvas}>
-            <div
-              ref={editorRef}
-              contentEditable
-              onInput={onEditorInput}
-              className={styles.editable}
-              suppressContentEditableWarning
-            />
+            <div className={styles.editableWrapper} style={{ width: `${pageSize.widthMm}mm`, maxWidth: '100%' }}>
+              <div
+                ref={editorRef}
+                contentEditable
+                onInput={onEditorInput}
+                className={styles.editable}
+                style={{ width: `${pageSize.widthMm}mm`, maxWidth: '100%', padding: `${PAGE_MARGIN_MM}mm` }}
+                suppressContentEditableWarning
+              />
+              <PageBreakOverlay pageSize={pageSize} contentHeightPx={contentHeightPx} />
+            </div>
           </div>
           <p className={styles.wordCount}>
-            Guardado automático activado · {wordCountOf(active?.html ?? '')} palabras en este capítulo.
+            Guardado automático activado · {wordCountOf(active?.html ?? '')} palabras · {pageCount} hoja
+            {pageCount === 1 ? '' : 's'} ({pageSize.label.split(' (')[0]}) en este capítulo.
           </p>
         </div>
 
