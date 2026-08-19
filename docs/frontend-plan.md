@@ -43,8 +43,8 @@ frontend routes themselves are not a security boundary.
 | `Admin Dashboard.dc.html` | `/admin` | `admin/pages/DashboardPage` | P2 | ✅ Done |
 | `Admin Libros.dc.html` | `/admin/libros` | `admin/pages/LibrosListPage` | P2 | ✅ Done |
 | `Admin Libro Nuevo.dc.html` | `/admin/libros/nuevo` + `/admin/libros/:slug/editar` | `admin/pages/LibroFormPage` | P2 | ✅ Done |
-| `Admin Ventas.dc.html` | `/admin/ventas` | `admin/pages/VentasPage` | P2 | ⬜ Pending |
-| `Admin Clientes.dc.html` | `/admin/clientes` | `admin/pages/ClientesPage` | P2 | ⬜ Pending |
+| `Admin Ventas.dc.html` | `/admin/ventas` | `admin/pages/VentasPage` | P2 | ✅ Done |
+| `Admin Clientes.dc.html` | `/admin/clientes` | `admin/pages/ClientesPage` | P2 | ✅ Done |
 | `Admin Multimedia.dc.html` | `/admin/media` | `admin/pages/MediaPage` | P2 | ⬜ Pending |
 | `Admin Configuracion.dc.html` | `/admin/configuracion` | `admin/pages/ConfiguracionPage` | P2 | ⬜ Pending |
 | `Admin Page Builder.dc.html` | `/admin/paginas/:pageId/editor` | `admin/pages/PageBuilderPage` | P3 (most complex; do last) | ⬜ Pending |

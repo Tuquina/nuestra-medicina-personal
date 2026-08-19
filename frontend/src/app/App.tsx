@@ -10,6 +10,8 @@ import { CheckoutPage } from '../public-store/pages/CheckoutPage/CheckoutPage';
 import { DashboardPage } from '../admin/pages/DashboardPage/DashboardPage';
 import { LibrosListPage } from '../admin/pages/LibrosListPage/LibrosListPage';
 import { LibroFormPage } from '../admin/pages/LibroFormPage/LibroFormPage';
+import { VentasPage } from '../admin/pages/VentasPage/VentasPage';
+import { ClientesPage } from '../admin/pages/ClientesPage/ClientesPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -32,6 +34,8 @@ export function App() {
       <Route path="/admin/libros" element={<LibrosListPage />} />
       <Route path="/admin/libros/nuevo" element={<LibroFormPage />} />
       <Route path="/admin/libros/:slug/editar" element={<LibroFormPage />} />
+      <Route path="/admin/ventas" element={<VentasPage />} />
+      <Route path="/admin/clientes" element={<ClientesPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

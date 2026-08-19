@@ -1,0 +1,147 @@
+.layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.panel {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toolbar {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-admin-border);
+}
+
+.search {
+  width: 100%;
+  max-width: 320px;
+  padding: 9px 14px;
+  border: 1px solid var(--color-admin-border);
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-family: var(--font-sans);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px;
+  color: var(--color-admin-text-faint);
+  font-weight: 600;
+  font-size: 12.5px;
+  background: oklch(98% 0.004 90);
+  border-bottom: 1px solid var(--color-admin-border);
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 20px;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 20px;
+}
+
+.table td {
+  padding: 12px;
+  color: oklch(32% 0.02 255);
+  border-bottom: 1px solid var(--color-admin-border-subtle);
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover {
+  background: oklch(98% 0.004 90);
+}
+
+.rowSelected {
+  background: oklch(96% 0.02 232);
+}
+
+.nameCell {
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.emailCell {
+  color: var(--color-admin-text-muted);
+}
+
+.emptyState {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--color-admin-text-muted);
+  font-size: 14px;
+}
+
+/* ---- Detail ---- */
+
+.detail {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-sky-soft);
+  color: var(--color-deep-blue);
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.detailName {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.detailEmail {
+  font-size: 13px;
+  color: var(--color-admin-text-muted);
+  margin: 0 0 18px;
+}
+
+.detailLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-admin-text-muted);
+  margin: 0 0 10px;
+}
+
+.bookList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+  color: oklch(28% 0.02 255);
+}
+
+.bookItem {
+  margin: 0;
+}
