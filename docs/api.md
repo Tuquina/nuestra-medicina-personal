@@ -131,3 +131,21 @@ archivo físico usa un UUID; el nombre original se conserva sólo como metadata.
 las entrega con ETag y caché immutable. `DELETE /api/v1/admin/media/{id}` revisa
 portadas, borradores, publicaciones y todas las versiones del CMS. Si encuentra
 una referencia responde `MEDIA_IN_USE` y no borra ni la fila ni el archivo.
+
+## Backoffice de datos
+
+`GET /api/v1/admin/dashboard`, `GET /api/v1/admin/sales` y
+`GET /api/v1/admin/customers` requieren autorización administrativa real en el
+backend. El rango predeterminado es el año calendario actual; también se
+aceptan `7d`, `30d` y `all`. Ventas y clientes admiten paginación con un máximo
+de 100 filas.
+
+Ingresos, compradores, ticket promedio y totales gastados cuentan únicamente
+órdenes `PAID` y nunca mezclan monedas. Los importes son enteros en unidades
+menores. Cada venta devuelve el título y monto históricos de `order_items`, no
+el precio vigente del catálogo. `orderStatus`, `paymentStatus` y
+`displayStatus` permanecen separados para no perder información operativa.
+
+El listado de clientes excluye la identidad Google configurada como
+administradora. Los usuarios sin compras aparecen con totales en cero; el
+historial de libros incluye sólo órdenes pagadas.

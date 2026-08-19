@@ -18,6 +18,7 @@ tags:
   - name: Admin books
   - name: Admin pages
   - name: Admin media
+  - name: Admin reporting
 paths:
   /health/live:
     get:
@@ -248,6 +249,57 @@ paths:
         '502':
           description: Fallo transitorio al consultar o persistir el pago.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/admin/dashboard:
+    get:
+      tags: [Admin reporting]
+      operationId: getAdminDashboard
+      security: [{sessionCookie: []}]
+      description: Métricas agregadas. Ingresos y ticket promedio consideran únicamente órdenes pagadas en la moneda solicitada.
+      parameters:
+        - {$ref: '#/components/parameters/ReportingRange'}
+        - {$ref: '#/components/parameters/ReportingBookSlug'}
+        - {$ref: '#/components/parameters/ReportingCurrency'}
+      responses:
+        '200': {description: Resumen del backoffice., content: {application/json: {schema: {$ref: '#/components/schemas/AdminDashboard'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '422': {$ref: '#/components/responses/BackofficeQueryInvalid'}
+  /api/v1/admin/sales:
+    get:
+      tags: [Admin reporting]
+      operationId: listAdminSales
+      security: [{sessionCookie: []}]
+      description: Lista órdenes con el título e importe históricos y estados de orden y pago separados.
+      parameters:
+        - {$ref: '#/components/parameters/ReportingRange'}
+        - {$ref: '#/components/parameters/ReportingBookSlug'}
+        - name: status
+          in: query
+          schema: {type: string, enum: [APPROVED, PENDING, REJECTED, REFUNDED, CANCELLED, EXPIRED]}
+        - {name: query, in: query, schema: {type: string}}
+        - {$ref: '#/components/parameters/PageLimit'}
+        - {$ref: '#/components/parameters/PageOffset'}
+      responses:
+        '200': {description: Página de ventas., content: {application/json: {schema: {$ref: '#/components/schemas/AdminSalesPage'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '422': {$ref: '#/components/responses/BackofficeQueryInvalid'}
+  /api/v1/admin/customers:
+    get:
+      tags: [Admin reporting]
+      operationId: listAdminCustomers
+      security: [{sessionCookie: []}]
+      description: Lista clientes y sus compras pagadas; excluye la cuenta administradora configurada.
+      parameters:
+        - {name: query, in: query, schema: {type: string}}
+        - {$ref: '#/components/parameters/ReportingCurrency'}
+        - {$ref: '#/components/parameters/PageLimit'}
+        - {$ref: '#/components/parameters/PageOffset'}
+      responses:
+        '200': {description: Página de clientes., content: {application/json: {schema: {$ref: '#/components/schemas/AdminCustomersPage'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '422': {$ref: '#/components/responses/BackofficeQueryInvalid'}
   /api/v1/admin/books:
     get:
       tags: [Admin books]
@@ -535,6 +587,26 @@ components:
       in: header
       required: true
       schema: {type: string, format: uri}
+    ReportingRange:
+      name: range
+      in: query
+      schema: {type: string, enum: [7d, 30d, year, all], default: year}
+    ReportingBookSlug:
+      name: bookSlug
+      in: query
+      schema: {type: string}
+    ReportingCurrency:
+      name: currency
+      in: query
+      schema: {type: string, minLength: 3, maxLength: 3, default: ARS}
+    PageLimit:
+      name: limit
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+    PageOffset:
+      name: offset
+      in: query
+      schema: {type: integer, minimum: 0, default: 0}
   schemas:
     Health:
       type: object
@@ -581,6 +653,116 @@ components:
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
         paidAt: {type: [string, 'null'], format: date-time}
+    ReportingDisplayStatus:
+      type: string
+      enum: [APPROVED, PENDING, REJECTED, REFUNDED, CANCELLED, EXPIRED]
+    AdminSale:
+      type: object
+      required: [id, createdAt, paidAt, customerId, customerName, customerEmail, bookId, bookSlug, bookTitle, amountMinorUnits, currency, orderStatus, paymentStatus, paymentProvider, providerPaymentId, displayStatus]
+      properties:
+        id: {type: string, format: uuid}
+        createdAt: {type: string, format: date-time}
+        paidAt: {type: [string, 'null'], format: date-time}
+        customerId: {type: string, format: uuid}
+        customerName: {type: string}
+        customerEmail: {type: string, format: email}
+        bookId: {type: string, format: uuid}
+        bookSlug: {type: string}
+        bookTitle: {type: string, description: Título histórico guardado en el item de la orden.}
+        amountMinorUnits: {type: integer, format: int64, minimum: 0, description: Importe histórico de la orden; nunca se deriva del precio actual del libro.}
+        currency: {type: string, minLength: 3, maxLength: 3}
+        orderStatus: {$ref: '#/components/schemas/OrderStatus'}
+        paymentStatus: {type: [string, 'null'], enum: [PENDING, APPROVED, REJECTED, CANCELLED, REFUNDED, null]}
+        paymentProvider: {type: [string, 'null']}
+        providerPaymentId: {type: [string, 'null']}
+        displayStatus: {$ref: '#/components/schemas/ReportingDisplayStatus'}
+    AdminSalesPage:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/AdminSale'}}
+        total: {type: integer, minimum: 0}
+        limit: {type: integer, minimum: 1, maximum: 100}
+        offset: {type: integer, minimum: 0}
+    AdminPurchasedBook:
+      type: object
+      required: [id, slug, title, purchasedAt]
+      properties:
+        id: {type: string, format: uuid}
+        slug: {type: string}
+        title: {type: string}
+        purchasedAt: {type: string, format: date-time}
+    AdminCustomer:
+      type: object
+      required: [id, displayName, email, pictureUrl, createdAt, lastLoginAt, paidOrdersCount, booksPurchasedCount, totalSpentMinorUnits, currency, lastPurchaseAt, purchasedBooks]
+      properties:
+        id: {type: string, format: uuid}
+        displayName: {type: string}
+        email: {type: string, format: email}
+        pictureUrl: {type: [string, 'null'], format: uri}
+        createdAt: {type: string, format: date-time}
+        lastLoginAt: {type: [string, 'null'], format: date-time}
+        paidOrdersCount: {type: integer, minimum: 0}
+        booksPurchasedCount: {type: integer, minimum: 0}
+        totalSpentMinorUnits: {type: integer, format: int64, minimum: 0}
+        currency: {type: string, minLength: 3, maxLength: 3}
+        lastPurchaseAt: {type: [string, 'null'], format: date-time}
+        purchasedBooks: {type: array, items: {$ref: '#/components/schemas/AdminPurchasedBook'}}
+    AdminCustomersPage:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/AdminCustomer'}}
+        total: {type: integer, minimum: 0}
+        limit: {type: integer, minimum: 1, maximum: 100}
+        offset: {type: integer, minimum: 0}
+    AdminTrendPoint:
+      type: object
+      required: [periodStart, salesCount, revenueMinorUnits]
+      properties:
+        periodStart: {type: string, format: date-time}
+        salesCount: {type: integer, minimum: 0}
+        revenueMinorUnits: {type: integer, format: int64, minimum: 0}
+    AdminBookMetric:
+      type: object
+      required: [bookId, bookSlug, bookTitle, salesCount, revenueMinorUnits]
+      properties:
+        bookId: {type: string, format: uuid}
+        bookSlug: {type: string}
+        bookTitle: {type: string}
+        salesCount: {type: integer, minimum: 0}
+        revenueMinorUnits: {type: integer, format: int64, minimum: 0}
+    AdminStatusMetric:
+      type: object
+      required: [status, count]
+      properties:
+        status: {$ref: '#/components/schemas/ReportingDisplayStatus'}
+        count: {type: integer, minimum: 0}
+    AdminDashboard:
+      type: object
+      required: [range, currency, kpis, books, trend, topBooks, paymentStatuses, recentSales, generatedAt]
+      properties:
+        range: {type: string, enum: [7d, 30d, year, all]}
+        currency: {type: string, minLength: 3, maxLength: 3}
+        kpis:
+          type: object
+          required: [approvedSalesCount, revenueMinorUnits, buyersCount, averageOrderMinorUnits]
+          properties:
+            approvedSalesCount: {type: integer, minimum: 0}
+            revenueMinorUnits: {type: integer, format: int64, minimum: 0}
+            buyersCount: {type: integer, minimum: 0}
+            averageOrderMinorUnits: {type: integer, format: int64, minimum: 0}
+        books:
+          type: object
+          required: [publishedCount, draftCount]
+          properties:
+            publishedCount: {type: integer, minimum: 0}
+            draftCount: {type: integer, minimum: 0}
+        trend: {type: array, items: {$ref: '#/components/schemas/AdminTrendPoint'}}
+        topBooks: {type: array, items: {$ref: '#/components/schemas/AdminBookMetric'}}
+        paymentStatuses: {type: array, items: {$ref: '#/components/schemas/AdminStatusMetric'}}
+        recentSales: {type: array, items: {$ref: '#/components/schemas/AdminSale'}}
+        generatedAt: {type: string, format: date-time}
     BookInput:
       type: object
       additionalProperties: false
@@ -913,4 +1095,7 @@ components:
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
     MediaNotFound:
       description: La imagen no existe.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    BackofficeQueryInvalid:
+      description: Algún filtro, rango o valor de paginación es inválido.
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}

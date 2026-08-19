@@ -48,6 +48,7 @@ El contrato disponible y las decisiones de seguridad de esta fase están en
 - worker con reintentos exponenciales y envío por Gmail API/Google Workspace;
 - CMS con borradores aislados, publicación transaccional e historial de versiones;
 - biblioteca multimedia local con validación JPEG/PNG y borrado seguro;
+- dashboard, ventas y clientes administrativos con importes históricos y paginación;
 - validación de origen, cuerpos JSON limitados, request IDs y logs JSON;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 
