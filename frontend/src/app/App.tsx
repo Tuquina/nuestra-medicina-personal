@@ -18,6 +18,7 @@ import { PageBuilderPage } from '../admin/pages/PageBuilderPage/PageBuilderPage'
 import { MeditacionesEditorPage } from '../admin/pages/CollectionPageEditor/MeditacionesEditorPage';
 import { HerramientasEditorPage } from '../admin/pages/CollectionPageEditor/HerramientasEditorPage';
 import { SobreElProyectoPage } from '../admin/pages/SobreElProyectoPage/SobreElProyectoPage';
+import { CuponesPage } from '../admin/pages/CuponesPage/CuponesPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -48,6 +49,7 @@ export function App() {
       <Route path="/admin/paginas/meditaciones" element={<MeditacionesEditorPage />} />
       <Route path="/admin/paginas/herramientas" element={<HerramientasEditorPage />} />
       <Route path="/admin/sobre-el-proyecto" element={<SobreElProyectoPage />} />
+      <Route path="/admin/cupones" element={<CuponesPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

@@ -1,0 +1,155 @@
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toolbar {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-admin-border);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search {
+  flex: 1;
+  min-width: 200px;
+  padding: 9px 14px;
+  border: 1px solid var(--color-admin-border);
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-family: var(--font-sans);
+}
+
+.select {
+  padding: 9px 14px;
+  border: 1px solid var(--color-admin-border);
+  border-radius: 6px;
+  font-size: 13.5px;
+  background: white;
+  font-family: var(--font-sans);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px;
+  color: var(--color-admin-text-faint);
+  font-weight: 600;
+  font-size: 12.5px;
+  background: oklch(98% 0.004 90);
+  border-bottom: 1px solid var(--color-admin-border);
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 20px;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 20px;
+}
+
+.table td {
+  padding: 12px;
+  color: oklch(32% 0.02 255);
+  border-bottom: 1px solid var(--color-admin-border-subtle);
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover {
+  background: oklch(98% 0.004 90);
+}
+
+.codeCell {
+  color: var(--color-ink);
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+}
+
+.mutedCell {
+  color: var(--color-admin-text-muted);
+}
+
+.emptyState {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--color-admin-text-muted);
+  font-size: 14px;
+}
+
+/* ---- Create/edit form (inside Dialog) ---- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.formRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.appliesToList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.appliesToRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: oklch(30% 0.02 90);
+}
+
+.activeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.activeLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: oklch(32% 0.02 255);
+}
+
+.deleteRow {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
+.deleteLink {
+  background: none;
+  border: none;
+  color: var(--color-status-danger-icon);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-sans);
+}

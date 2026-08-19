@@ -7,6 +7,10 @@ const STATUS_TONE: Record<string, StatusTone> = {
   Reembolsado: 'refunded',
   Publicado: 'success',
   Borrador: 'neutral',
+  Activo: 'success',
+  Programado: 'pending',
+  Vencido: 'danger',
+  Desactivado: 'neutral',
 };
 
 /** Maps the known status label strings straight to a `StatusBadge` tone. */
