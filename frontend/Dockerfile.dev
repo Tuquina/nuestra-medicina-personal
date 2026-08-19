@@ -1,0 +1,16 @@
+# Dev-only image for running the Vite dev server without a local Node
+# install. Not used in production — see deploy/ once the build pipeline
+# exists (architecture.md §3, §46): production serves the prebuilt
+# `dist/` through Nginx, no Node process at runtime.
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev"]

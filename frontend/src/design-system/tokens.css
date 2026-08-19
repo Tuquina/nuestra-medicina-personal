@@ -1,0 +1,51 @@
+/**
+ * Design tokens — Nuestra Medicina Personal
+ *
+ * Extracted from the approved Claude Design mockup
+ * ("Nuestra Medicina Personal - Login.dc.html"). Keep this file as the
+ * single source of truth for color/typography/spacing primitives; avoid
+ * hardcoding raw values in component styles (see architecture.md §31).
+ */
+
+:root {
+  /* ---- Color: background & surface ---- */
+  --color-bg-gradient-start: oklch(98% 0.015 75);
+  --color-bg-gradient-mid: oklch(96% 0.022 82);
+  --color-bg-gradient-end: oklch(97% 0.018 78);
+  --color-surface: oklch(99% 0.006 80);
+  --color-surface-border: oklch(88% 0.02 75);
+  --color-surface-border-strong: oklch(80% 0.02 75);
+  --color-surface-hover: oklch(96% 0.01 75);
+
+  /* ---- Color: ink (text) ---- */
+  --color-ink: oklch(24% 0.03 255);
+  --color-ink-muted: oklch(46% 0.025 255);
+  --color-ink-subtle: oklch(58% 0.02 255);
+
+  /* ---- Color: accent (warm amber / gold) ---- */
+  --color-accent-gold: oklch(64% 0.1 38);
+  --color-accent-amber: oklch(74% 0.12 55);
+  --color-accent-amber-soft: oklch(82% 0.11 55);
+  --color-accent-amber-light: oklch(88% 0.1 55);
+  --color-accent-amber-deep: oklch(62% 0.12 40);
+
+  /* ---- Color: deep blue (brand / links / primary ink accents) ---- */
+  --color-deep-blue: oklch(32% 0.07 254);
+
+  /* ---- Typography ---- */
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-sans: 'Public Sans', system-ui, sans-serif;
+
+  /* ---- Radius ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  /* ---- Shadow ---- */
+  --shadow-card: 0 24px 48px oklch(24% 0.03 255 / 0.08);
+
+  /* ---- Layout ---- */
+  --space-section-x: clamp(20px, 5vw, 64px);
+
+  /* ---- Motion ---- */
+  --transition-fast: 150ms ease;
+}

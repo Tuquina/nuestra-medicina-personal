@@ -1,0 +1,15 @@
+.header {
+  padding: 24px var(--space-section-x);
+}
+
+.logoLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+  text-decoration: none;
+}

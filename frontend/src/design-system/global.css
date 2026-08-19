@@ -1,0 +1,39 @@
+@import './tokens.css';
+
+html {
+  scroll-behavior: smooth;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-bg-gradient-start);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+}
+
+/* Consistent, visible keyboard focus across the app. */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--color-deep-blue);
+  outline-offset: 2px;
+}

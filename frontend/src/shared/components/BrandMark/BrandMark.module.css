@@ -1,0 +1,12 @@
+.mark {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 32% 30%,
+    var(--color-accent-amber-light),
+    var(--color-accent-amber-deep)
+  );
+  flex-shrink: 0;
+}

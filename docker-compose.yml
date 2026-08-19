@@ -1,0 +1,16 @@
+# Local development only. Runs the Vite dev server in a container so
+# nobody needs Node installed on the host. The production stack
+# (Nginx + Go API + Postgres, per architecture.md §3) lives separately
+# under deploy/ once the backend exists — do not merge the two.
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
