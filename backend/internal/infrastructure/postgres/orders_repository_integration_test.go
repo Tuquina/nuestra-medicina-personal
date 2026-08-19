@@ -88,6 +88,24 @@ func TestOrderPaymentIsIdempotentAgainstPostgres(t *testing.T) {
 		t.Fatalf("expected one email job after webhook retry, got %d", emailJobCount)
 	}
 
+	cancelledAttempt := payment
+	cancelledAttempt.ProviderPaymentID = "integration-cancelled-payment"
+	cancelledAttempt.Status = order.PaymentCancelled
+	cancelledAttempt.RawStatus = "cancelled"
+	cancelledAttempt.RawPayload = []byte(`{"id":"integration-cancelled-payment"}`)
+	stillPaid, err := repository.ApplyPayment(ctx, "MERCADO_PAGO", cancelledAttempt, now.Add(3*time.Minute))
+	if err != nil || stillPaid.Status != order.StatusPaid {
+		t.Fatalf("cancelled attempt after approved payment: %#v %v", stillPaid, err)
+	}
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM email_jobs
+		WHERE recipient = 'buyer@example.com' AND type = 'payment.failed'`).Scan(&emailJobCount); err != nil {
+		t.Fatalf("count failed-payment email jobs: %v", err)
+	}
+	if emailJobCount != 0 {
+		t.Fatalf("expected no failed-payment email for a paid order, got %d", emailJobCount)
+	}
+
 	mismatch := payment
 	mismatch.ProviderPaymentID = "mismatched-payment"
 	mismatch.AmountMinorUnits++

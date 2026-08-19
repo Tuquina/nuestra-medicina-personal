@@ -129,7 +129,16 @@ func (r *OrderRepository) ApplyPayment(ctx context.Context, provider string, pay
 		}
 	case order.PaymentCancelled, order.PaymentRefunded:
 		if _, err := tx.Exec(ctx, `
-			UPDATE orders SET status = 'CANCELLED', updated_at = $2 WHERE id::text = $1`,
+			UPDATE orders
+			SET status = CASE
+			        WHEN EXISTS (
+			            SELECT 1 FROM payments
+			            WHERE payments.order_id = orders.id AND payments.status = 'APPROVED'
+			        ) THEN 'PAID'
+			        ELSE 'CANCELLED'
+			    END,
+			    updated_at = $2
+			WHERE id::text = $1`,
 			payment.ExternalReference, now); err != nil {
 			return order.Order{}, fmt.Errorf("mark order refunded: %w", err)
 		}
@@ -155,6 +164,7 @@ func (r *OrderRepository) ApplyPayment(ctx context.Context, provider string, pay
 			JOIN order_items ON order_items.order_id = orders.id
 			JOIN books ON books.id = order_items.book_id
 			WHERE orders.id::text = $5
+			  AND ($2::text = 'payment.approved' OR orders.status <> 'PAID')
 			LIMIT 1
 			ON CONFLICT (dedupe_key) DO NOTHING`,
 			emailJobID, jobType,
