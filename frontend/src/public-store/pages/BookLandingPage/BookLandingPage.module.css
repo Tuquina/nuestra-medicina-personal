@@ -1,0 +1,12 @@
+.page {
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-gradient-start) 0%,
+    var(--color-bg-gradient-mid) 45%,
+    var(--color-bg-gradient-end) 100%
+  );
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  min-height: 100vh;
+}

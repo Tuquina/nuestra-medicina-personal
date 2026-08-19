@@ -80,6 +80,18 @@ the tile via CSS instead, give that CSS class its own `aspect-ratio` (a
 placeholder with no sizing from either source collapses to 0 height; hit
 this once already, in the About section's photo).
 
+Added while implementing the Catálogo and book landing pages: no new
+color tokens (both reused the Home palette almost entirely — see
+`bookLandings.ts` for the one genuine one-off, `oklch(40% 0.07 235)` for
+the second book's tagline). New shared components: `BackLink`,
+`BookHero`, `Synopsis`, `QuoteBanner`, `BookDetailsGrid`, `RelatedBooks`,
+`FinalCta`, `ImageTextSection`, `FeatureGrid`, `FaqAccordion`, and a
+`BookCard` extracted out of Home's featured-books grid (used with
+`compact` on the catalog, without it on Home). `global.css` also gained a
+`.gradient-text` utility for the warm sunrise heading treatment, shared
+by Home's hero and the Catálogo title instead of duplicating the
+3-stop gradient.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all

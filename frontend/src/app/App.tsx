@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { HomePage } from '../public-store/pages/HomePage/HomePage';
 import { CatalogoPage } from '../public-store/pages/CatalogoPage/CatalogoPage';
+import { BookLandingPage } from '../public-store/pages/BookLandingPage/BookLandingPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -13,6 +14,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/libros" element={<CatalogoPage />} />
+      <Route path="/libros/:slug" element={<BookLandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

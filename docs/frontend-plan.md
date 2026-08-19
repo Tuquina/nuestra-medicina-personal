@@ -16,18 +16,21 @@ verifiable steps rather than "build the whole app").
 | `Login.dc.html` | `/login` | `public-store/pages/LoginPage` | P0 | ✅ Done |
 | `Inicio.dc.html` | `/` | `public-store/pages/HomePage` | P0 | ✅ Done |
 | `Catalogo.dc.html` | `/libros` | `public-store/pages/CatalogoPage` | P0 | ✅ Done |
-| `Libro - El poder de tu historia.dc.html` | `/libros/el-poder-de-tu-historia` | `public-store/pages/BookLandingPage` (shared, data-driven) | P0 | ⬜ Pending |
-| `Libro - La escritura terapeutica entra a la escuela.dc.html` | `/libros/la-escritura-terapeutica-entra-a-la-escuela` | same as above | P0 | ⬜ Pending |
+| `Libro - El poder de tu historia.dc.html` | `/libros/el-poder-de-tu-historia` | `public-store/pages/BookLandingPage` (shared, data-driven) | P0 | ✅ Done |
+| `Libro - La escritura terapeutica entra a la escuela.dc.html` | `/libros/la-escritura-terapeutica-entra-a-la-escuela` | same as above | P0 | ✅ Done |
 | `Mi Cuenta.dc.html` | `/cuenta` | `public-store/pages/MiCuentaPage` | P1 | ⬜ Pending |
 | `Biblioteca.dc.html` | `/biblioteca` | `public-store/pages/BibliotecaPage` | P1 | ⬜ Pending |
 | `Checkout.dc.html` | `/checkout` | `public-store/pages/CheckoutPage` | P1 | ⬜ Pending |
 | `Meditaciones.dc.html` | `/meditaciones` | `public-store/pages/MeditacionesPage` | P1 | ⬜ Pending |
 | `Herramientas.dc.html` | `/herramientas` | `public-store/pages/HerramientasPage` | P1 | ⬜ Pending |
 
-`BookLandingPage` is planned as **one** data-driven component (title,
-cover, sections) rather than two near-duplicate files — confirm the two
-book mockups actually share structure before committing to that; if they
-diverge meaningfully, split them.
+`BookLandingPage` is **one** data-driven component at `/libros/:slug`,
+not two files. The two mockups *do* diverge (one has an image+text
+section + FAQ accordion, the other has a benefits grid and no FAQ) — that
+divergence is modeled as a discriminated union (`middleSection.type`)
+plus an optional `faqs` field in `data/bookLandings.ts`, so each book
+picks the blocks it actually has instead of forcing a shared shape or
+duplicating the whole page.
 
 ## Admin backoffice
 

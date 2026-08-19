@@ -1,0 +1,20 @@
+.section {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 var(--space-section-x) clamp(56px, 7vw, 88px);
+}
+
+.eyebrow {
+  margin: 0 0 16px;
+}
+
+.paragraph {
+  font-size: 17px;
+  line-height: 1.75;
+  color: oklch(32% 0.02 255);
+  margin: 0 0 20px;
+}
+
+.paragraph:last-child {
+  margin-bottom: 0;
+}
