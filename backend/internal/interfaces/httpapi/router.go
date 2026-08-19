@@ -17,6 +17,7 @@ type Dependencies struct {
 	Authentication      AuthenticationService
 	Orders              OrderService
 	Library             LibraryService
+	Pages               PageService
 	WebhookValidator    MercadoPagoWebhookValidator
 	Database            DatabaseHealth
 	AdminAuthorizer     AdminAuthorizer
@@ -32,6 +33,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies)
 	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
+	pageHandler := NewPageHandler(dependencies.Pages, dependencies.Logger)
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -47,6 +49,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	})
 	root.HandleFunc("GET /api/v1/books", booksHandler.ListPublished)
 	root.HandleFunc("GET /api/v1/books/{slug}", booksHandler.GetPublished)
+	root.HandleFunc("GET /api/v1/pages/{slug}", pageHandler.GetPublished)
 	root.HandleFunc("GET /api/v1/auth/google", authHandler.Start)
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
 	root.HandleFunc("GET /api/v1/me", authHandler.Me)
@@ -65,6 +68,12 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}", booksHandler.Update)
 	admin.HandleFunc("DELETE /api/v1/admin/books/{identifier}", booksHandler.Archive)
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/ebook", libraryHandler.Upload)
+	admin.HandleFunc("POST /api/v1/admin/pages", pageHandler.Create)
+	admin.HandleFunc("GET /api/v1/admin/pages/{identifier}", pageHandler.GetAdmin)
+	admin.HandleFunc("PUT /api/v1/admin/pages/{identifier}/draft", pageHandler.SaveDraft)
+	admin.HandleFunc("POST /api/v1/admin/pages/{identifier}/publish", pageHandler.Publish)
+	admin.HandleFunc("GET /api/v1/admin/pages/{identifier}/versions", pageHandler.ListVersions)
+	admin.HandleFunc("POST /api/v1/admin/pages/{identifier}/versions/{versionID}/restore", pageHandler.Restore)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
 		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, admin))
 	root.Handle("/api/v1/admin/", adminHandler)

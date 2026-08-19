@@ -14,6 +14,7 @@ import (
 	emailapp "github.com/nuestra-medicina-personal/backend/internal/application/email"
 	"github.com/nuestra-medicina-personal/backend/internal/application/library"
 	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
+	"github.com/nuestra-medicina-personal/backend/internal/application/pages"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/gmail"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/google"
@@ -60,6 +61,8 @@ func run(logger *slog.Logger) error {
 	}
 	libraryRepository := postgres.NewLibraryRepository(pool)
 	libraryService := library.NewService(libraryRepository, bookService, ebookStorage, cfg.EbookMaxUploadBytes)
+	pageRepository := postgres.NewPageRepository(pool)
+	pageService := pages.NewService(pageRepository)
 	emailRenderer, err := emailapp.NewRenderer(cfg.BaseURL, cfg.SupportEmail)
 	if err != nil {
 		return err
@@ -81,7 +84,7 @@ func run(logger *slog.Logger) error {
 	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService,
+		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService,
 		WebhookValidator: webhookValidator, Database: pool, AdminAuthorizer: authorizer,
 		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie, SecureCookies: cfg.SecureCookies(),
 		EbookInternalPrefix: cfg.EbookInternalPrefix, EbookMaxUploadBytes: cfg.EbookMaxUploadBytes,
