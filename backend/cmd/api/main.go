@@ -1,0 +1,72 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/nuestra-medicina-personal/backend/internal/application/books"
+	"github.com/nuestra-medicina-personal/backend/internal/config"
+	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/postgres"
+	"github.com/nuestra-medicina-personal/backend/internal/interfaces/httpapi"
+)
+
+func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	if err := run(logger); err != nil {
+		logger.Error("api stopped", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run(logger *slog.Logger) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	pool, err := postgres.Open(ctx, cfg.DatabaseURL, cfg.MaxDBConns, cfg.DatabaseTimeout)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	bookRepository := postgres.NewBookRepository(pool)
+	bookService := books.NewService(bookRepository)
+	authorizer := postgres.NewSessionAuthorizer(pool, cfg.AdminGoogleSub)
+	router := httpapi.NewRouter(httpapi.Dependencies{
+		Logger: logger, Books: bookService, Database: pool, AdminAuthorizer: authorizer,
+		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie,
+	})
+	server := &http.Server{
+		Addr: cfg.HTTPAddress, Handler: router, ReadTimeout: cfg.ReadTimeout,
+		ReadHeaderTimeout: cfg.ReadTimeout, WriteTimeout: cfg.WriteTimeout, IdleTimeout: cfg.IdleTimeout,
+	}
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		logger.Info("api listening", "configuration", cfg.String())
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			return err
+		}
+		return nil
+	case err := <-serverErrors:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	}
+}

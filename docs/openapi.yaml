@@ -1,0 +1,249 @@
+openapi: 3.1.0
+info:
+  title: Nuestra Medicina Personal API
+  version: 0.1.0
+  description: API REST del monolito para la tienda personal de eBooks.
+servers:
+  - url: http://localhost:8080
+    description: Desarrollo local
+tags:
+  - name: Health
+  - name: Books
+  - name: Admin books
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      operationId: getLiveness
+      responses:
+        '200':
+          description: El proceso HTTP está vivo.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+  /health/ready:
+    get:
+      tags: [Health]
+      operationId: getReadiness
+      responses:
+        '200':
+          description: La API puede acceder a PostgreSQL.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+        '503': {$ref: '#/components/responses/DatabaseUnavailable'}
+  /api/v1/books:
+    get:
+      tags: [Books]
+      operationId: listPublishedBooks
+      description: Devuelve exclusivamente libros publicados.
+      responses:
+        '200':
+          description: Catálogo público.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BookList'}
+  /api/v1/books/{slug}:
+    parameters:
+      - $ref: '#/components/parameters/BookSlug'
+    get:
+      tags: [Books]
+      operationId: getPublishedBook
+      description: Un borrador o libro archivado se responde como inexistente.
+      responses:
+        '200':
+          description: Libro publicado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Book'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+  /api/v1/admin/books:
+    get:
+      tags: [Admin books]
+      operationId: listAdminBooks
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Todos los libros, incluidos borradores y archivados.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BookList'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+    post:
+      tags: [Admin books]
+      operationId: createBook
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BookInput'}
+      responses:
+        '201':
+          description: Libro creado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Book'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '409': {$ref: '#/components/responses/BookSlugConflict'}
+        '422': {$ref: '#/components/responses/BookValidationFailed'}
+  /api/v1/admin/books/{identifier}:
+    parameters:
+      - $ref: '#/components/parameters/BookIdentifier'
+    get:
+      tags: [Admin books]
+      operationId: getAdminBook
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Libro por UUID o slug.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Book'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+    put:
+      tags: [Admin books]
+      operationId: updateBook
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BookInput'}
+      responses:
+        '200':
+          description: Libro actualizado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Book'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+        '409': {$ref: '#/components/responses/BookSlugConflict'}
+        '422': {$ref: '#/components/responses/BookValidationFailed'}
+    delete:
+      tags: [Admin books]
+      operationId: archiveBook
+      description: Cambia el estado a ARCHIVED; no elimina registros físicamente.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': {description: Libro archivado.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: nmp_session
+  parameters:
+    BookSlug:
+      name: slug
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+    BookIdentifier:
+      name: identifier
+      in: path
+      required: true
+      description: UUID o slug del libro.
+      schema: {type: string}
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      schema: {type: string, format: uri}
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, const: ok}
+    BookStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, ARCHIVED]
+    BookInput:
+      type: object
+      additionalProperties: false
+      required: [slug, title, priceMinorUnits]
+      properties:
+        slug: {type: string, maxLength: 160, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+        title: {type: string, maxLength: 200}
+        subtitle: {type: string}
+        authorName: {type: string}
+        category: {type: string}
+        variant: {type: string, enum: [gold, blue], default: blue}
+        shortDescription: {type: string, maxLength: 1000}
+        priceMinorUnits: {type: integer, format: int64, minimum: 0}
+        currency: {type: string, minLength: 3, maxLength: 3, default: ARS}
+        isbn: {type: string}
+        publicationDate: {type: [string, 'null'], format: date}
+        publicationDateLabel: {type: string}
+        format: {type: string}
+        fileSizeBytes: {type: [integer, 'null'], format: int64, minimum: 0}
+        coverMediaId: {type: [string, 'null'], format: uuid}
+        coverCaption: {type: string}
+        status: {$ref: '#/components/schemas/BookStatus'}
+        seoTitle: {type: string}
+        seoDescription: {type: string}
+        seoIndexable: {type: boolean, default: true}
+    Book:
+      allOf:
+        - $ref: '#/components/schemas/BookInput'
+        - type: object
+          required: [id, status, hasCover, createdAt, updatedAt]
+          properties:
+            id: {type: string, format: uuid}
+            hasCover: {type: boolean}
+            createdAt: {type: string, format: date-time}
+            updatedAt: {type: string, format: date-time}
+            publishedAt: {type: [string, 'null'], format: date-time}
+    BookList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/Book'}
+        total: {type: integer, minimum: 0}
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            details: {}
+  responses:
+    DatabaseUnavailable:
+      description: PostgreSQL no está disponible.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    AuthenticationRequired:
+      description: Falta una sesión válida.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    AdminRequired:
+      description: La sesión no corresponde al administrador.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    BookNotFound:
+      description: El libro no existe o no está publicado en una ruta pública.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    BookSlugConflict:
+      description: El slug ya pertenece a otro libro.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    BookValidationFailed:
+      description: Los datos del libro no cumplen el contrato.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}

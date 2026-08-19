@@ -1,8 +1,54 @@
-# Local development only. Runs the Vite dev server in a container so
-# nobody needs Node installed on the host. The production stack
-# (Nginx + Go API + Postgres, per architecture.md §3) lives separately
-# under deploy/ once the backend exists — do not merge the two.
+# Local development only. The production stack described in
+# architecture.md §3 belongs under deploy/ and is intentionally separate.
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: nmp
+      POSTGRES_USER: nmp
+      POSTGRES_PASSWORD: nmp_dev_only
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nmp -d nmp']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ['migrate']
+    environment:
+      DATABASE_URL: postgres://nmp:nmp_dev_only@postgres:5432/nmp?sslmode=disable
+      MIGRATIONS_PATH: /app/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - '8080:8080'
+    environment:
+      APP_ENV: development
+      APP_BASE_URL: http://localhost:5173
+      HTTP_ADDRESS: :8080
+      DATABASE_URL: postgres://nmp:nmp_dev_only@postgres:5432/nmp?sslmode=disable
+      DATABASE_MAX_CONNECTIONS: 5
+      ADMIN_GOOGLE_SUB: ${ADMIN_GOOGLE_SUB:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost:8080/health/ready']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   frontend:
     build:
       context: ./frontend
@@ -13,4 +59,10 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - CHOKIDAR_USEPOLLING=true
+      CHOKIDAR_USEPOLLING: 'true'
+      VITE_API_PROXY_TARGET: http://api:8080
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

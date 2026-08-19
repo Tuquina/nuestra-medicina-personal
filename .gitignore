@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+backend/coverage.out
+backend/bin/
+frontend/dist/
+*.log

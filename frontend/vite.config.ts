@@ -8,12 +8,11 @@ export default defineConfig({
     host: true,
     port: 5173,
     // Mirrors the production topology (architecture.md §3): Nginx proxies
-    // `/api/*` to the Go backend. There's no backend yet, so this just
-    // means API calls 404 locally until it exists — same behavior as prod
-    // would have before deploying it.
+    // `/api/*` to the Go backend. Docker Compose overrides the target with
+    // the API service name; local Node development keeps localhost.
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8080',
         changeOrigin: true,
       },
     },
