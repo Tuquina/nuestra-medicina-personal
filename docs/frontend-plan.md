@@ -54,7 +54,7 @@ is unaffected — only this frontend path differs.
 | `Admin Ventas.dc.html` | `/admin/ventas` | `admin/pages/VentasPage` | P2 | ✅ Done |
 | `Admin Clientes.dc.html` | `/admin/clientes` | `admin/pages/ClientesPage` | P2 | ✅ Done |
 | `Admin Multimedia.dc.html` | `/admin/multimedia` | `admin/pages/MultimediaPage` | P2 | ✅ Done |
-| `Admin Configuracion.dc.html` | `/admin/configuracion` | `admin/pages/ConfiguracionPage` | P2 | ⬜ Pending |
+| `Admin Configuracion.dc.html` | `/admin/configuracion` | `admin/pages/ConfiguracionPage` | P2 | ✅ Done |
 | `Admin Page Builder.dc.html` | `/admin/paginas/:pageId/editor` | `admin/pages/PageBuilderPage` | P3 (most complex; do last) | ⬜ Pending |
 
 ## Notes for whoever picks this up next

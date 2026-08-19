@@ -1,0 +1,111 @@
+.layout {
+  display: flex;
+  gap: 24px;
+  max-width: 900px;
+}
+
+.sectionNav {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navButton {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 9px 14px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-admin-text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.navButtonActive {
+  background: oklch(95% 0.006 90);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: 8px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.narrow {
+  max-width: 380px;
+}
+
+.medium {
+  max-width: 420px;
+}
+
+.wide {
+  max-width: 480px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkboxLabel {
+  font-size: 13.5px;
+  color: oklch(32% 0.02 255);
+}
+
+.saveButton {
+  align-self: flex-start;
+}
+
+/* ---- Integraciones ---- */
+
+.integrationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.integrationCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.integrationName {
+  font-size: 14.5px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.integrationHint {
+  font-size: 12.5px;
+  color: var(--color-admin-text-muted);
+  margin: 0;
+}
