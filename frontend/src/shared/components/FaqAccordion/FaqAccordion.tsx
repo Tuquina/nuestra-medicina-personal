@@ -3,15 +3,18 @@ import styles from './FaqAccordion.module.css';
 
 interface FaqAccordionProps {
   faqs: { q: string; a: string }[];
+  /** Omit when the surrounding page already has its own heading (e.g. a
+   * hero title) — a book landing page still wants its own. */
+  heading?: string;
 }
 
 /** "Preguntas frecuentes" — a single-open accordion (matches the mockup). */
-export function FaqAccordion({ faqs }: FaqAccordionProps) {
+export function FaqAccordion({ faqs, heading = 'Preguntas frecuentes' }: FaqAccordionProps) {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>Preguntas frecuentes</h2>
+      {heading && <h2 className={styles.heading}>{heading}</h2>}
       <div className={styles.list}>
         {faqs.map((faq, index) => {
           const open = openIndex === index;

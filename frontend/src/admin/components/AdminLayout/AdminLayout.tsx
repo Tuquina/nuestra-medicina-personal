@@ -89,6 +89,25 @@ export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = fals
           <NavLink to="/admin/configuracion" className={navLinkClass}>
             Configuración
           </NavLink>
+
+          <p className={styles.sectionLabel}>Ayuda</p>
+          <NavLink to="/admin/ayuda/contacto" className={navLinkClass}>
+            Contacto
+          </NavLink>
+          <NavLink to="/admin/ayuda/soporte" className={navLinkClass}>
+            Soporte
+          </NavLink>
+          <NavLink to="/admin/ayuda/preguntas-frecuentes" className={navLinkClass}>
+            Preguntas frecuentes
+          </NavLink>
+
+          <p className={styles.sectionLabel}>Legal</p>
+          <NavLink to="/admin/legal/terminos" className={navLinkClass}>
+            Términos
+          </NavLink>
+          <NavLink to="/admin/legal/privacidad" className={navLinkClass}>
+            Privacidad
+          </NavLink>
         </nav>
 
         <Link to="/" className={styles.siteLink}>

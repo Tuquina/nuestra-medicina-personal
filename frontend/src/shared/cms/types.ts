@@ -15,15 +15,24 @@
  */
 
 /**
- * 'MEDITACIONES' and 'HERRAMIENTAS' are wider than the real backend's
+ * Everything past 'HOME' | 'BOOK' is wider than the real backend's
  * `pages.type` CHECK constraint today (`migrations/001_initial_schema.up.sql`
- * only allows `'HOME'` / `'BOOK'`) — whoever wires the real `pages` API
- * needs a migration adding these values (or a generic `'PAGE'` type +
- * slug-based lookup) before `contentStore.ts` can point at a real
- * endpoint for these two. See docs/frontend-plan.md "Post-launch content
- * & admin extensions".
+ * only allows those two) — whoever wires the real `pages` API needs a
+ * migration adding these values (or a generic `'PAGE'` type + slug-based
+ * lookup) before `contentStore.ts` can point at a real endpoint for
+ * them. See docs/frontend-plan.md "Post-launch content & admin
+ * extensions".
  */
-export type PageType = 'HOME' | 'BOOK' | 'MEDITACIONES' | 'HERRAMIENTAS';
+export type PageType =
+  | 'HOME'
+  | 'BOOK'
+  | 'MEDITACIONES'
+  | 'HERRAMIENTAS'
+  | 'CONTACTO'
+  | 'SOPORTE'
+  | 'FAQ'
+  | 'TERMINOS'
+  | 'PRIVACIDAD';
 export type PageStatus = 'DRAFT' | 'PUBLISHED';
 
 /** A single content block. `props` is intentionally untyped here — each

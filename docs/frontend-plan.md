@@ -130,20 +130,59 @@ just with write operations too since these are admin-editable).
 - Sidebar: the three "Próximamente" `<span>` placeholders in
   `AdminLayout.tsx` become real `NavLink`s once each route exists.
 
-**C. `/terminos` and `/privacidad`** — real content now, replacing the
-`NotFoundPage` fallback the footer/login links used to hit. No
-`.dc.html` mockup exists for these (they weren't part of the original
-handoff), so they follow the site's existing typographic conventions
-via a new shared `LegalPage` layout (`shared/components/LegalPage`) —
-hero + table of contents + prose sections — rather than a specific
-source design. Written with Argentine law as the reference point (Ley
-24.240 Defensa del Consumidor, Ley 25.326 Protección de Datos
-Personales, Ley 11.723 Propiedad Intelectual, Resolución 424/2020) since
-the site sells to consumers in Argentina via Mercado Pago, but both
-pages open with a note that this is a starting point for a real
-abogado to review, not a finished legal instrument — and the site
-owner's actual legal identity (razón social/CUIT/domicilio) is marked
-`[a completar]` rather than invented.
+**C. `/terminos` and `/privacidad`** — real content, replacing the
+`NotFoundPage` fallback the footer/login links used to hit, and now
+editable from `/admin/legal/*` (see D below). No `.dc.html` mockup
+exists for these (they weren't part of the original handoff), so they
+follow the site's existing typographic conventions via a new shared
+`LegalPage` layout (`shared/components/LegalPage`) — hero + table of
+contents + prose sections — rather than a specific source design.
+Written with Argentine law as the reference point (Ley 24.240 Defensa
+del Consumidor, Ley 25.326 Protección de Datos Personales, Ley 11.723
+Propiedad Intelectual, Resolución 424/2020) since the site sells to
+consumers in Argentina via Mercado Pago, but both pages open with a
+note that this is a starting point for a real abogado to review, not a
+finished legal instrument — and the site owner's actual legal identity
+(razón social/CUIT/domicilio) is marked `[a completar]` rather than
+invented.
+
+**D. The rest of the footer's "Ayuda" and "Legal" links, and admin
+editors for both groups** — `/contacto`, `/soporte`,
+`/preguntas-frecuentes` are real pages now (previously 404ing), and
+every one of C/D's five pages is editable from the admin, in two
+sidebar sections separate from "Páginas": **Ayuda**
+(`/admin/ayuda/contacto`, `/admin/ayuda/soporte`,
+`/admin/ayuda/preguntas-frecuentes`) and **Legal**
+(`/admin/legal/terminos`, `/admin/legal/privacidad`).
+
+- `shared/cms/helpContent.ts` models the three Ayuda pages: Contacto is
+  a title/intro + a repeatable list of contact methods
+  (label/value/href); Soporte is a title/intro + repeatable "topic"
+  cards (reuses `FeatureGrid`); FAQ is a title/intro + repeatable Q&A
+  items (reuses `FaqAccordion`, both now take an optional `heading` so
+  a standalone page doesn't get a duplicate title).
+- `shared/cms/legalDocContent.ts` models Términos/Privacidad as a
+  title/updated-label/intro-note + an ordered list of numbered
+  sections, where each section's body is a small **markdown-lite**
+  string (blank line = new paragraph, `- ` = bullet, `> ` = highlighted
+  note, `**bold**`) rather than JSX — safe to edit from a plain
+  `<textarea>` without a rich-text editor. `legalDocRenderer.tsx`
+  parses it back into `LegalParagraph`/`LegalList`/`LegalNote`. (Split
+  into a `.ts` data file + a `.tsx` renderer file specifically so the
+  data file has no JSX and doesn't trip oxlint's
+  `react/only-export-components` Fast Refresh rule.)
+- Admin editors: `admin/pages/AyudaEditorPages/*` (one file per Ayuda
+  page) and `admin/pages/LegalDocEditorPage/LegalDocEditorPage.tsx` (one
+  generic editor, reused for both legal docs via two thin wrapper
+  components) — all sharing `admin/components/EditorForm/EditorForm.module.css`,
+  the toolbar/status-badge/card-list styling first written for
+  `CollectionPageEditor` and promoted here once a third and fourth
+  editor needed the same look.
+- `PageType` (`shared/cms/types.ts`) now also has `'CONTACTO'`,
+  `'SOPORTE'`, `'FAQ'`, `'TERMINOS'`, `'PRIVACIDAD'` — same caveat as
+  Meditaciones/Herramientas: wider than the real `pages.type` CHECK
+  constraint today, flagged in that file's doc comment for whoever
+  wires the real endpoint.
 
 ## Notes for whoever picks this up next
 

@@ -1,0 +1,28 @@
+.previewBanner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: oklch(28% 0.06 254);
+  color: oklch(96% 0.02 80);
+}
+
+.contactHint {
+  max-width: 640px;
+  margin: -40px auto 0;
+  padding: 0 var(--space-section-x) clamp(56px, 7vw, 88px);
+  text-align: center;
+}
+
+.contactHint a {
+  color: var(--color-deep-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.contactHint a:hover {
+  text-decoration: underline;
+}

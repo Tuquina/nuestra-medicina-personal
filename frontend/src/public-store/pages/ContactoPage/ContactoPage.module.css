@@ -1,0 +1,54 @@
+.previewBanner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: oklch(28% 0.06 254);
+  color: oklch(96% 0.02 80);
+}
+
+.section {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 var(--space-section-x) clamp(72px, 9vw, 112px);
+}
+
+.methods {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.method {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 18px 22px;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.methodLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+  min-width: 70px;
+}
+
+.methodValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-deep-blue);
+  text-decoration: none;
+}
+
+.methodValue:hover {
+  text-decoration: underline;
+}

@@ -11,6 +11,18 @@
   min-height: 100vh;
 }
 
+.previewBanner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: oklch(28% 0.06 254);
+  color: oklch(96% 0.02 80);
+}
+
 .hero {
   max-width: 760px;
   margin: 0 auto;

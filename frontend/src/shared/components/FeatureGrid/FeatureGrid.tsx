@@ -1,7 +1,10 @@
 import styles from './FeatureGrid.module.css';
 
 interface FeatureGridProps {
-  heading: string;
+  /** Omit when the surrounding page already has its own heading (e.g. a
+   * hero title) — a book landing page's middle section still wants its
+   * own. */
+  heading?: string;
   items: { title: string; description: string }[];
 }
 
@@ -9,7 +12,7 @@ interface FeatureGridProps {
 export function FeatureGrid({ heading, items }: FeatureGridProps) {
   return (
     <section className={styles.section}>
-      <h2 className={styles.heading}>{heading}</h2>
+      {heading && <h2 className={styles.heading}>{heading}</h2>}
       <div className={styles.grid}>
         {items.map((item) => (
           <div key={item.title} className={styles.item}>

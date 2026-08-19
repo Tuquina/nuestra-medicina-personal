@@ -6,7 +6,7 @@ import { useEditablePage } from '../../../shared/cms/useEditablePage';
 import type { PageContent, PageType } from '../../../shared/cms/types';
 import { COLLECTION_SECTION_TYPE, readCollectionProps, type CollectionCard, type CollectionPageProps } from '../../../shared/cms/collectionContent';
 import f from '../../../shared/components/FormField/FormField.module.css';
-import styles from './CollectionPageEditor.module.css';
+import styles from '../../components/EditorForm/EditorForm.module.css';
 
 interface CollectionPageEditorProps {
   pageType: Extract<PageType, 'MEDITACIONES' | 'HERRAMIENTAS'>;

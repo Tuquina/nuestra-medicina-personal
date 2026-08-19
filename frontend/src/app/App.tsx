@@ -21,9 +21,17 @@ import { SobreElProyectoPage } from '../admin/pages/SobreElProyectoPage/SobreElP
 import { CuponesPage } from '../admin/pages/CuponesPage/CuponesPage';
 import { ResenasPage } from '../admin/pages/ResenasPage/ResenasPage';
 import { AnaliticaPage } from '../admin/pages/AnaliticaPage/AnaliticaPage';
+import { TerminosEditorPage } from '../admin/pages/LegalDocEditorPage/TerminosEditorPage';
+import { PrivacidadEditorPage } from '../admin/pages/LegalDocEditorPage/PrivacidadEditorPage';
+import { ContactoEditorPage } from '../admin/pages/AyudaEditorPages/ContactoEditorPage';
+import { SoporteEditorPage } from '../admin/pages/AyudaEditorPages/SoporteEditorPage';
+import { FaqEditorPage } from '../admin/pages/AyudaEditorPages/FaqEditorPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { TerminosPage } from '../public-store/pages/TerminosPage/TerminosPage';
 import { PrivacidadPage } from '../public-store/pages/PrivacidadPage/PrivacidadPage';
+import { ContactoPage } from '../public-store/pages/ContactoPage/ContactoPage';
+import { SoportePage } from '../public-store/pages/SoportePage/SoportePage';
+import { PreguntasFrecuentesPage } from '../public-store/pages/PreguntasFrecuentesPage/PreguntasFrecuentesPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
 /**
@@ -56,9 +64,17 @@ export function App() {
       <Route path="/admin/cupones" element={<CuponesPage />} />
       <Route path="/admin/resenas" element={<ResenasPage />} />
       <Route path="/admin/analitica" element={<AnaliticaPage />} />
+      <Route path="/admin/legal/terminos" element={<TerminosEditorPage />} />
+      <Route path="/admin/legal/privacidad" element={<PrivacidadEditorPage />} />
+      <Route path="/admin/ayuda/contacto" element={<ContactoEditorPage />} />
+      <Route path="/admin/ayuda/soporte" element={<SoporteEditorPage />} />
+      <Route path="/admin/ayuda/preguntas-frecuentes" element={<FaqEditorPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/terminos" element={<TerminosPage />} />
       <Route path="/privacidad" element={<PrivacidadPage />} />
+      <Route path="/contacto" element={<ContactoPage />} />
+      <Route path="/soporte" element={<SoportePage />} />
+      <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentesPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

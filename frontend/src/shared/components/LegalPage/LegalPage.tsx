@@ -16,6 +16,8 @@ interface LegalPageProps {
   updatedLabel: string;
   sections: LegalSectionDef[];
   children: ReactNode;
+  /** True when rendering an admin's "Vista previa" of unpublished changes. */
+  preview?: boolean;
 }
 
 /**
@@ -27,9 +29,14 @@ interface LegalPageProps {
  * headings, the same Eyebrow/GradientTopBar/SiteHeader/SiteFooter used
  * everywhere else) rather than a specific source design.
  */
-export function LegalPage({ eyebrow, title, updatedLabel, sections, children }: LegalPageProps) {
+export function LegalPage({ eyebrow, title, updatedLabel, sections, children, preview = false }: LegalPageProps) {
   return (
     <div className={styles.page}>
+      {preview && (
+        <div className={styles.previewBanner} role="status">
+          Vista previa — estás viendo cambios sin publicar.
+        </div>
+      )}
       <GradientTopBar />
       <SiteHeader />
 
