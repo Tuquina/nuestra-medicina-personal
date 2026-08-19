@@ -27,6 +27,7 @@ func TestOrderPaymentIsIdempotentAgainstPostgres(t *testing.T) {
 		itemID  = "40000000-0000-4000-8000-000000000001"
 	)
 	cleanup := func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM email_jobs WHERE recipient = 'buyer@example.com'`)
 		_, _ = pool.Exec(ctx, `DELETE FROM payments WHERE order_id = $1::uuid`, orderID)
 		_, _ = pool.Exec(ctx, `DELETE FROM order_items WHERE order_id = $1::uuid`, orderID)
 		_, _ = pool.Exec(ctx, `DELETE FROM orders WHERE id = $1::uuid`, orderID)
@@ -76,6 +77,15 @@ func TestOrderPaymentIsIdempotentAgainstPostgres(t *testing.T) {
 	}
 	if paymentCount != 1 {
 		t.Fatalf("expected one payment row after retry, got %d", paymentCount)
+	}
+	var emailJobCount int
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM email_jobs
+		WHERE recipient = 'buyer@example.com' AND type = 'payment.approved'`).Scan(&emailJobCount); err != nil {
+		t.Fatalf("count email jobs: %v", err)
+	}
+	if emailJobCount != 1 {
+		t.Fatalf("expected one email job after webhook retry, got %d", emailJobCount)
 	}
 
 	mismatch := payment

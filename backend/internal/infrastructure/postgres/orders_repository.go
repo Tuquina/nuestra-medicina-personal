@@ -134,10 +134,53 @@ func (r *OrderRepository) ApplyPayment(ctx context.Context, provider string, pay
 			return order.Order{}, fmt.Errorf("mark order refunded: %w", err)
 		}
 	}
+	if jobType := paymentEmailJobType(payment.Status); jobType != "" {
+		emailJobID, err := databaseUUID()
+		if err != nil {
+			return order.Order{}, fmt.Errorf("generate email job id: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO email_jobs (id, type, recipient, payload, dedupe_key, next_attempt_at, created_at, updated_at)
+			SELECT $1::uuid, $2, users.email,
+			       jsonb_build_object(
+			           'orderId', orders.id::text,
+			           'bookTitle', order_items.book_title,
+			           'amountMinorUnits', orders.total_minor_units,
+			           'currency', orders.currency
+			       ),
+			       $3, $4, $4, $4
+			FROM orders
+			JOIN users ON users.id = orders.user_id
+			JOIN order_items ON order_items.order_id = orders.id
+			WHERE orders.id::text = $5
+			LIMIT 1
+			ON CONFLICT (dedupe_key) DO NOTHING`,
+			emailJobID, jobType,
+			fmt.Sprintf("payment:%s:%s:%s", provider, payment.ProviderPaymentID, payment.Status),
+			now, payment.ExternalReference,
+		); err != nil {
+			return order.Order{}, fmt.Errorf("enqueue payment email: %w", err)
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return order.Order{}, fmt.Errorf("commit verified payment: %w", err)
 	}
 	return r.get(ctx, payment.ExternalReference, "")
+}
+
+func paymentEmailJobType(status order.PaymentStatus) string {
+	switch status {
+	case order.PaymentApproved:
+		return "payment.approved"
+	case order.PaymentPending:
+		return "payment.pending"
+	case order.PaymentRejected, order.PaymentCancelled:
+		return "payment.failed"
+	case order.PaymentRefunded:
+		return "purchase.refunded"
+	default:
+		return ""
+	}
 }
 
 func (r *OrderRepository) get(ctx context.Context, identifier, userID string) (order.Order, error) {
