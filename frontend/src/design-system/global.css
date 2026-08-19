@@ -37,3 +37,17 @@ button:focus-visible {
   outline: 2px solid var(--color-deep-blue);
   outline-offset: 2px;
 }
+
+/* Visually hidden but announced by screen readers — for labels whose
+   visible equivalent is a placeholder or icon (architecture.md §61). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

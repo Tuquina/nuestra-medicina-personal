@@ -1,0 +1,146 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in oklch, var(--color-bg-gradient-end) 92%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-surface-border-strong);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 22px var(--space-section-x);
+  transition: padding var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.row.scrolled {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  box-shadow: 0 8px 24px color-mix(in oklch, var(--color-ink) 8%, transparent);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  flex-shrink: 0;
+}
+
+.nav a {
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.nav a:hover {
+  color: var(--color-ink);
+}
+
+.authRow {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-shrink: 0;
+}
+
+.libraryLink {
+  color: var(--color-deep-blue);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.loginButton {
+  background: var(--color-deep-blue);
+  color: var(--color-surface);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 22px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: opacity var(--transition-fast);
+}
+
+.loginButton:hover {
+  opacity: 0.88;
+}
+
+.menuToggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.menuToggle span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--color-ink);
+}
+
+.mobileMenu {
+  display: none;
+  flex-direction: column;
+  gap: 22px;
+  padding: 8px 24px 28px;
+  border-top: 1px solid var(--color-surface-border-strong);
+}
+
+.mobileMenu a {
+  color: var(--color-ink);
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.mobileMenu .libraryLink {
+  font-size: 17px;
+}
+
+.mobileMenu .loginButton {
+  padding: 13px 22px;
+  text-align: center;
+}
+
+.mobileMenu.open {
+  display: flex;
+}
+
+@media (max-width: 1039px) {
+  .nav,
+  .authRow {
+    display: none;
+  }
+
+  .menuToggle {
+    display: inline-flex;
+  }
+}

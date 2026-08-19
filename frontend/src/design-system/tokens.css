@@ -1,8 +1,8 @@
 /**
  * Design tokens — Nuestra Medicina Personal
  *
- * Extracted from the approved Claude Design mockup
- * ("Nuestra Medicina Personal - Login.dc.html"). Keep this file as the
+ * Extracted from the approved Claude Design mockups (see
+ * docs/design-system.md for provenance per token). Keep this file as the
  * single source of truth for color/typography/spacing primitives; avoid
  * hardcoding raw values in component styles (see architecture.md §31).
  */
@@ -16,6 +16,7 @@
   --color-surface-border: oklch(88% 0.02 75);
   --color-surface-border-strong: oklch(80% 0.02 75);
   --color-surface-hover: oklch(96% 0.01 75);
+  --color-placeholder-base: oklch(95% 0.02 75);
 
   /* ---- Color: ink (text) ---- */
   --color-ink: oklch(24% 0.03 255);
@@ -24,13 +25,29 @@
 
   /* ---- Color: accent (warm amber / gold) ---- */
   --color-accent-gold: oklch(64% 0.1 38);
+  --color-accent-gold-dark: oklch(45% 0.1 38);
   --color-accent-amber: oklch(74% 0.12 55);
   --color-accent-amber-soft: oklch(82% 0.11 55);
   --color-accent-amber-light: oklch(88% 0.1 55);
   --color-accent-amber-deep: oklch(62% 0.12 40);
 
+  /* ---- Color: sky blue (secondary accent — meditations, nature imagery) ---- */
+  --color-sky: oklch(70% 0.08 230);
+  --color-sky-pale: oklch(88% 0.045 230);
+  --color-sky-soft: oklch(90% 0.035 230);
+
   /* ---- Color: deep blue (brand / links / primary ink accents) ---- */
   --color-deep-blue: oklch(32% 0.07 254);
+
+  /* ---- Color: section washes (decorative gradients, one per section type) ---- */
+  --color-manifesto-gradient-start: oklch(91% 0.035 232);
+  --color-manifesto-gradient-end: oklch(87% 0.05 250);
+  --color-tools-gradient-start: oklch(94% 0.022 75);
+  --color-tools-gradient-end: oklch(89% 0.045 45);
+  --color-footer-bg-start: oklch(22% 0.05 254);
+  --color-footer-bg-end: oklch(15% 0.04 258);
+  --color-newsletter-bg-start: oklch(38% 0.08 250);
+  --color-newsletter-bg-end: oklch(20% 0.055 258);
 
   /* ---- Typography ---- */
   --font-serif: 'Newsreader', Georgia, serif;

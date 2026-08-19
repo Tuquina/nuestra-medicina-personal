@@ -13,20 +13,6 @@
   flex-direction: column;
 }
 
-.topBar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--color-deep-blue),
-    var(--color-accent-amber)
-  );
-  z-index: 60;
-}
-
 .main {
   flex: 1;
   display: flex;

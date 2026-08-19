@@ -1,0 +1,81 @@
+.section {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(72px, 9vw, 112px) var(--space-section-x);
+}
+
+.intro {
+  margin: 0 0 48px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 40px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cover {
+  margin-bottom: 22px;
+}
+
+.badge {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.badgeGold {
+  background: color-mix(in oklch, var(--color-accent-gold) 14%, transparent);
+  color: var(--color-accent-gold-dark);
+}
+
+.badgeBlue {
+  background: color-mix(in oklch, var(--color-deep-blue) 12%, transparent);
+  color: var(--color-deep-blue);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 24px;
+  margin: 0 0 10px;
+  color: var(--color-ink);
+}
+
+.description {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  margin: 0 0 20px;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.price {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.link {
+  color: var(--color-deep-blue);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-deep-blue);
+}

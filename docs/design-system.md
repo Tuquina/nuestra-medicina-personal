@@ -52,6 +52,34 @@ public-store mockups:
 | `--shadow-card` | `0 24px 48px oklch(24% 0.03 255 / 0.08)` | Elevated cards |
 | `--space-section-x` | `clamp(20px, 5vw, 64px)` | Horizontal page padding |
 
+Added while implementing `Inicio.dc.html` (Home):
+
+| Token | Value | Use |
+|---|---|---|
+| `--color-placeholder-base` | `oklch(95% 0.02 75)` | Neutral stripe in photo placeholders |
+| `--color-accent-gold-dark` | `oklch(45% 0.1 38)` | Text on a gold badge |
+| `--color-sky` | `oklch(70% 0.08 230)` | Meditaciones eyebrow/underline accent |
+| `--color-sky-pale` | `oklch(88% 0.045 230)` | "Nature" photo placeholder stripe |
+| `--color-sky-soft` | `oklch(90% 0.035 230)` | Footer link/body text on the dark footer |
+| `--color-manifesto-gradient-start/end` | `oklch(91% 0.035 232)` / `oklch(87% 0.05 250)` | Manifesto section wash |
+| `--color-tools-gradient-start/end` | `oklch(94% 0.022 75)` / `oklch(89% 0.045 45)` | Herramientas section wash |
+| `--color-footer-bg-start/end` | `oklch(22% 0.05 254)` / `oklch(15% 0.04 258)` | Footer background |
+| `--color-newsletter-bg-start/end` | `oklch(38% 0.08 250)` / `oklch(20% 0.055 258)` | Newsletter section background |
+
+Translucent variants (badges, footer text opacity, etc.) use
+`color-mix(in oklch, var(--token) X%, transparent)` at the point of use
+rather than dedicated alpha tokens — keeps the token list from
+multiplying for every opacity a mockup happens to use.
+
+New shared components from Home: `GradientTopBar`, `SiteHeader` (full nav,
+sticky, mobile menu), `SiteFooter`, `Eyebrow`, `SectionIntro`,
+`ImagePlaceholder` (+ `stripedPlaceholder()` helper in `shared/utils`).
+`ImagePlaceholder` only sets `aspect-ratio`/`border-radius` inline when
+passed explicitly — if you use it inside a grid/flex layout that sizes
+the tile via CSS instead, give that CSS class its own `aspect-ratio` (a
+placeholder with no sizing from either source collapses to 0 height; hit
+this once already, in the About section's photo).
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all
@@ -61,9 +89,6 @@ Don't guess their exact values ahead of need — pull them from the actual
 mockup file when you implement the page that uses them, and add them to
 `tokens.css` + this table at that point:
 
-- **Sky blue** (hue ~230–240, e.g. `oklch(90% 0.035 230)`) — shows up
-  repeatedly outside the Login page; likely a secondary accent for
-  catalog/book pages.
 - **Warm neutral gray** (hue ~90, e.g. `oklch(88% 0.01 90)` through
   `oklch(30% 0.02 90)`) — a full gray ramp, likely the admin backoffice's
   UI chrome (tables, borders, muted admin text) rather than the public

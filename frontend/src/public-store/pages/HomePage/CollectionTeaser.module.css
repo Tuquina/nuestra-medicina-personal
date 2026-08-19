@@ -1,0 +1,43 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 64px;
+}
+
+.row.reverse {
+  flex-direction: row-reverse;
+}
+
+@media (max-width: 1039px) {
+  .row,
+  .row.reverse {
+    flex-direction: column;
+    gap: 32px;
+  }
+}
+
+.textCol {
+  flex: 1;
+  min-width: 280px;
+}
+
+.description {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--color-ink-muted);
+  margin: 0 0 28px;
+  max-width: 420px;
+}
+
+.link {
+  color: var(--color-ink);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--color-ink);
+}
+
+.imgCol {
+  flex: 1;
+  min-width: 280px;
+}

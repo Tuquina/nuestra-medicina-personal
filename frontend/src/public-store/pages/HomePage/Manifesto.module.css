@@ -1,0 +1,62 @@
+.section {
+  background: linear-gradient(
+    135deg,
+    var(--color-manifesto-gradient-start),
+    var(--color-manifesto-gradient-end)
+  );
+  padding: clamp(64px, 9vw, 104px) var(--space-section-x);
+  position: relative;
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  bottom: -90px;
+  left: 8%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-accent-amber-soft) 0%, transparent 70%);
+  filter: blur(50px);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.inner {
+  max-width: 720px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.mark {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 32% 30%,
+    var(--color-accent-amber-light),
+    var(--color-accent-amber-deep)
+  );
+  margin: 0 auto 24px;
+}
+
+.quote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(24px, 3.4vw, 34px);
+  line-height: 1.4;
+  color: var(--color-ink);
+  margin: 0 0 24px;
+}
+
+.body {
+  font-size: 16px;
+  line-height: 1.7;
+  color: oklch(38% 0.03 255);
+  margin: 0;
+}

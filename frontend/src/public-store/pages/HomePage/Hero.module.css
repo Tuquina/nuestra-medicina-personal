@@ -1,0 +1,131 @@
+.section {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 96px) var(--space-section-x) clamp(56px, 8vw, 104px);
+  position: relative;
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  top: -60px;
+  right: 6%;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--color-accent-amber-soft) 0%,
+    transparent 70%
+  );
+  filter: blur(30px);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 72px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 1039px) {
+  .row {
+    flex-direction: column;
+    gap: 36px;
+  }
+}
+
+.textCol {
+  max-width: 480px;
+}
+
+@media (max-width: 1039px) {
+  .textCol {
+    max-width: 100%;
+  }
+}
+
+.heading {
+  margin: 0 0 28px;
+  line-height: 1.02;
+}
+
+.headingLine1 {
+  display: block;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(32px, 4.4vw, 50px);
+  color: var(--color-ink);
+  letter-spacing: 0.01em;
+}
+
+.headingLine2 {
+  display: block;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-style: italic;
+  font-size: clamp(40px, 5.8vw, 70px);
+  background: linear-gradient(
+    100deg,
+    var(--color-deep-blue) 0%,
+    var(--color-accent-gold-dark) 55%,
+    var(--color-accent-amber) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lede {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  margin: 0 0 36px;
+  max-width: 440px;
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 28px;
+}
+
+.primaryCta {
+  background: var(--color-deep-blue);
+  color: var(--color-surface);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 15px 30px;
+  border-radius: 4px;
+  display: inline-block;
+  transition: opacity var(--transition-fast);
+}
+
+.primaryCta:hover {
+  opacity: 0.88;
+}
+
+.secondaryCta {
+  color: var(--color-ink);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--color-ink);
+}
+
+.imgCol {
+  width: 440px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1039px) {
+  .imgCol {
+    width: 100%;
+  }
+}

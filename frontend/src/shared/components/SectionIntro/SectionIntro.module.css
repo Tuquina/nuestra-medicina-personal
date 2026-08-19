@@ -1,0 +1,30 @@
+.intro {
+  max-width: var(--intro-max-width, 560px);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(26px, 3.4vw, 38px);
+  margin: 14px 0 16px;
+  color: var(--color-ink);
+}
+
+.underline {
+  width: 46px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--color-deep-blue),
+    var(--underline-end, var(--color-accent-amber))
+  );
+  margin: 0 0 16px;
+}
+
+.description {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--color-ink-muted);
+  margin: 0;
+}

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PublicHeader } from '../../../shared/components/PublicHeader/PublicHeader';
 import { PublicFooter } from '../../../shared/components/PublicFooter/PublicFooter';
+import { GradientTopBar } from '../../../shared/components/GradientTopBar/GradientTopBar';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { GOOGLE_AUTH_URL } from '../../../shared/config/api';
 import styles from './LoginPage.module.css';
@@ -19,7 +20,7 @@ export function LoginPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.topBar} aria-hidden="true" />
+      <GradientTopBar />
 
       <PublicHeader />
 
