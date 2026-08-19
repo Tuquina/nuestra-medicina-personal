@@ -1,0 +1,183 @@
+.body {
+  display: flex;
+}
+
+.main {
+  flex: 1;
+  padding: clamp(20px, 3vw, 36px);
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 340px;
+  padding: 9px 14px;
+  border: 1px solid var(--color-admin-border);
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-family: var(--font-sans);
+}
+
+.filterRow {
+  display: flex;
+  gap: 6px;
+}
+
+.filterButton {
+  background: oklch(95% 0.006 90);
+  color: var(--color-admin-text-muted);
+  border: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.filterButtonActive {
+  background: var(--color-deep-blue);
+  color: var(--color-surface);
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: 8px;
+  padding: 0 0 8px;
+  cursor: pointer;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+.tileSelected {
+  border-color: var(--color-deep-blue);
+}
+
+.tileThumb {
+  aspect-ratio: 1;
+}
+
+.tileName {
+  font-size: 11.5px;
+  color: oklch(40% 0.02 90);
+  padding: 8px 8px 0;
+  text-align: left;
+  word-break: break-word;
+}
+
+.addTile {
+  aspect-ratio: 1;
+  border: 1px dashed var(--color-surface-border-strong);
+  border-radius: 8px;
+  background: oklch(98% 0.004 90);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.addTilePlus {
+  font-size: 24px;
+  color: oklch(65% 0.01 90);
+  font-weight: 300;
+}
+
+.emptyState {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--color-admin-text-muted);
+  font-size: 14px;
+}
+
+/* ---- Drawer ---- */
+
+.drawer {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-admin-border);
+  padding: 24px;
+  height: calc(100vh - 65px);
+  position: sticky;
+  top: 65px;
+  overflow-y: auto;
+}
+
+.drawerThumb {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  margin-bottom: 18px;
+}
+
+.drawerTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  color: var(--color-ink);
+}
+
+.drawerFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.drawerFieldLabel {
+  color: var(--color-admin-text-muted);
+  margin: 0 0 2px;
+}
+
+.drawerFieldValue {
+  margin: 0;
+  color: oklch(28% 0.02 255);
+}
+
+.altLabel {
+  display: block;
+  color: var(--color-admin-text-muted);
+  margin: 0 0 6px;
+}
+
+.altTextarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 5px;
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  resize: vertical;
+}
+
+.deleteButton {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.drawerEmpty {
+  font-size: 13.5px;
+  color: var(--color-admin-text-muted);
+  text-align: center;
+  margin-top: 40px;
+}
