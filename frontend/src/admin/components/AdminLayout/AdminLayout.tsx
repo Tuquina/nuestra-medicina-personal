@@ -77,6 +77,9 @@ export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = fals
           <NavLink to="/admin/cupones" className={navLinkClass}>
             Cupones
           </NavLink>
+          <NavLink to="/admin/resenas" className={navLinkClass}>
+            Reseñas
+          </NavLink>
           <NavLink to="/admin/multimedia" className={navLinkClass}>
             Multimedia
           </NavLink>
@@ -85,7 +88,6 @@ export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = fals
           </NavLink>
 
           <p className={styles.sectionLabel}>Próximamente</p>
-          <span className={styles.disabledItem}>Reseñas</span>
           <span className={styles.disabledItem}>Analítica</span>
         </nav>
 

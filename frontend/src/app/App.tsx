@@ -19,6 +19,7 @@ import { MeditacionesEditorPage } from '../admin/pages/CollectionPageEditor/Medi
 import { HerramientasEditorPage } from '../admin/pages/CollectionPageEditor/HerramientasEditorPage';
 import { SobreElProyectoPage } from '../admin/pages/SobreElProyectoPage/SobreElProyectoPage';
 import { CuponesPage } from '../admin/pages/CuponesPage/CuponesPage';
+import { ResenasPage } from '../admin/pages/ResenasPage/ResenasPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -50,6 +51,7 @@ export function App() {
       <Route path="/admin/paginas/herramientas" element={<HerramientasEditorPage />} />
       <Route path="/admin/sobre-el-proyecto" element={<SobreElProyectoPage />} />
       <Route path="/admin/cupones" element={<CuponesPage />} />
+      <Route path="/admin/resenas" element={<ResenasPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

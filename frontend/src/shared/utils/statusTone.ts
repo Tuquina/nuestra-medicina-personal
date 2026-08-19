@@ -11,6 +11,8 @@ const STATUS_TONE: Record<string, StatusTone> = {
   Programado: 'pending',
   Vencido: 'danger',
   Desactivado: 'neutral',
+  Aprobada: 'success',
+  Rechazada: 'danger',
 };
 
 /** Maps the known status label strings straight to a `StatusBadge` tone. */

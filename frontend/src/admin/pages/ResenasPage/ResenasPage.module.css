@@ -1,0 +1,140 @@
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toolbar {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-admin-border);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search {
+  flex: 1;
+  min-width: 200px;
+  padding: 9px 14px;
+  border: 1px solid var(--color-admin-border);
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-family: var(--font-sans);
+}
+
+.select {
+  padding: 9px 14px;
+  border: 1px solid var(--color-admin-border);
+  border-radius: 6px;
+  font-size: 13.5px;
+  background: white;
+  font-family: var(--font-sans);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.reviewRow {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-admin-border-subtle);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.reviewMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.reviewHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.customerName {
+  font-weight: 600;
+  color: var(--color-ink);
+  font-size: 13.5px;
+}
+
+.bookTitle {
+  font-size: 12.5px;
+  color: var(--color-admin-text-muted);
+}
+
+.stars {
+  color: var(--color-accent-gold-dark, #b8860b);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.reviewText {
+  font-size: 13.5px;
+  color: oklch(32% 0.02 255);
+  line-height: 1.5;
+  margin: 6px 0;
+}
+
+.reviewDate {
+  font-size: 11.5px;
+  color: var(--color-admin-text-faint);
+}
+
+.reviewActions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.actionButton {
+  border: 1px solid var(--color-surface-border-strong);
+  background: var(--color-surface);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.actionButtonApprove {
+  color: var(--color-status-success-icon);
+  border-color: color-mix(in oklch, var(--color-status-success-icon) 40%, transparent);
+}
+
+.actionButtonReject {
+  color: var(--color-status-danger-icon);
+  border-color: color-mix(in oklch, var(--color-status-danger-icon) 40%, transparent);
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  color: var(--color-admin-text-faint);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-sans);
+}
+
+.emptyState {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--color-admin-text-muted);
+  font-size: 14px;
+}
