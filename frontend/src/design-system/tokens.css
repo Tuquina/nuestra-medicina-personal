@@ -36,6 +36,10 @@
   --color-sky-pale: oklch(88% 0.045 230);
   --color-sky-soft: oklch(90% 0.035 230);
 
+  /* ---- Color: warm neutral gray (muted status badges, e.g. "Próximamente") ---- */
+  --color-neutral-badge-bg: oklch(92% 0.01 90);
+  --color-neutral-badge-text: oklch(45% 0.01 90);
+
   /* ---- Color: deep blue (brand / links / primary ink accents) ---- */
   --color-deep-blue: oklch(32% 0.07 254);
 

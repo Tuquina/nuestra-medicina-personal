@@ -1,0 +1,15 @@
+.footer {
+  background: linear-gradient(
+    180deg,
+    var(--color-footer-bg-start),
+    var(--color-footer-bg-end)
+  );
+  padding: clamp(40px, 6vw, 56px) var(--space-section-x) 28px;
+  text-align: center;
+}
+
+.text {
+  font-size: 12.5px;
+  color: color-mix(in oklch, var(--color-sky-soft) 55%, transparent);
+  margin: 0;
+}

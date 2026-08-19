@@ -92,6 +92,20 @@ the second book's tagline). New shared components: `BackLink`,
 by Home's hero and the Catálogo title instead of duplicating the
 3-stop gradient.
 
+Added while implementing Meditaciones/Herramientas: `--color-neutral-badge-bg`
+/ `--color-neutral-badge-text` (`oklch(92% 0.01 90)` / `oklch(45% 0.01 90)`)
+for the muted "Próximamente" status badge — the first real pull from the
+warm-neutral-gray family flagged below. New shared components:
+`CollectionHero` (extracted from Catálogo once Meditaciones/Herramientas
+needed the identical eyebrow+gradient-title+glow pattern a 2nd/3rd time),
+`ComingSoonCard`, `NewsletterSignup` (generalized from Home's inline
+newsletter form so all three signup forms share one implementation), and
+`MinimalFooter` (copyright-only — these two pages don't have a
+sitemap-worthy set of pages yet). `MeditacionesPage`/`HerramientasPage`
+are both thin data props into one shared
+`public-store/components/ComingSoonCollectionPage` — the two mockups are
+structurally identical, not just similar.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all
@@ -101,10 +115,11 @@ Don't guess their exact values ahead of need — pull them from the actual
 mockup file when you implement the page that uses them, and add them to
 `tokens.css` + this table at that point:
 
-- **Warm neutral gray** (hue ~90, e.g. `oklch(88% 0.01 90)` through
-  `oklch(30% 0.02 90)`) — a full gray ramp, likely the admin backoffice's
-  UI chrome (tables, borders, muted admin text) rather than the public
-  site's blue-tinted ink scale.
+- **Warm neutral gray** (hue ~90) — a full ramp from `oklch(88% 0.01 90)`
+  through `oklch(30% 0.02 90)`, likely the admin backoffice's UI chrome
+  (tables, borders, muted admin text) rather than the public site's
+  blue-tinted ink scale. Two points on this ramp are already formalized
+  (`--color-neutral-badge-*`, above) — the rest is still unclaimed.
 - **Deep near-black blue** (hue ~254–258, e.g. `oklch(15% 0.04 258)`) —
   likely an admin dark-surface (sidebar?) background.
 - **Green** (hue ~145, e.g. `oklch(35% 0.1 145)`) — likely a

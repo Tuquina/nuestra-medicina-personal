@@ -1,0 +1,33 @@
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.cover {
+  margin-bottom: 18px;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 20px;
+  margin: 0 0 8px;
+  color: var(--color-ink);
+}
+
+.description {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  margin: 0 0 16px;
+}
+
+.badge {
+  align-self: flex-start;
+  background: var(--color-neutral-badge-bg);
+  color: var(--color-neutral-badge-text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 4px;
+}

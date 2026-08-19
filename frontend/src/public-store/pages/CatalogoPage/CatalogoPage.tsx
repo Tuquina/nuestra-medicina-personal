@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { GradientTopBar } from '../../../shared/components/GradientTopBar/GradientTopBar';
 import { SiteHeader } from '../../../shared/components/SiteHeader/SiteHeader';
 import { SiteFooter } from '../../../shared/components/SiteFooter/SiteFooter';
-import { Eyebrow } from '../../../shared/components/Eyebrow/Eyebrow';
+import { CollectionHero } from '../../../shared/components/CollectionHero/CollectionHero';
 import { BookCard } from '../../../shared/components/BookCard/BookCard';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { BOOKS, CATALOG_FILTERS, type CatalogFilter } from '../../data/books';
@@ -23,17 +23,13 @@ export function CatalogoPage() {
       <GradientTopBar />
       <SiteHeader />
 
-      <section className={styles.hero}>
-        <div className={styles.glow} aria-hidden="true" />
-        <div className={styles.heroInner}>
-          <Eyebrow>Colección</Eyebrow>
-          <h1 className={`${styles.title} gradient-text`}>Libros</h1>
-          <p className={styles.lede}>
-            Escritura, educación y herramientas para acompañar procesos
-            personales.
-          </p>
-        </div>
-      </section>
+      <CollectionHero
+        eyebrow="Colección"
+        eyebrowColor="var(--color-accent-gold)"
+        glowColor="var(--color-accent-amber-soft)"
+        title="Libros"
+        description="Escritura, educación y herramientas para acompañar procesos personales."
+      />
 
       <section className={styles.filters}>
         <div className={styles.filterRow}>

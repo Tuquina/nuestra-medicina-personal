@@ -21,8 +21,8 @@ verifiable steps rather than "build the whole app").
 | `Mi Cuenta.dc.html` | `/cuenta` | `public-store/pages/MiCuentaPage` | P1 | ⬜ Pending |
 | `Biblioteca.dc.html` | `/biblioteca` | `public-store/pages/BibliotecaPage` | P1 | ⬜ Pending |
 | `Checkout.dc.html` | `/checkout` | `public-store/pages/CheckoutPage` | P1 | ⬜ Pending |
-| `Meditaciones.dc.html` | `/meditaciones` | `public-store/pages/MeditacionesPage` | P1 | ⬜ Pending |
-| `Herramientas.dc.html` | `/herramientas` | `public-store/pages/HerramientasPage` | P1 | ⬜ Pending |
+| `Meditaciones.dc.html` | `/meditaciones` | `public-store/pages/MeditacionesPage` | P1 | ✅ Done |
+| `Herramientas.dc.html` | `/herramientas` | `public-store/pages/HerramientasPage` | P1 | ✅ Done |
 
 `BookLandingPage` is **one** data-driven component at `/libros/:slug`,
 not two files. The two mockups *do* diverge (one has an image+text

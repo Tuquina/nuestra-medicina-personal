@@ -4,7 +4,7 @@
     var(--color-newsletter-bg-start),
     var(--color-newsletter-bg-end) 65%
   );
-  padding: clamp(64px, 9vw, 104px) var(--space-section-x);
+  padding: clamp(56px, 8vw, 88px) var(--space-section-x);
   position: relative;
   overflow: hidden;
 }
@@ -34,7 +34,7 @@
 .title {
   font-family: var(--font-serif);
   font-weight: 500;
-  font-size: clamp(26px, 3.2vw, 32px);
+  font-size: clamp(24px, 3vw, 32px);
   margin: 0 0 14px;
   color: var(--color-surface);
 }
@@ -58,6 +58,14 @@
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
+}
+
+.form.withSubtitle {
+  margin-top: 0;
+}
+
+.form.noSubtitle {
+  margin-top: 20px;
 }
 
 .input {
