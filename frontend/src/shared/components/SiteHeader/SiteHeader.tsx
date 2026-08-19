@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { BrandMark } from '../BrandMark/BrandMark';
+import type { CurrentUser } from '../../../public-store/data/currentUser';
 import styles from './SiteHeader.module.css';
 
 const NAV_LINKS = [
@@ -13,6 +14,13 @@ const NAV_LINKS = [
 const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
   isActive ? styles.navActive : undefined;
 
+interface SiteHeaderProps {
+  /** Pass the mock signed-in user (see data/currentUser.ts) to render the
+   * avatar state instead of "Iniciar sesión" — used by Mi Cuenta and
+   * Biblioteca, which represent a logged-in area. */
+  user?: CurrentUser;
+}
+
 /**
  * Full site navigation header: sticky, gains a shadow past a small scroll
  * threshold, collapses to a hamburger menu below ~1040px, and highlights
@@ -20,7 +28,7 @@ const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
  * page except Login (which uses the bare `PublicHeader` on purpose — see
  * its doc comment).
  */
-export function SiteHeader() {
+export function SiteHeader({ user }: SiteHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -52,9 +60,15 @@ export function SiteHeader() {
           <Link to="/biblioteca" className={styles.libraryLink}>
             Mi biblioteca
           </Link>
-          <Link to="/login" className={styles.loginButton}>
-            Iniciar sesión
-          </Link>
+          {user ? (
+            <Link to="/cuenta" className={styles.avatar} aria-label="Mi cuenta">
+              {user.initials}
+            </Link>
+          ) : (
+            <Link to="/login" className={styles.loginButton}>
+              Iniciar sesión
+            </Link>
+          )}
         </div>
 
         <button
@@ -87,9 +101,15 @@ export function SiteHeader() {
         <Link to="/biblioteca" className={styles.libraryLink} onClick={closeMenu}>
           Mi biblioteca
         </Link>
-        <Link to="/login" className={styles.loginButton} onClick={closeMenu}>
-          Iniciar sesión
-        </Link>
+        {user ? (
+          <Link to="/cuenta" className={styles.navActive} onClick={closeMenu}>
+            Mi cuenta
+          </Link>
+        ) : (
+          <Link to="/login" className={styles.loginButton} onClick={closeMenu}>
+            Iniciar sesión
+          </Link>
+        )}
       </nav>
     </header>
   );

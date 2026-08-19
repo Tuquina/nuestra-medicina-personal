@@ -1,0 +1,120 @@
+.page {
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-gradient-start) 0%,
+    var(--color-bg-gradient-mid) 45%,
+    var(--color-bg-gradient-end) 100%
+  );
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+.main {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: clamp(56px, 8vw, 88px) var(--space-section-x) 100px;
+}
+
+.eyebrow {
+  margin: 0 0 16px;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(28px, 3.4vw, 34px);
+  margin: 0 0 32px;
+  color: var(--color-ink);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-sky-soft);
+  color: var(--color-deep-blue);
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 2px;
+  color: var(--color-ink);
+}
+
+.email {
+  font-size: 13.5px;
+  color: oklch(55% 0.02 90);
+  margin: 0;
+}
+
+.googleNote {
+  font-size: 12.5px;
+  color: oklch(58% 0.02 90);
+  margin: 0 0 28px;
+  line-height: 1.6;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid oklch(92% 0.006 90);
+  padding-top: 20px;
+}
+
+.settingLabel {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 2px;
+  color: var(--color-ink);
+}
+
+.settingHint {
+  font-size: 12.5px;
+  color: oklch(58% 0.02 90);
+  margin: 0;
+}
+
+.logoutButton {
+  margin-bottom: 20px;
+}
+
+.deleteRow {
+  text-align: center;
+}
+
+.deleteLink {
+  background: none;
+  border: none;
+  color: oklch(55% 0.02 90);
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  padding: 4px;
+}

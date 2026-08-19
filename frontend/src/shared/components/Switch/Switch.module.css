@@ -1,0 +1,26 @@
+.track {
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  border: none;
+  cursor: pointer;
+  padding: 3px;
+  display: flex;
+  background: var(--color-surface-border-strong);
+  justify-content: flex-start;
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.trackOn {
+  background: var(--color-deep-blue);
+  justify-content: flex-end;
+}
+
+.thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  display: block;
+}

@@ -98,6 +98,22 @@
   opacity: 0.88;
 }
 
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-sky-soft);
+  color: var(--color-deep-blue);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 2px solid var(--color-deep-blue);
+  flex-shrink: 0;
+}
+
 .menuToggle {
   display: none;
   flex-direction: column;

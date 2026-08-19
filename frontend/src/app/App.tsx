@@ -4,6 +4,7 @@ import { CatalogoPage } from '../public-store/pages/CatalogoPage/CatalogoPage';
 import { BookLandingPage } from '../public-store/pages/BookLandingPage/BookLandingPage';
 import { MeditacionesPage } from '../public-store/pages/MeditacionesPage/MeditacionesPage';
 import { HerramientasPage } from '../public-store/pages/HerramientasPage/HerramientasPage';
+import { MiCuentaPage } from '../public-store/pages/MiCuentaPage/MiCuentaPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -19,6 +20,7 @@ export function App() {
       <Route path="/libros/:slug" element={<BookLandingPage />} />
       <Route path="/meditaciones" element={<MeditacionesPage />} />
       <Route path="/herramientas" element={<HerramientasPage />} />
+      <Route path="/cuenta" element={<MiCuentaPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

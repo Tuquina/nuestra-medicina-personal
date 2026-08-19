@@ -13,3 +13,6 @@ const API_PREFIX = '/api/v1';
  * browser on to Google.
  */
 export const GOOGLE_AUTH_URL = `${API_PREFIX}/auth/google`;
+
+/** `POST` to end the session (architecture.md §20, §34). */
+export const LOGOUT_URL = `${API_PREFIX}/auth/logout`;

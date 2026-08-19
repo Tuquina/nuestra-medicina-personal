@@ -71,6 +71,14 @@ architecture.md §3 — that belongs under `deploy/` once the backend exists.
   that's already a token — pull from `design-system/tokens.css`.
 - New pages live under `src/public-store/pages/` or `src/admin/pages/`.
   Shared, reusable pieces go in `src/shared/components/`.
+- There's no real auth yet. Pages that represent a logged-in area (Mi
+  Cuenta, Biblioteca) import the mock `CURRENT_USER` from
+  `public-store/data/currentUser.ts` and pass it to `SiteHeader`'s `user`
+  prop; everything else leaves it unset. Don't invent a fake login/logout
+  flow beyond that — actions that need a real backend (logout, account
+  deletion) call the real `/api/v1/...` endpoint from architecture.md §34
+  and are left to fail gracefully until that endpoint exists, same as the
+  Google login button.
 - When implementing a new mockup (`*.dc.html` file from a Claude Design
   handoff bundle), **read the whole file**, translate inline styles to
   tokens/CSS Modules, and match the visual output — don't copy the

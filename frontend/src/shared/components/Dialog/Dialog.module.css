@@ -1,0 +1,40 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--color-deep-blue) 50%, transparent);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.card {
+  background: var(--color-surface);
+  width: 100%;
+  max-width: 380px;
+  border-radius: var(--radius-md);
+  padding: 28px;
+  box-shadow: 0 24px 48px color-mix(in oklch, var(--color-ink) 20%, transparent);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--color-ink);
+}
+
+.body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  margin: 0 0 24px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}

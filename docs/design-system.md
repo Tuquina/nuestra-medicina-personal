@@ -106,6 +106,15 @@ are both thin data props into one shared
 `public-store/components/ComingSoonCollectionPage` — the two mockups are
 structurally identical, not just similar.
 
+Added while implementing Mi Cuenta: `SiteHeader` now takes an optional
+`user` prop (see `data/currentUser.ts`) that swaps "Iniciar sesión" for a
+circular initials avatar linking to `/cuenta` — there's no real session
+yet, so only the pages that represent a logged-in area (Mi Cuenta,
+Biblioteca) pass it. New general-purpose shared components (not tied to
+one page): `Button` (primary/secondary/danger/accent), `Switch`, `Dialog`
+(a small confirmation modal, Escape-to-close + backdrop-click-to-close).
+These will get reused heavily once the admin backoffice starts.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all
