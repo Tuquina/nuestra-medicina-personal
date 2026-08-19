@@ -1,16 +1,17 @@
 import { SectionIntro } from '../../../shared/components/SectionIntro/SectionIntro';
 import { BookCard } from '../../../shared/components/BookCard/BookCard';
 import { PUBLISHED_BOOKS } from '../../data/books';
+import type { FeaturedBooksProps } from '../../../shared/cms/homeContent';
 import styles from './FeaturedBooks.module.css';
 
-export function FeaturedBooks() {
+export function FeaturedBooks({ eyebrow, title, description }: FeaturedBooksProps) {
   return (
     <section id="libros" className={styles.section}>
       <SectionIntro
         className={styles.intro}
-        eyebrow="Colección"
-        title="Libros destacados"
-        description="Escritura y educación para acompañar tus propios procesos."
+        eyebrow={eyebrow}
+        title={title}
+        description={description}
         maxWidth="560px"
       />
 

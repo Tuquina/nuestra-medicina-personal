@@ -1,20 +1,24 @@
 import { Link } from 'react-router-dom';
 import { SectionIntro } from '../../../shared/components/SectionIntro/SectionIntro';
 import { ImagePlaceholder } from '../../../shared/components/ImagePlaceholder/ImagePlaceholder';
+import type { CollectionTeaserProps } from '../../../shared/cms/homeContent';
 import styles from './CollectionTeaser.module.css';
 
-interface CollectionTeaserProps {
-  eyebrowColor: string;
-  underlineEndColor: string;
-  title: string;
-  description: string;
-  ctaLabel: string;
-  ctaTo: string;
-  imageAccent: string;
-  imageCaption: string;
-  /** Image on the left, text on the right (desktop only). */
-  reverse?: boolean;
-}
+/** The two color moods available for a collection teaser — kept as a
+ * small fixed choice (not a raw color picker) per architecture.md §12's
+ * "preferir opciones predefinidas frente a permitir CSS arbitrario". */
+const ACCENTS = {
+  sky: {
+    eyebrowColor: 'var(--color-sky)',
+    underlineEndColor: 'var(--color-sky)',
+    imageAccent: 'var(--color-sky-pale)',
+  },
+  amber: {
+    eyebrowColor: 'var(--color-accent-gold)',
+    underlineEndColor: 'var(--color-accent-amber)',
+    imageAccent: 'color-mix(in oklch, var(--color-accent-gold) 45%, transparent)',
+  },
+};
 
 /**
  * The "collection preview" row used for both Meditaciones and
@@ -22,23 +26,24 @@ interface CollectionTeaserProps {
  * recolored per collection.
  */
 export function CollectionTeaser({
-  eyebrowColor,
-  underlineEndColor,
+  eyebrow,
   title,
   description,
   ctaLabel,
   ctaTo,
-  imageAccent,
   imageCaption,
-  reverse = false,
+  reverse,
+  accent,
 }: CollectionTeaserProps) {
+  const colors = ACCENTS[accent] ?? ACCENTS.sky;
+
   return (
     <div className={[styles.row, reverse ? styles.reverse : ''].join(' ')}>
       <div className={styles.textCol}>
         <SectionIntro
-          eyebrow="Colección"
-          eyebrowColor={eyebrowColor}
-          underlineEndColor={underlineEndColor}
+          eyebrow={eyebrow}
+          eyebrowColor={colors.eyebrowColor}
+          underlineEndColor={colors.underlineEndColor}
           title={title}
           maxWidth="420px"
         />
@@ -48,7 +53,7 @@ export function CollectionTeaser({
         </Link>
       </div>
       <div className={styles.imgCol}>
-        <ImagePlaceholder accent={imageAccent} caption={imageCaption} aspectRatio="16 / 11" />
+        <ImagePlaceholder accent={colors.imageAccent} caption={imageCaption} aspectRatio="16 / 11" />
       </div>
     </div>
   );

@@ -1,14 +1,15 @@
 import { NewsletterSignup } from '../../../shared/components/NewsletterSignup/NewsletterSignup';
+import type { NewsletterProps } from '../../../shared/cms/homeContent';
 
-export function Newsletter() {
+export function Newsletter({ title, subtitle, buttonLabel, confirmationText, fineprint }: NewsletterProps) {
   return (
     <NewsletterSignup
       sectionId="novedades"
-      title="Recibí nuestras novedades"
-      subtitle="Nuevos libros, meditaciones y contenidos directamente en tu correo."
-      buttonLabel="Quiero recibir novedades"
-      confirmationText="Gracias — ya estás suscripto/a. Podés darte de baja cuando quieras."
-      fineprint="Podés darte de baja cuando quieras. Nunca compartimos tu correo."
+      title={title}
+      subtitle={subtitle}
+      buttonLabel={buttonLabel}
+      confirmationText={confirmationText}
+      fineprint={fineprint}
     />
   );
 }

@@ -1,5 +1,7 @@
 import type { MouseEvent } from 'react';
-import { BG_STYLES, BG_TEXT_COLOR, WIDTH_MAX, type PageBlock } from './pageBuilderData';
+import type { Section } from '../../../shared/cms/types';
+import { HomeSectionContent } from '../../../public-store/pages/HomePage/HomeSections';
+import { SECTION_SCHEMAS } from './sectionSchemas';
 import styles from './PageBuilderPage.module.css';
 
 export type BuilderView = 'desktop' | 'tablet' | 'mobile';
@@ -11,7 +13,7 @@ const CANVAS_WIDTH: Record<BuilderView, string> = {
 };
 
 interface CanvasProps {
-  blocks: PageBlock[];
+  sections: Section[];
   selectedId: string | null;
   view: BuilderView;
   onSelect: (id: string) => void;
@@ -22,20 +24,26 @@ interface CanvasProps {
   onRemove: (id: string) => void;
 }
 
-function isDeviceHidden(block: PageBlock, view: BuilderView): boolean {
-  if (view === 'mobile') return !block.vis.m;
-  if (view === 'tablet') return !block.vis.t;
-  return !block.vis.d;
-}
-
-/** The center editing surface: block previews in publish order, with a per-block hover/selected toolbar. */
-export function Canvas({ blocks, selectedId, view, onSelect, onMoveUp, onMoveDown, onDuplicate, onToggleHide, onRemove }: CanvasProps) {
+/**
+ * The center editing surface — real Home section components, in publish
+ * order, each wrapped with a hover/selected toolbar. This is a genuine
+ * preview (not an abstract colored box): what an admin sees here is what
+ * visitors see once the page is published, so "cómo se va a ver" is
+ * answered directly instead of by imagining it from a label.
+ */
+export function Canvas({ sections, selectedId, view, onSelect, onMoveUp, onMoveDown, onDuplicate, onToggleHide, onRemove }: CanvasProps) {
   return (
     <main className={styles.canvasArea}>
       <div className={styles.canvas} style={{ width: CANVAS_WIDTH[view] }}>
-        {blocks.map((block) => {
-          const isSelected = block.id === selectedId;
-          const faded = block.hidden || isDeviceHidden(block, view);
+        {sections.length === 0 && (
+          <p className={styles.canvasEmpty}>
+            Esta página no tiene bloques todavía. Agregá uno desde la izquierda.
+          </p>
+        )}
+
+        {sections.map((section, index) => {
+          const isSelected = section.id === selectedId;
+          const schema = SECTION_SCHEMAS[section.type];
           const stop = (event: MouseEvent, action: () => void) => {
             event.stopPropagation();
             action();
@@ -43,58 +51,60 @@ export function Canvas({ blocks, selectedId, view, onSelect, onMoveUp, onMoveDow
 
           return (
             <div
-              key={block.id}
-              className={[styles.block, isSelected ? styles.blockSelected : '', faded ? styles.blockFaded : ''].join(
-                ' ',
-              )}
-              onClick={() => onSelect(block.id)}
+              key={section.id}
+              className={[styles.block, isSelected ? styles.blockSelected : '', section.hidden ? styles.blockFaded : ''].join(' ')}
+              onClick={() => onSelect(section.id)}
             >
-              <div
-                className={styles.blockPreview}
-                style={{ background: BG_STYLES[block.bg], maxWidth: WIDTH_MAX[block.width] }}
-              >
-                <span className={styles.blockLabel} style={{ color: BG_TEXT_COLOR[block.bg] }}>
-                  {block.label}
-                </span>
+              <div className={styles.blockRendered}>
+                <HomeSectionContent section={section} />
               </div>
+
               <div className={[styles.blockToolbar, isSelected ? styles.blockToolbarVisible : ''].join(' ')}>
+                {schema && <span className={styles.blockTypeTag}>{schema.label}</span>}
                 <button
                   type="button"
                   className={styles.toolbarIconButton}
-                  onClick={(e) => stop(e, () => onMoveUp(block.id))}
+                  title="Mover arriba"
                   aria-label="Mover arriba"
+                  disabled={index === 0}
+                  onClick={(e) => stop(e, () => onMoveUp(section.id))}
                 >
                   ↑
                 </button>
                 <button
                   type="button"
                   className={styles.toolbarIconButton}
-                  onClick={(e) => stop(e, () => onMoveDown(block.id))}
+                  title="Mover abajo"
                   aria-label="Mover abajo"
+                  disabled={index === sections.length - 1}
+                  onClick={(e) => stop(e, () => onMoveDown(section.id))}
                 >
                   ↓
                 </button>
                 <button
                   type="button"
                   className={styles.toolbarIconButton}
-                  onClick={(e) => stop(e, () => onDuplicate(block.id))}
-                  aria-label="Duplicar"
+                  title="Duplicar bloque"
+                  aria-label="Duplicar bloque"
+                  onClick={(e) => stop(e, () => onDuplicate(section.id))}
                 >
                   ⧉
                 </button>
                 <button
                   type="button"
                   className={styles.toolbarIconButton}
-                  onClick={(e) => stop(e, () => onToggleHide(block.id))}
-                  aria-label={block.hidden ? 'Mostrar bloque' : 'Ocultar bloque'}
+                  title={section.hidden ? 'Mostrar bloque' : 'Ocultar bloque'}
+                  aria-label={section.hidden ? 'Mostrar bloque' : 'Ocultar bloque'}
+                  onClick={(e) => stop(e, () => onToggleHide(section.id))}
                 >
-                  {block.hidden ? '◌' : '●'}
+                  {section.hidden ? '◌' : '●'}
                 </button>
                 <button
                   type="button"
                   className={[styles.toolbarIconButton, styles.toolbarIconButtonDanger].join(' ')}
-                  onClick={(e) => stop(e, () => onRemove(block.id))}
+                  title="Eliminar bloque"
                   aria-label="Eliminar bloque"
+                  onClick={(e) => stop(e, () => onRemove(section.id))}
                 >
                   ✕
                 </button>
