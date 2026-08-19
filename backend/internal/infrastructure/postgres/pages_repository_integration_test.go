@@ -92,6 +92,32 @@ func TestPageDraftPublicationAndRestoreAgainstPostgres(t *testing.T) {
 	}
 }
 
+func TestPageRepositoryPersistsSingletonEditorialType(t *testing.T) {
+	ctx := context.Background()
+	pool, err := Open(ctx, os.Getenv("DATABASE_URL"), 2, 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	const pageID = "32000000-0000-4000-8000-000000000002"
+	_, _ = pool.Exec(ctx, `DELETE FROM pages WHERE id = $1::uuid OR type = 'CONTACTO'`, pageID)
+	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM pages WHERE id = $1::uuid`, pageID) })
+
+	props, _ := json.Marshal(map[string]any{
+		"title": "Contacto", "intro": "Escribinos", "methods": []map[string]string{{
+			"id": "email", "label": "Correo", "value": "support@example.com", "href": "mailto:support@example.com",
+		}},
+	})
+	content := page.Content{SchemaVersion: 1, Sections: []page.Block{{ID: "contacto", Type: "contacto", Props: props}}}
+	created, err := NewPageRepository(pool).Create(ctx, page.Page{
+		ID: pageID, Type: string(page.TypeContact), Slug: "contacto", Title: "Contacto",
+		DraftContent: content, CreatedAt: time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC),
+	})
+	if err != nil || created.Type != string(page.TypeContact) || created.BookID != nil {
+		t.Fatalf("persist contact page: %#v %v", created, err)
+	}
+}
+
 func contentWithHero(t *testing.T, title string) page.Content {
 	t.Helper()
 	props, err := json.Marshal(map[string]any{

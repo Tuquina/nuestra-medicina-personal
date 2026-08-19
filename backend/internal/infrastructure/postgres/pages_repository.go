@@ -218,7 +218,7 @@ func normalizePageError(err error) error {
 		switch postgresError.ConstraintName {
 		case "pages_slug_key":
 			return page.ErrSlugConflict
-		case "pages_one_home_idx", "pages_one_page_per_book_idx":
+		case "pages_one_home_idx", "pages_one_singleton_type_idx", "pages_one_page_per_book_idx":
 			return page.ErrPageExists
 		}
 	}

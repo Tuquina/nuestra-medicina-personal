@@ -21,9 +21,20 @@ var (
 
 type Status string
 
+type Type string
+
 const (
 	StatusDraft     Status = "DRAFT"
 	StatusPublished Status = "PUBLISHED"
+	TypeHome        Type   = "HOME"
+	TypeBook        Type   = "BOOK"
+	TypeMeditations Type   = "MEDITACIONES"
+	TypeTools       Type   = "HERRAMIENTAS"
+	TypeContact     Type   = "CONTACTO"
+	TypeSupport     Type   = "SOPORTE"
+	TypeFAQ         Type   = "FAQ"
+	TypeTerms       Type   = "TERMINOS"
+	TypePrivacy     Type   = "PRIVACIDAD"
 )
 
 type Page struct {
@@ -55,9 +66,10 @@ type Content struct {
 }
 
 type Block struct {
-	ID    string          `json:"id"`
-	Type  string          `json:"type"`
-	Props json.RawMessage `json:"props"`
+	ID     string          `json:"id"`
+	Type   string          `json:"type"`
+	Props  json.RawMessage `json:"props"`
+	Hidden bool            `json:"hidden,omitempty"`
 }
 
 type ValidationError struct {
@@ -70,15 +82,15 @@ func EmptyContent() Content { return Content{SchemaVersion: 1, Sections: []Block
 
 func (value Page) Validate() error {
 	fields := make(map[string]string)
-	if value.Type != "HOME" && value.Type != "BOOK" {
-		fields["type"] = "must be HOME or BOOK"
+	if !validPageType(value.Type) {
+		fields["type"] = "is not supported"
 	}
-	if value.Type == "HOME" && value.BookID != nil {
-		fields["bookId"] = "must be empty for a home page"
+	if value.Type != string(TypeBook) && value.BookID != nil {
+		fields["bookId"] = "must be empty unless type is BOOK"
 	}
-	if value.Type == "BOOK" && (value.BookID == nil || strings.TrimSpace(*value.BookID) == "") {
+	if value.Type == string(TypeBook) && (value.BookID == nil || strings.TrimSpace(*value.BookID) == "") {
 		fields["bookId"] = "is required for a book page"
-	} else if value.Type == "BOOK" && value.BookID != nil && !validUUID(*value.BookID) {
+	} else if value.Type == string(TypeBook) && value.BookID != nil && !validUUID(*value.BookID) {
 		fields["bookId"] = "must be a UUID"
 	}
 	if strings.TrimSpace(value.Slug) == "" || len(value.Slug) > 160 {
@@ -103,6 +115,15 @@ func (value Page) Validate() error {
 		return &ValidationError{Fields: fields}
 	}
 	return nil
+}
+
+func validPageType(value string) bool {
+	switch Type(value) {
+	case TypeHome, TypeBook, TypeMeditations, TypeTools, TypeContact, TypeSupport, TypeFAQ, TypeTerms, TypePrivacy:
+		return true
+	default:
+		return false
+	}
 }
 
 func validUUID(value string) bool {
@@ -195,6 +216,69 @@ type faqProps struct {
 type faqItem struct {
 	Question string `json:"question"`
 	Answer   string `json:"answer"`
+}
+
+type collectionProps struct {
+	Title       string           `json:"title"`
+	Description string           `json:"description"`
+	Cards       []collectionCard `json:"cards"`
+}
+
+type collectionCard struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	ImageCaption string `json:"imageCaption"`
+}
+
+type contactProps struct {
+	Title   string          `json:"title"`
+	Intro   string          `json:"intro"`
+	Methods []contactMethod `json:"methods"`
+}
+
+type contactMethod struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	Value string `json:"value"`
+	Href  string `json:"href"`
+}
+
+type supportProps struct {
+	Title  string         `json:"title"`
+	Intro  string         `json:"intro"`
+	Topics []supportTopic `json:"topics"`
+}
+
+type supportTopic struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+type faqPageProps struct {
+	Title string        `json:"title"`
+	Intro string        `json:"intro"`
+	FAQs  []faqPageItem `json:"faqs"`
+}
+
+type faqPageItem struct {
+	ID       string `json:"id"`
+	Question string `json:"q"`
+	Answer   string `json:"a"`
+}
+
+type legalDocumentProps struct {
+	Title        string                 `json:"title"`
+	UpdatedLabel string                 `json:"updatedLabel"`
+	IntroNote    string                 `json:"introNote"`
+	Sections     []legalDocumentSection `json:"sections"`
+}
+
+type legalDocumentSection struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Body  string `json:"body"`
 }
 
 type ctaProps struct {
@@ -294,6 +378,17 @@ func validateBlock(block Block) error {
 		}
 		return nil
 	case "faq":
+		var shape map[string]json.RawMessage
+		if err := json.Unmarshal(block.Props, &shape); err != nil {
+			return err
+		}
+		if _, isPage := shape["faqs"]; isPage {
+			var props faqPageProps
+			if err := strictDecode(block.Props, &props); err != nil {
+				return err
+			}
+			return validateFAQPage(props)
+		}
 		var props faqProps
 		if err := strictDecode(block.Props, &props); err != nil {
 			return err
@@ -313,6 +408,30 @@ func validateBlock(block Block) error {
 			}
 		}
 		return nil
+	case "collection":
+		var props collectionProps
+		if err := strictDecode(block.Props, &props); err != nil {
+			return err
+		}
+		return validateCollection(props)
+	case "contacto":
+		var props contactProps
+		if err := strictDecode(block.Props, &props); err != nil {
+			return err
+		}
+		return validateContact(props)
+	case "soporte":
+		var props supportProps
+		if err := strictDecode(block.Props, &props); err != nil {
+			return err
+		}
+		return validateSupport(props)
+	case "legal-doc":
+		var props legalDocumentProps
+		if err := strictDecode(block.Props, &props); err != nil {
+			return err
+		}
+		return validateLegalDocument(props)
 	case "cta":
 		var props ctaProps
 		if err := strictDecode(block.Props, &props); err != nil {
@@ -334,6 +453,151 @@ func validateBlock(block Block) error {
 	default:
 		return fmt.Errorf("unsupported block type %q", block.Type)
 	}
+}
+
+func validateCollection(props collectionProps) error {
+	if err := requiredText("title", props.Title, 200); err != nil {
+		return err
+	}
+	if err := requiredText("description", props.Description, 1_000); err != nil {
+		return err
+	}
+	if len(props.Cards) < 1 || len(props.Cards) > 30 {
+		return errors.New("cards must contain between 1 and 30 entries")
+	}
+	for _, card := range props.Cards {
+		if err := validateItemID(card.ID); err != nil {
+			return err
+		}
+		if err := requiredText("card title", card.Title, 200); err != nil {
+			return err
+		}
+		if err := requiredText("card description", card.Description, 1_000); err != nil {
+			return err
+		}
+		if err := optionalText("card imageCaption", card.ImageCaption, 300); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateContact(props contactProps) error {
+	if err := validateEditorialHeader(props.Title, props.Intro); err != nil {
+		return err
+	}
+	if len(props.Methods) < 1 || len(props.Methods) > 20 {
+		return errors.New("methods must contain between 1 and 20 entries")
+	}
+	for _, method := range props.Methods {
+		if err := validateItemID(method.ID); err != nil {
+			return err
+		}
+		if err := requiredText("method label", method.Label, 100); err != nil {
+			return err
+		}
+		if err := requiredText("method value", method.Value, 320); err != nil {
+			return err
+		}
+		if err := validateContactHref(method.Href); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateSupport(props supportProps) error {
+	if err := validateEditorialHeader(props.Title, props.Intro); err != nil {
+		return err
+	}
+	if len(props.Topics) < 1 || len(props.Topics) > 30 {
+		return errors.New("topics must contain between 1 and 30 entries")
+	}
+	for _, topic := range props.Topics {
+		if err := validateItemID(topic.ID); err != nil {
+			return err
+		}
+		if err := requiredText("topic title", topic.Title, 200); err != nil {
+			return err
+		}
+		if err := requiredText("topic description", topic.Description, 1_000); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateFAQPage(props faqPageProps) error {
+	if err := validateEditorialHeader(props.Title, props.Intro); err != nil {
+		return err
+	}
+	if len(props.FAQs) < 1 || len(props.FAQs) > 50 {
+		return errors.New("faqs must contain between 1 and 50 entries")
+	}
+	for _, item := range props.FAQs {
+		if err := validateItemID(item.ID); err != nil {
+			return err
+		}
+		if err := requiredText("question", item.Question, 300); err != nil {
+			return err
+		}
+		if err := requiredText("answer", item.Answer, 2_000); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateLegalDocument(props legalDocumentProps) error {
+	if err := requiredText("title", props.Title, 200); err != nil {
+		return err
+	}
+	if err := requiredText("updatedLabel", props.UpdatedLabel, 200); err != nil {
+		return err
+	}
+	if err := requiredText("introNote", props.IntroNote, 5_000); err != nil {
+		return err
+	}
+	if len(props.Sections) < 1 || len(props.Sections) > 50 {
+		return errors.New("sections must contain between 1 and 50 legal entries")
+	}
+	for _, section := range props.Sections {
+		if err := validateItemID(section.ID); err != nil {
+			return err
+		}
+		if err := requiredText("section title", section.Title, 300); err != nil {
+			return err
+		}
+		if err := requiredText("section body", section.Body, 20_000); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateEditorialHeader(title, intro string) error {
+	if err := requiredText("title", title, 200); err != nil {
+		return err
+	}
+	return requiredText("intro", intro, 2_000)
+}
+
+func validateItemID(value string) error {
+	if strings.TrimSpace(value) == "" || len(value) > 100 {
+		return errors.New("item id must contain between 1 and 100 characters")
+	}
+	return nil
+}
+
+func validateContactHref(href string) error {
+	if strings.HasPrefix(href, "mailto:") {
+		address := strings.TrimPrefix(href, "mailto:")
+		if address == "" || strings.ContainsAny(address, "?&#\r\n") || !strings.Contains(address, "@") {
+			return errors.New("mailto href must contain a plain email address")
+		}
+		return nil
+	}
+	return validateHref(href)
 }
 
 func validateRichText(props richTextProps) error {

@@ -2,6 +2,7 @@ package page
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -78,5 +79,40 @@ func TestPageRejectsInvalidBookAndSlugIdentifiers(t *testing.T) {
 	}
 	if validationError.Fields["bookId"] == "" || validationError.Fields["slug"] == "" {
 		t.Fatalf("expected identifier details, got %#v", validationError.Fields)
+	}
+}
+
+func TestContentAcceptsNewEditorialPageBlocks(t *testing.T) {
+	raw := []byte(`{
+		"schemaVersion":1,
+		"sections":[
+			{"id":"collection","type":"collection","hidden":false,"props":{"title":"Meditaciones","description":"Prácticas breves","cards":[{"id":"c1","title":"Respirar","description":"Una pausa","imageCaption":"Amanecer"}]}},
+			{"id":"contacto","type":"contacto","props":{"title":"Contacto","intro":"Escribinos","methods":[{"id":"email","label":"Correo","value":"soporte@example.com","href":"mailto:soporte@example.com"}]}},
+			{"id":"soporte","type":"soporte","props":{"title":"Soporte","intro":"Te ayudamos","topics":[{"id":"t1","title":"Compras","description":"Ayuda con pagos"}]}},
+			{"id":"faq","type":"faq","props":{"title":"Preguntas frecuentes","intro":"Dudas comunes","faqs":[{"id":"f1","q":"¿Cómo compro?","a":"Desde la página del libro."}]}},
+			{"id":"doc","type":"legal-doc","props":{"title":"Términos","updatedLabel":"Actualizado hoy","introNote":"Texto para revisión profesional.","sections":[{"id":"s1","title":"1. Alcance","body":"Contenido estructurado.\n\n- Punto uno"}]}}
+		]
+	}`)
+	content, err := DecodeContent(raw)
+	if err != nil {
+		t.Fatalf("decode editorial content: %v", err)
+	}
+	if len(content.Sections) != 5 {
+		t.Fatalf("expected five sections, got %d", len(content.Sections))
+	}
+}
+
+func TestNewEditorialPageTypesDoNotAcceptBookID(t *testing.T) {
+	bookID := "10000000-0000-4000-8000-000000000001"
+	for _, pageType := range []Type{TypeMeditations, TypeTools, TypeContact, TypeSupport, TypeFAQ, TypeTerms, TypePrivacy} {
+		value := Page{Type: string(pageType), Slug: strings.ToLower(string(pageType)), Title: string(pageType), DraftContent: EmptyContent()}
+		if err := value.Validate(); err != nil {
+			t.Fatalf("expected %s page to be valid: %v", pageType, err)
+		}
+		value.BookID = &bookID
+		var validationError *ValidationError
+		if !errors.As(value.Validate(), &validationError) || validationError.Fields["bookId"] == "" {
+			t.Fatalf("expected %s to reject bookId", pageType)
+		}
 	}
 }
