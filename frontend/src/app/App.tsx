@@ -22,6 +22,8 @@ import { CuponesPage } from '../admin/pages/CuponesPage/CuponesPage';
 import { ResenasPage } from '../admin/pages/ResenasPage/ResenasPage';
 import { AnaliticaPage } from '../admin/pages/AnaliticaPage/AnaliticaPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
+import { TerminosPage } from '../public-store/pages/TerminosPage/TerminosPage';
+import { PrivacidadPage } from '../public-store/pages/PrivacidadPage/PrivacidadPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
 /**
@@ -55,6 +57,8 @@ export function App() {
       <Route path="/admin/resenas" element={<ResenasPage />} />
       <Route path="/admin/analitica" element={<AnaliticaPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/terminos" element={<TerminosPage />} />
+      <Route path="/privacidad" element={<PrivacidadPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

@@ -5,9 +5,9 @@ import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import styles from './NotFoundPage.module.css';
 
 /**
- * Fallback for unimplemented/unknown routes (e.g. `/terminos`,
- * `/privacidad`, and any path outside the current scope). Intentionally
- * bare — most of the site isn't built yet.
+ * Fallback for unimplemented/unknown routes (e.g. `/contacto`, `/soporte`,
+ * `/preguntas-frecuentes`, and any path outside the current scope).
+ * Intentionally bare — several footer links aren't built yet.
  */
 export function NotFoundPage() {
   useDocumentTitle('Página no encontrada · Nuestra Medicina Personal');

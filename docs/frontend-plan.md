@@ -130,6 +130,21 @@ just with write operations too since these are admin-editable).
 - Sidebar: the three "Próximamente" `<span>` placeholders in
   `AdminLayout.tsx` become real `NavLink`s once each route exists.
 
+**C. `/terminos` and `/privacidad`** — real content now, replacing the
+`NotFoundPage` fallback the footer/login links used to hit. No
+`.dc.html` mockup exists for these (they weren't part of the original
+handoff), so they follow the site's existing typographic conventions
+via a new shared `LegalPage` layout (`shared/components/LegalPage`) —
+hero + table of contents + prose sections — rather than a specific
+source design. Written with Argentine law as the reference point (Ley
+24.240 Defensa del Consumidor, Ley 25.326 Protección de Datos
+Personales, Ley 11.723 Propiedad Intelectual, Resolución 424/2020) since
+the site sells to consumers in Argentina via Mercado Pago, but both
+pages open with a note that this is a starting point for a real
+abogado to review, not a finished legal instrument — and the site
+owner's actual legal identity (razón social/CUIT/domicilio) is marked
+`[a completar]` rather than invented.
+
 ## Notes for whoever picks this up next
 
 - All of this is **frontend-only, no backend yet**. Pages render with
@@ -143,10 +158,9 @@ just with write operations too since these are admin-editable).
   that rather than re-deriving one, and use the DTOs implied by what
   the frontend already calls (`shared/config/api.ts`, and each page's
   `fetch(...)` calls) as the de facto contract to implement against.
-- If new frontend pages get added later (e.g. real Term/Privacy pages
-  currently 404ing to `NotFoundPage`): read the `.dc.html` source in
-  full first (see `AGENTS.md`), extract any new tokens into
-  `design-system/tokens.css` + `docs/design-system.md` before writing
+- If new frontend pages get added later that *do* have a mockup: read
+  the `.dc.html` source in full first (see `AGENTS.md`), extract any new
+  tokens into `design-system/tokens.css` + `docs/design-system.md` before writing
   the component, then build the page. Verify with `docker compose up` +
   the browser tools, plus `npm run build` / `npm run lint` (via Docker
   — see AGENTS.md) before marking anything done.
