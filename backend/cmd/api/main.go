@@ -9,8 +9,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/nuestra-medicina-personal/backend/internal/application/authentication"
 	"github.com/nuestra-medicina-personal/backend/internal/application/books"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
+	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/google"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/postgres"
 	"github.com/nuestra-medicina-personal/backend/internal/interfaces/httpapi"
 )
@@ -39,10 +41,13 @@ func run(logger *slog.Logger) error {
 
 	bookRepository := postgres.NewBookRepository(pool)
 	bookService := books.NewService(bookRepository)
+	authRepository := postgres.NewAuthRepository(pool)
+	googleProvider := google.NewOIDCProvider(ctx, cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect)
+	authService := authentication.NewService(googleProvider, authRepository, cfg.AdminGoogleSub, cfg.SessionTTL)
 	authorizer := postgres.NewSessionAuthorizer(pool, cfg.AdminGoogleSub)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Database: pool, AdminAuthorizer: authorizer,
-		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie,
+		Logger: logger, Books: bookService, Authentication: authService, Database: pool, AdminAuthorizer: authorizer,
+		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie, SecureCookies: cfg.SecureCookies(),
 	})
 	server := &http.Server{
 		Addr: cfg.HTTPAddress, Handler: router, ReadTimeout: cfg.ReadTimeout,

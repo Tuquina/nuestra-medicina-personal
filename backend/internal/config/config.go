@@ -14,7 +14,11 @@ type Config struct {
 	HTTPAddress     string
 	DatabaseURL     string
 	AdminGoogleSub  string
+	GoogleClientID  string
+	GoogleSecret    string
+	GoogleRedirect  string
 	SessionCookie   string
+	SessionTTL      time.Duration
 	ShutdownTimeout time.Duration
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
@@ -30,7 +34,11 @@ func Load() (Config, error) {
 		HTTPAddress:     envOrDefault("HTTP_ADDRESS", ":8080"),
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
 		AdminGoogleSub:  os.Getenv("ADMIN_GOOGLE_SUB"),
+		GoogleClientID:  os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleSecret:    os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleRedirect:  os.Getenv("GOOGLE_REDIRECT_URL"),
 		SessionCookie:   envOrDefault("SESSION_COOKIE_NAME", "nmp_session"),
+		SessionTTL:      durationOrDefault("SESSION_TTL", 30*24*time.Hour),
 		ShutdownTimeout: durationOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
 		ReadTimeout:     durationOrDefault("HTTP_READ_TIMEOUT", 10*time.Second),
 		WriteTimeout:    durationOrDefault("HTTP_WRITE_TIMEOUT", 15*time.Second),
@@ -49,7 +57,23 @@ func Load() (Config, error) {
 	if cfg.BaseURL == "" {
 		validationErrors = append(validationErrors, errors.New("APP_BASE_URL is required"))
 	}
+	googleValues := 0
+	for _, value := range []string{cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect} {
+		if value != "" {
+			googleValues++
+		}
+	}
+	if (cfg.GoogleClientID != "" || cfg.GoogleSecret != "") && googleValues != 3 {
+		validationErrors = append(validationErrors, errors.New("GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_REDIRECT_URL must be configured together"))
+	}
+	if cfg.SessionTTL < time.Hour {
+		validationErrors = append(validationErrors, errors.New("SESSION_TTL must be at least 1h"))
+	}
 	return cfg, errors.Join(validationErrors...)
+}
+
+func (c Config) SecureCookies() bool {
+	return c.Environment != "development" && c.Environment != "test"
 }
 
 func envOrDefault(key, fallback string) string {

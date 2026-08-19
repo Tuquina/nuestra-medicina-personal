@@ -40,6 +40,10 @@ services:
       DATABASE_URL: postgres://nmp:nmp_dev_only@postgres:5432/nmp?sslmode=disable
       DATABASE_MAX_CONNECTIONS: 5
       ADMIN_GOOGLE_SUB: ${ADMIN_GOOGLE_SUB:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8080/api/v1/auth/google/callback}
+      SESSION_TTL: ${SESSION_TTL:-720h}
     depends_on:
       migrate:
         condition: service_completed_successfully

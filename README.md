@@ -35,9 +35,12 @@ El contrato disponible y las decisiones de seguridad de esta fase están en
 - esquema inicial normalizado para usuarios, sesiones, catálogo, CMS, órdenes y pagos;
 - catálogo público que nunca expone borradores, archivados ni rutas físicas;
 - CRUD administrativo de libros con archivado lógico;
+- Google OIDC mediante Authorization Code, PKCE, state y nonce;
+- sesiones opacas persistidas server-side y logout con revocación;
 - sesión opaca y autorización server-side para todo `/api/v1/admin/*`;
 - validación de origen, cuerpos JSON limitados, request IDs y logs JSON;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 
-Google OIDC todavía no crea sesiones: las rutas admin están cerradas por defecto
-hasta implementar ese flujo en la próxima fase.
+Para habilitar login, definir juntas `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+y `GOOGLE_REDIRECT_URL`. Sin esas variables la API sigue operativa, pero la
+autenticación queda cerrada explícitamente.

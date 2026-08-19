@@ -8,6 +8,7 @@ servers:
     description: Desarrollo local
 tags:
   - name: Health
+  - name: Authentication
   - name: Books
   - name: Admin books
 paths:
@@ -32,6 +33,55 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Health'}
         '503': {$ref: '#/components/responses/DatabaseUnavailable'}
+  /api/v1/auth/google:
+    get:
+      tags: [Authentication]
+      operationId: startGoogleAuthentication
+      description: Inicia Authorization Code con PKCE, state y nonce.
+      responses:
+        '302': {description: Redirección al endpoint de autorización de Google.}
+        '503':
+          description: Las credenciales Google no están configuradas.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/auth/google/callback:
+    get:
+      tags: [Authentication]
+      operationId: completeGoogleAuthentication
+      parameters:
+        - {name: code, in: query, schema: {type: string}}
+        - {name: state, in: query, schema: {type: string}}
+        - {name: error, in: query, schema: {type: string}}
+      responses:
+        '302': {description: Sesión creada y redirección a la biblioteca, o regreso al login si el usuario canceló.}
+        '400':
+          description: State, nonce, PKCE o callback inválido/expirado.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '502':
+          description: No fue posible validar la identidad con Google.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': {description: Sesión revocada y cookie eliminada.}
+        '403':
+          description: Origin no permitido.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/me:
+    get:
+      tags: [Authentication]
+      operationId: getCurrentUser
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Usuario de la sesión vigente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/User'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
   /api/v1/books:
     get:
       tags: [Books]
@@ -173,6 +223,15 @@ components:
     BookStatus:
       type: string
       enum: [DRAFT, PUBLISHED, ARCHIVED]
+    User:
+      type: object
+      required: [id, email, displayName, pictureUrl, isAdmin]
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: string, format: email}
+        displayName: {type: string}
+        pictureUrl: {type: string}
+        isAdmin: {type: boolean}
     BookInput:
       type: object
       additionalProperties: false

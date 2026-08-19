@@ -1,7 +1,8 @@
 # API del backend
 
-La fuente de verdad del contrato HTTP es [`openapi.yaml`](openapi.yaml). La
-primera entrega implementa salud, catálogo público y administración de libros.
+La fuente de verdad del contrato HTTP es [`openapi.yaml`](openapi.yaml). La API
+implementa salud, catálogo público, administración de libros y sesiones propias
+iniciadas mediante Google OpenID Connect.
 
 ## Ejecutar en desarrollo
 
@@ -29,9 +30,13 @@ comprueba que la sesión esté vigente y que el `google_subject` corresponda a
 `ADMIN_GOOGLE_SUB`. Las operaciones de escritura también exigen un encabezado
 `Origin` que coincida con `APP_BASE_URL`.
 
-El flujo que crea usuarios y sesiones mediante Google OIDC pertenece a la
-siguiente fase. Hasta entonces las rutas admin permanecen cerradas por defecto,
-especialmente cuando `ADMIN_GOOGLE_SUB` no está configurado.
+El login usa Authorization Code con PKCE, `state` y `nonce`. Google identifica
+al usuario, pero la aplicación no usa el ID token como sesión: crea un token
+opaco aleatorio, almacena sólo su hash y lo entrega en una cookie `HttpOnly`,
+`SameSite=Lax` y `Secure` fuera del entorno de desarrollo. Logout revoca la
+sesión server-side. Si las tres variables de Google no están configuradas, el
+endpoint de inicio responde `AUTH_NOT_CONFIGURED` y las rutas admin permanecen
+cerradas.
 
 ## Errores
 

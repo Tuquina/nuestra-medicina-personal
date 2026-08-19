@@ -14,14 +14,17 @@ type DatabaseHealth interface {
 type Dependencies struct {
 	Logger          *slog.Logger
 	Books           BookService
+	Authentication  AuthenticationService
 	Database        DatabaseHealth
 	AdminAuthorizer AdminAuthorizer
 	BaseURL         string
 	SessionCookie   string
+	SecureCookies   bool
 }
 
 func NewRouter(dependencies Dependencies) http.Handler {
 	booksHandler := NewBookHandler(dependencies.Books, dependencies.Logger)
+	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies)
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -37,6 +40,10 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	})
 	root.HandleFunc("GET /api/v1/books", booksHandler.ListPublished)
 	root.HandleFunc("GET /api/v1/books/{slug}", booksHandler.GetPublished)
+	root.HandleFunc("GET /api/v1/auth/google", authHandler.Start)
+	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
+	root.HandleFunc("GET /api/v1/me", authHandler.Me)
+	root.Handle("POST /api/v1/auth/logout", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(authHandler.Logout)))
 
 	admin := http.NewServeMux()
 	admin.HandleFunc("GET /api/v1/admin/books", booksHandler.ListAdmin)

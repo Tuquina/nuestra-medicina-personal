@@ -82,7 +82,7 @@ func withSecurityHeaders(next http.Handler) http.Handler {
 
 func requireJSON(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch {
+		if (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch) && r.ContentLength != 0 {
 			contentType := r.Header.Get("Content-Type")
 			if !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
 				writeError(w, http.StatusUnsupportedMediaType, "JSON_REQUIRED", "Content-Type must be application/json", nil)
