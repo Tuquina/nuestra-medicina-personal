@@ -1,5 +1,10 @@
 # Frontend implementation plan
 
+**Status: all 17 mockups implemented.** Every public-store and admin page
+in the handoff bundle has a working route, verified against its mockup
+in the browser. There is still no backend — see "Notes for whoever picks
+this up next" below for what that means and what's next.
+
 Maps every mockup in the Claude Design handoff bundle
 (`Web page UI mockup-handoff.zip` → `project/*.dc.html`) to a route and
 component, in implementation order. Update the Status column as pages
@@ -55,19 +60,25 @@ is unaffected — only this frontend path differs.
 | `Admin Clientes.dc.html` | `/admin/clientes` | `admin/pages/ClientesPage` | P2 | ✅ Done |
 | `Admin Multimedia.dc.html` | `/admin/multimedia` | `admin/pages/MultimediaPage` | P2 | ✅ Done |
 | `Admin Configuracion.dc.html` | `/admin/configuracion` | `admin/pages/ConfiguracionPage` | P2 | ✅ Done |
-| `Admin Page Builder.dc.html` | `/admin/paginas/:pageId/editor` | `admin/pages/PageBuilderPage` | P3 (most complex; do last) | ⬜ Pending |
+| `Admin Page Builder.dc.html` | `/admin/paginas` | `admin/pages/PageBuilderPage` | P3 (most complex; done last) | ✅ Done |
 
 ## Notes for whoever picks this up next
 
-- All of this is **frontend-only, no backend yet**. Pages should render
-  with realistic placeholder/mock data and wire API calls to the
-  contracts in architecture.md §34, but those calls will 404 until the
-  Go backend exists — that's expected, not a bug to work around with
-  fake success states.
-- Every new page: read the `.dc.html` source in full first (see
-  `AGENTS.md`), extract any new tokens into
+- All of this is **frontend-only, no backend yet**. Pages render with
+  realistic mock data (`public-store/data/*`, `admin/data/*`) and wire
+  API calls to the contracts in architecture.md §34, but those calls
+  404 until the Go backend exists — that's expected, not a bug to work
+  around with fake success states. Search the frontend for `No backend
+  yet` comments to find every one of these seams.
+- **Next real milestone**: the backend. Architecture.md §73 has a
+  recommended build order (schema → domain → API → auth → …) — follow
+  that rather than re-deriving one, and use the DTOs implied by what
+  the frontend already calls (`shared/config/api.ts`, and each page's
+  `fetch(...)` calls) as the de facto contract to implement against.
+- If new frontend pages get added later (e.g. real Term/Privacy pages
+  currently 404ing to `NotFoundPage`): read the `.dc.html` source in
+  full first (see `AGENTS.md`), extract any new tokens into
   `design-system/tokens.css` + `docs/design-system.md` before writing
-  the component, then build the page.
-- Verify with `docker compose up` + the browser tools, plus
-  `npm run build` / `npm run lint` (via Docker — see AGENTS.md) before
-  marking a row ✅ here.
+  the component, then build the page. Verify with `docker compose up` +
+  the browser tools, plus `npm run build` / `npm run lint` (via Docker
+  — see AGENTS.md) before marking anything done.

@@ -165,6 +165,20 @@ chapter switch, not every keystroke); its preview modal uses
 to them in the same session, which is a different trust boundary than
 the public-facing renderer architecture.md §40 requires sanitization for.
 
+Added while implementing the Page Builder — the last page, and a
+different kind of surface than everything before it (a standalone
+full-screen editor, not wrapped in `AdminLayout`, matching the mockup's
+own choice to drop the admin sidebar in favor of canvas space). Block
+reordering is arrow-button based, not drag-and-drop, because that's what
+the mockup does — no DnD library was introduced. The inspector's
+background/width/visibility controls are real; alignment and top/bottom
+spacing render but aren't wired to state, because those two `<select>`s
+have no `onChange` in the source either — matching architecture.md §12's
+"preferir opciones predefinidas" scope discipline rather than inventing
+functionality the design doesn't specify. No new component primitives
+were needed here — everything reused `StatusBadge`'s tone tokens and the
+existing color/spacing system.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all

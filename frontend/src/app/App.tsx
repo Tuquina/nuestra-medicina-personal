@@ -14,6 +14,7 @@ import { VentasPage } from '../admin/pages/VentasPage/VentasPage';
 import { ClientesPage } from '../admin/pages/ClientesPage/ClientesPage';
 import { MultimediaPage } from '../admin/pages/MultimediaPage/MultimediaPage';
 import { ConfiguracionPage } from '../admin/pages/ConfiguracionPage/ConfiguracionPage';
+import { PageBuilderPage } from '../admin/pages/PageBuilderPage/PageBuilderPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -40,6 +41,7 @@ export function App() {
       <Route path="/admin/clientes" element={<ClientesPage />} />
       <Route path="/admin/multimedia" element={<MultimediaPage />} />
       <Route path="/admin/configuracion" element={<ConfiguracionPage />} />
+      <Route path="/admin/paginas" element={<PageBuilderPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
