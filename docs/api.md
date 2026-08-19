@@ -119,3 +119,15 @@ El esquema inicial admite `hero`, `richText`, `imageText`, `features`, `faq`,
 `cta` y `buyButton`. Cada bloque tiene propiedades cerradas; rich text usa
 nodos y marcas controladas, no HTML. Los enlaces sólo aceptan rutas relativas o
 URLs `http`/`https`.
+
+## Biblioteca multimedia
+
+`POST /api/v1/admin/media` acepta `multipart/form-data` y guarda únicamente
+JPEG o PNG cuyo MIME declarado, firma real y decodificación coincidan. El límite
+predeterminado es 10 MiB y ninguna dimensión puede superar 8000 píxeles. El
+archivo físico usa un UUID; el nombre original se conserva sólo como metadata.
+
+`GET /api/v1/media/{id}` permite probar las imágenes directamente en local y
+las entrega con ETag y caché immutable. `DELETE /api/v1/admin/media/{id}` revisa
+portadas, borradores, publicaciones y todas las versiones del CMS. Si encuentra
+una referencia responde `MEDIA_IN_USE` y no borra ni la fila ni el archivo.

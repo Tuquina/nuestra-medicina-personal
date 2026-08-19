@@ -13,9 +13,11 @@ tags:
   - name: Orders
   - name: Library
   - name: Pages
+  - name: Media
   - name: Webhooks
   - name: Admin books
   - name: Admin pages
+  - name: Admin media
 paths:
   /health/live:
     get:
@@ -124,6 +126,23 @@ paths:
           description: Página publicada.
           content: {application/json: {schema: {$ref: '#/components/schemas/PublishedPage'}}}
         '404': {$ref: '#/components/responses/PageNotFound'}
+  /api/v1/media/{id}:
+    get:
+      tags: [Media]
+      operationId: getMedia
+      description: Sirve una imagen publicada por su UUID sin exponer el path físico.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Imagen con cache immutable.
+          headers:
+            ETag: {schema: {type: string}}
+            Cache-Control: {schema: {type: string}}
+          content:
+            image/jpeg: {}
+            image/png: {}
+        '404': {$ref: '#/components/responses/MediaNotFound'}
   /api/v1/me/books:
     get:
       tags: [Library]
@@ -395,6 +414,52 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {description: Página o versión inexistente., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+  /api/v1/admin/media:
+    get:
+      tags: [Admin media]
+      operationId: listMedia
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Biblioteca multimedia., content: {application/json: {schema: {$ref: '#/components/schemas/MediaList'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+    post:
+      tags: [Admin media]
+      operationId: uploadMedia
+      description: Valida extensión, MIME, contenido y dimensiones antes de guardar la imagen.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        '201': {description: Imagen guardada., content: {application/json: {schema: {$ref: '#/components/schemas/MediaAsset'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '413': {description: La imagen supera el límite configurado., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '422': {description: El archivo no es una imagen JPEG/PNG válida., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+  /api/v1/admin/media/{id}:
+    delete:
+      tags: [Admin media]
+      operationId: deleteMedia
+      description: Rechaza la eliminación si una portada o versión de página todavía referencia la imagen.
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': {description: Imagen y metadata eliminadas.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/MediaNotFound'}
+        '409': {description: La imagen todavía está referenciada., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
     delete:
       tags: [Admin books]
       operationId: archiveBook
@@ -790,6 +855,26 @@ components:
           type: array
           items: {$ref: '#/components/schemas/PageVersion'}
         total: {type: integer, minimum: 0}
+    MediaAsset:
+      type: object
+      required: [id, originalFilename, mimeType, sizeBytes, width, height, url, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        originalFilename: {type: string}
+        mimeType: {type: string, enum: [image/jpeg, image/png]}
+        sizeBytes: {type: integer, format: int64, minimum: 1}
+        width: {type: integer, minimum: 1, maximum: 8000}
+        height: {type: integer, minimum: 1, maximum: 8000}
+        url: {type: string}
+        createdAt: {type: string, format: date-time}
+    MediaList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/MediaAsset'}
+        total: {type: integer, minimum: 0}
     Error:
       type: object
       required: [error]
@@ -825,4 +910,7 @@ components:
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
     PageValidationFailed:
       description: La página o alguno de sus bloques no cumple el contrato seguro.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    MediaNotFound:
+      description: La imagen no existe.
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
