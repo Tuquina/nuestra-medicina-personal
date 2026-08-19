@@ -1,0 +1,341 @@
+/* ---- Start screen ---- */
+
+.startGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.startCardDashed {
+  border: 1px dashed var(--color-surface-border-strong);
+  border-radius: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  background: oklch(98% 0.004 90);
+}
+
+.startCard {
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  background: var(--color-surface);
+}
+
+.startCardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--color-ink);
+}
+
+.startCardHint {
+  font-size: 12.5px;
+  color: var(--color-admin-text-muted);
+  margin: 0 0 18px;
+}
+
+.converting {
+  text-align: center;
+  padding: 48px 0;
+  font-size: 14px;
+  color: var(--color-admin-text-muted);
+}
+
+/* ---- Editor layout ---- */
+
+.editorLayout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.chapterList {
+  width: 170px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 20px;
+}
+
+.chapterListTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-admin-text-muted);
+  margin: 4px 0 8px 10px;
+}
+
+.chapterItem {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--color-admin-text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.chapterItemActive {
+  background: oklch(95% 0.02 232);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.addChapter {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  color: var(--color-deep-blue);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.editorCol {
+  flex: 1;
+  min-width: 460px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--color-surface);
+  flex-wrap: wrap;
+  position: sticky;
+  top: 20px;
+  z-index: 5;
+  box-shadow: 0 1px 3px color-mix(in oklch, var(--color-ink) 4%, transparent);
+}
+
+.toolbarSelect {
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+  background: white;
+  font-family: var(--font-sans);
+  color: oklch(32% 0.02 255);
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 22px;
+  background: var(--color-surface-border-strong);
+  margin: 0 2px;
+}
+
+.toolbarButton {
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  color: oklch(28% 0.02 255);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbarButton:hover {
+  background: oklch(95% 0.006 90);
+}
+
+.toolbarButtonBold {
+  font-weight: 700;
+}
+
+.toolbarButtonItalic {
+  font-style: italic;
+  font-family: var(--font-serif);
+}
+
+.toolbarButtonUnderline {
+  text-decoration: underline;
+}
+
+.toolbarButtonQuote {
+  font-family: var(--font-serif);
+  font-size: 16px;
+}
+
+.alignBars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+}
+
+.alignBar {
+  height: 2px;
+  background: oklch(40% 0.02 90);
+  border-radius: 1px;
+}
+
+.toolbarSpacer {
+  flex: 1;
+}
+
+.canvas {
+  background: oklch(93% 0.006 90);
+  border-radius: 10px;
+  padding: 32px clamp(16px, 4vw, 48px);
+  display: flex;
+  justify-content: center;
+}
+
+.editable {
+  width: 100%;
+  max-width: 680px;
+  border-radius: 4px;
+  padding: 64px 72px;
+  min-height: 640px;
+  background: var(--color-surface);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.85;
+  color: var(--color-ink);
+  box-shadow: 0 2px 10px color-mix(in oklch, var(--color-ink) 8%, transparent);
+}
+
+.editable:focus {
+  outline: 2px solid var(--color-deep-blue);
+  outline-offset: 2px;
+}
+
+.wordCount {
+  font-size: 12px;
+  color: var(--color-admin-text-muted);
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+/* ---- Export panel ---- */
+
+.exportPanel {
+  width: 220px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--color-surface);
+  position: sticky;
+  top: 20px;
+}
+
+.exportTitle {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 14px;
+  color: var(--color-ink);
+}
+
+.exportMessage {
+  font-size: 12px;
+  color: var(--color-status-success-icon);
+  margin: 12px 0 0;
+  line-height: 1.5;
+}
+
+.exportHint {
+  font-size: 11px;
+  color: var(--color-admin-text-faint);
+  margin: 14px 0 0;
+  line-height: 1.5;
+}
+
+/* ---- Preview modal ---- */
+
+.previewBackdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, oklch(20% 0.02 250) 55%, transparent);
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+
+.previewCard {
+  background: var(--color-surface);
+  width: 100%;
+  max-width: 720px;
+  border-radius: 8px;
+  box-shadow: 0 24px 60px color-mix(in oklch, var(--color-ink) 30%, transparent);
+  padding: 56px 64px 64px;
+  position: relative;
+}
+
+.previewClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: oklch(95% 0.006 90);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--color-admin-text-muted);
+  font-family: var(--font-sans);
+}
+
+.previewEyebrow {
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-admin-text-muted);
+  margin: 0 0 10px;
+}
+
+.previewTitle {
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 600;
+  margin: 0 0 44px;
+  text-align: center;
+  color: var(--color-ink);
+}
+
+.previewChapter {
+  margin-bottom: 44px;
+}
+
+.previewChapterTitle {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 18px;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.previewChapterBody {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.8;
+  color: oklch(28% 0.02 255);
+}
+
+.previewChapterEmpty {
+  color: oklch(60% 0.02 90);
+}

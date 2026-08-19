@@ -149,6 +149,22 @@ chart-bucketing logic lives in `dashboardData.ts`, separate from the
 component, mirroring the real aggregate queries architecture.md §7 says
 Postgres can answer directly at this scale.
 
+Added while implementing the book editor (`LibroFormPage`) — by far the
+largest single page so far, so it earned several new general-purpose
+primitives: `Tabs` (underline-style, `role="tablist"`), `FormField` (+ its
+`.module.css` classes `control`/`row2`/`row3`/`stack`, imported directly
+by consumers rather than re-exported from the component file, which broke
+fast-refresh). `AdminLayout` gained `titleSlot` (a back-link-above-title
+header, for pages whose header doesn't fit a plain string) and
+`hideAvatar` (this page's header has Guardar borrador/Publicar where the
+avatar usually sits). The manuscript sub-tab uses `contentEditable` +
+`document.execCommand` exactly as the mockup does — deprecated APIs, but
+correct for an uncontrolled rich-text region in React (state syncs on
+chapter switch, not every keystroke); its preview modal uses
+`dangerouslySetInnerHTML` to show the author's own just-typed HTML back
+to them in the same session, which is a different trust boundary than
+the public-facing renderer architecture.md §40 requires sanitization for.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all

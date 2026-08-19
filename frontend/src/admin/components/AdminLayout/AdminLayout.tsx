@@ -11,7 +11,13 @@ const navLinkClassSpaced = ({ isActive }: { isActive: boolean }) =>
 
 interface AdminLayoutProps {
   title: string;
+  /** Replaces the default `<h1>{title}</h1>` — for pages like the book
+   * editor that need a back-link above the title instead of a plain
+   * string. `title` is still used for the document title/fallback. */
+  titleSlot?: ReactNode;
   headerActions?: ReactNode;
+  /** The book editor's header has no avatar — save status + actions fill that space instead. */
+  hideAvatar?: boolean;
   children: ReactNode;
 }
 
@@ -23,7 +29,7 @@ interface AdminLayoutProps {
  * see docs/frontend-plan.md for the Page Builder's own route once it
  * needs to distinguish which page it's editing).
  */
-export function AdminLayout({ title, headerActions, children }: AdminLayoutProps) {
+export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = false, children }: AdminLayoutProps) {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
@@ -79,10 +85,10 @@ export function AdminLayout({ title, headerActions, children }: AdminLayoutProps
 
       <div className={styles.main}>
         <header className={styles.header}>
-          <h1 className={styles.title}>{title}</h1>
+          {titleSlot ?? <h1 className={styles.title}>{title}</h1>}
           <div className={styles.headerRight}>
             {headerActions}
-            <span className={styles.avatar}>AD</span>
+            {!hideAvatar && <span className={styles.avatar}>AD</span>}
           </div>
         </header>
 

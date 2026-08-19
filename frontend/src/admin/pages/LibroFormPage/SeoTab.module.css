@@ -1,0 +1,36 @@
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkboxLabel {
+  font-size: 13.5px;
+  color: oklch(32% 0.02 255);
+}
+
+.previewCard {
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 8px;
+  padding: 16px;
+  max-width: 420px;
+}
+
+.previewBreadcrumb {
+  font-size: 11px;
+  color: var(--color-admin-text-muted);
+  margin: 0 0 4px;
+  font-family: ui-monospace, monospace;
+}
+
+.previewTitle {
+  font-size: 15px;
+  color: oklch(35% 0.08 250);
+  margin: 0 0 4px;
+}
+
+.previewDescription {
+  font-size: 12.5px;
+  color: var(--color-admin-text-muted);
+  margin: 0;
+}

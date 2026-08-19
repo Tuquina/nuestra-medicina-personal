@@ -9,6 +9,7 @@ import { BibliotecaPage } from '../public-store/pages/BibliotecaPage/BibliotecaP
 import { CheckoutPage } from '../public-store/pages/CheckoutPage/CheckoutPage';
 import { DashboardPage } from '../admin/pages/DashboardPage/DashboardPage';
 import { LibrosListPage } from '../admin/pages/LibrosListPage/LibrosListPage';
+import { LibroFormPage } from '../admin/pages/LibroFormPage/LibroFormPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -29,6 +30,8 @@ export function App() {
       <Route path="/checkout/:slug" element={<CheckoutPage />} />
       <Route path="/admin" element={<DashboardPage />} />
       <Route path="/admin/libros" element={<LibrosListPage />} />
+      <Route path="/admin/libros/nuevo" element={<LibroFormPage />} />
+      <Route path="/admin/libros/:slug/editar" element={<LibroFormPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
