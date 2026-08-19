@@ -1,5 +1,6 @@
 import { PUBLISHED_BOOKS } from '../../../public-store/data/books';
 import { SALES, saleBook, type Sale } from '../../data/sales';
+import { ADMIN_NOW } from '../../adminNow';
 
 export type Period = '7d' | '30d' | 'year' | 'all';
 
@@ -10,14 +11,6 @@ export const PERIOD_LABELS: Record<Period, string> = {
   all: 'todo el período',
 };
 
-/**
- * Fixed reference "now" for this mock dataset, matching the latest sale
- * (2026-08-17) — not the real system clock. Every filter/bucket below is
- * relative to this so the demo data reads sensibly regardless of when
- * someone actually opens the page. Swap for the server's clock once a
- * real `GET /api/v1/admin/dashboard` exists.
- */
-export const DASHBOARD_NOW = new Date('2026-08-18');
 
 function daysBetween(a: Date, b: Date): number {
   return Math.round((a.getTime() - b.getTime()) / 86_400_000);
@@ -33,7 +26,7 @@ function inPeriod(dateISO: string, period: Period, now: Date): boolean {
   return true;
 }
 
-export function filterByPeriod(sales: Sale[], period: Period, now: Date = DASHBOARD_NOW): Sale[] {
+export function filterByPeriod(sales: Sale[], period: Period, now: Date = ADMIN_NOW): Sale[] {
   return sales.filter((sale) => inPeriod(sale.dateISO, period, now));
 }
 
@@ -89,7 +82,7 @@ export interface ChartBar {
   count: number;
 }
 
-export function computeChartBars(filtered: Sale[], period: Period, now: Date = DASHBOARD_NOW): ChartBar[] {
+export function computeChartBars(filtered: Sale[], period: Period, now: Date = ADMIN_NOW): ChartBar[] {
   if (period === '7d' || period === '30d') {
     const days = period === '7d' ? 7 : 30;
     const groups = period === '7d' ? days : 10;
