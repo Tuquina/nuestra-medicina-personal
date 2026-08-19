@@ -20,6 +20,7 @@ import { HerramientasEditorPage } from '../admin/pages/CollectionPageEditor/Herr
 import { SobreElProyectoPage } from '../admin/pages/SobreElProyectoPage/SobreElProyectoPage';
 import { CuponesPage } from '../admin/pages/CuponesPage/CuponesPage';
 import { ResenasPage } from '../admin/pages/ResenasPage/ResenasPage';
+import { AnaliticaPage } from '../admin/pages/AnaliticaPage/AnaliticaPage';
 import { LoginPage } from '../public-store/pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 
@@ -52,6 +53,7 @@ export function App() {
       <Route path="/admin/sobre-el-proyecto" element={<SobreElProyectoPage />} />
       <Route path="/admin/cupones" element={<CuponesPage />} />
       <Route path="/admin/resenas" element={<ResenasPage />} />
+      <Route path="/admin/analitica" element={<AnaliticaPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

@@ -80,15 +80,15 @@ export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = fals
           <NavLink to="/admin/resenas" className={navLinkClass}>
             Reseñas
           </NavLink>
+          <NavLink to="/admin/analitica" className={navLinkClass}>
+            Analítica
+          </NavLink>
           <NavLink to="/admin/multimedia" className={navLinkClass}>
             Multimedia
           </NavLink>
           <NavLink to="/admin/configuracion" className={navLinkClass}>
             Configuración
           </NavLink>
-
-          <p className={styles.sectionLabel}>Próximamente</p>
-          <span className={styles.disabledItem}>Analítica</span>
         </nav>
 
         <Link to="/" className={styles.siteLink}>
