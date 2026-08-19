@@ -130,6 +130,25 @@ literal). These are named by *status role*, not by page, because
 architecture.md §26/§7 mean order/payment status badges will need the
 same three colors in the admin dashboard and sales list later.
 
+Added while implementing Admin Dashboard — the first admin page, so it
+established the whole backoffice chrome: `AdminLayout` (dark sidebar +
+sticky header, shared by every `/admin/*` page), a new `--color-admin-*`
+token set (warm-neutral canvas, dark sidebar, borders — claiming most of
+the "warm neutral gray" family flagged below), `--color-status-refunded-*`
+(4th order status) and `--color-admin-chart-bar-start` (the CSS-only bar
+chart's gradient). New general-purpose components: `StatusBadge` (+
+`shared/utils/statusTone.ts` mapping status label → tone). `Button` is
+now polymorphic — pass `to` or `href` and it renders a `Link`/`<a>`
+instead of a `<button>`, styled identically; needed once a button-styled
+element had to *navigate* (a `<button>` nested inside a `Link`'s `<a>` is
+invalid HTML). `Book` gained a real `status` field (`DRAFT` / `PUBLISHED`
+/ `ARCHIVED`, architecture.md §8.1) with a `PUBLISHED_BOOKS` export —
+**every public page now filters through `PUBLISHED_BOOKS`, not `BOOKS`**;
+only admin pages see the full list. All the dashboard's filtering/KPI/
+chart-bucketing logic lives in `dashboardData.ts`, separate from the
+component, mirroring the real aggregate queries architecture.md §7 says
+Postgres can answer directly at this scale.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all

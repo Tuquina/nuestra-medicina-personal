@@ -13,7 +13,7 @@ import { FaqAccordion } from '../../../shared/components/FaqAccordion/FaqAccordi
 import { RelatedBooks } from '../../../shared/components/RelatedBooks/RelatedBooks';
 import { FinalCta } from '../../../shared/components/FinalCta/FinalCta';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { BOOKS } from '../../data/books';
+import { PUBLISHED_BOOKS as BOOKS } from '../../data/books';
 import { BOOK_LANDINGS } from '../../data/bookLandings';
 import { formatPrice } from '../../../shared/utils/money';
 import { NotFoundPage } from '../NotFoundPage/NotFoundPage';

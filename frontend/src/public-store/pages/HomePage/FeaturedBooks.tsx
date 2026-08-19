@@ -1,6 +1,6 @@
 import { SectionIntro } from '../../../shared/components/SectionIntro/SectionIntro';
 import { BookCard } from '../../../shared/components/BookCard/BookCard';
-import { BOOKS } from '../../data/books';
+import { PUBLISHED_BOOKS } from '../../data/books';
 import styles from './FeaturedBooks.module.css';
 
 export function FeaturedBooks() {
@@ -15,7 +15,7 @@ export function FeaturedBooks() {
       />
 
       <div className={styles.grid}>
-        {BOOKS.map((book) => (
+        {PUBLISHED_BOOKS.map((book) => (
           <BookCard key={book.slug} book={book} />
         ))}
       </div>

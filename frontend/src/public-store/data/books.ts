@@ -5,6 +5,8 @@
  * will actually return so swapping a `fetch` in later doesn't change
  * consuming components.
  */
+export type BookStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
 export interface Book {
   slug: string;
   title: string;
@@ -17,8 +19,14 @@ export interface Book {
   /** e.g. "PDF · EPUB" — architecture.md §8.1's `format` field. */
   format: string;
   coverCaption: string;
+  status: BookStatus;
 }
 
+/**
+ * Every book, any status — for admin use only. Public pages must use
+ * `PUBLISHED_BOOKS` instead: "La web pública nunca debe mostrar cambios
+ * no publicados" (architecture.md §15).
+ */
 export const BOOKS: Book[] = [
   {
     slug: 'el-poder-de-tu-historia',
@@ -31,6 +39,7 @@ export const BOOKS: Book[] = [
     currency: 'ARS',
     format: 'PDF · EPUB',
     coverCaption: 'Portada — El poder de tu historia',
+    status: 'PUBLISHED',
   },
   {
     slug: 'la-escritura-terapeutica-entra-a-la-escuela',
@@ -43,8 +52,24 @@ export const BOOKS: Book[] = [
     currency: 'ARS',
     format: 'PDF · EPUB',
     coverCaption: 'Portada — La escritura terapéutica entra a la escuela',
+    status: 'PUBLISHED',
+  },
+  {
+    slug: 'meditaciones-vol-1',
+    title: 'Meditaciones — vol. 1',
+    category: 'Meditaciones',
+    variant: 'blue',
+    shortDescription: 'Prácticas breves para volver a habitar el cuerpo y la respiración.',
+    priceMinorUnits: 1_500_000,
+    currency: 'ARS',
+    format: 'PDF · EPUB',
+    coverCaption: 'Portada — Meditaciones vol. 1',
+    status: 'DRAFT',
   },
 ];
+
+/** What every public page should render from — never a draft/archived book. */
+export const PUBLISHED_BOOKS: Book[] = BOOKS.filter((book) => book.status === 'PUBLISHED');
 
 /** Category filters shown on `/libros` (architecture.md §1.1 taxonomy). */
 export const CATALOG_FILTERS = [

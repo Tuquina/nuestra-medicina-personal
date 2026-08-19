@@ -71,6 +71,10 @@ architecture.md §3 — that belongs under `deploy/` once the backend exists.
   that's already a token — pull from `design-system/tokens.css`.
 - New pages live under `src/public-store/pages/` or `src/admin/pages/`.
   Shared, reusable pieces go in `src/shared/components/`.
+- Public pages must import `PUBLISHED_BOOKS` from
+  `public-store/data/books.ts`, never the raw `BOOKS` export — the latter
+  includes drafts/archived entries for admin use. This mirrors "La web
+  pública nunca debe mostrar cambios no publicados" (architecture.md §15).
 - There's no real auth yet. Pages that represent a logged-in area (Mi
   Cuenta, Biblioteca) import the mock `CURRENT_USER` from
   `public-store/data/currentUser.ts` and pass it to `SiteHeader`'s `user`

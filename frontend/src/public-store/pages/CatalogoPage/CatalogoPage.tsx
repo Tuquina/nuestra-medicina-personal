@@ -5,7 +5,7 @@ import { SiteFooter } from '../../../shared/components/SiteFooter/SiteFooter';
 import { CollectionHero } from '../../../shared/components/CollectionHero/CollectionHero';
 import { BookCard } from '../../../shared/components/BookCard/BookCard';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { BOOKS, CATALOG_FILTERS, type CatalogFilter } from '../../data/books';
+import { PUBLISHED_BOOKS, CATALOG_FILTERS, type CatalogFilter } from '../../data/books';
 import styles from './CatalogoPage.module.css';
 
 /** `/libros` — the full catalog, filterable by collection. */
@@ -14,7 +14,8 @@ export function CatalogoPage() {
 
   const [filter, setFilter] = useState<CatalogFilter>('Todos');
 
-  const visibleBooks = filter === 'Todos' ? BOOKS : BOOKS.filter((book) => book.category === filter);
+  const visibleBooks =
+    filter === 'Todos' ? PUBLISHED_BOOKS : PUBLISHED_BOOKS.filter((book) => book.category === filter);
   const showComingSoon = filter === 'Todos';
   const showEmpty = visibleBooks.length === 0 && !showComingSoon;
 

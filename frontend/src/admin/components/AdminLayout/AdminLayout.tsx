@@ -1,0 +1,93 @@
+import type { ReactNode } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { BrandMark } from '../../../shared/components/BrandMark/BrandMark';
+import styles from './AdminLayout.module.css';
+
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  [styles.navLink, isActive ? styles.navLinkActive : ''].filter(Boolean).join(' ');
+
+const navLinkClassSpaced = ({ isActive }: { isActive: boolean }) =>
+  [styles.navLink, styles.navLinkSpaced, isActive ? styles.navLinkActive : ''].filter(Boolean).join(' ');
+
+interface AdminLayoutProps {
+  title: string;
+  headerActions?: ReactNode;
+  children: ReactNode;
+}
+
+/**
+ * The sidebar + header shell every `/admin/*` page renders inside.
+ * Sidebar nav matches every Admin *.dc.html mockup's identical `<aside>`
+ * — including that "Inicio" and "Páginas de libros" both point at the
+ * one Page Builder route today (that's what the mockups themselves do;
+ * see docs/frontend-plan.md for the Page Builder's own route once it
+ * needs to distinguish which page it's editing).
+ */
+export function AdminLayout({ title, headerActions, children }: AdminLayoutProps) {
+  return (
+    <div className={styles.shell}>
+      <aside className={styles.sidebar}>
+        <Link to="/admin" className={styles.logo}>
+          <BrandMark />
+          <span className={styles.logoText}>Nuestra Medicina Personal</span>
+        </Link>
+
+        <nav className={styles.nav} aria-label="Admin">
+          <NavLink to="/admin" end className={navLinkClass}>
+            Dashboard
+          </NavLink>
+
+          <p className={styles.sectionLabel}>Libros</p>
+          <NavLink to="/admin/libros" end className={navLinkClass}>
+            Todos los libros
+          </NavLink>
+          <NavLink to="/admin/libros/nuevo" className={navLinkClass}>
+            Nuevo libro
+          </NavLink>
+
+          <p className={styles.sectionLabel}>Páginas</p>
+          <NavLink to="/admin/paginas" className={navLinkClass}>
+            Inicio
+          </NavLink>
+          <NavLink to="/admin/paginas" className={navLinkClass}>
+            Páginas de libros
+          </NavLink>
+
+          <NavLink to="/admin/ventas" className={navLinkClassSpaced}>
+            Ventas
+          </NavLink>
+          <NavLink to="/admin/clientes" className={navLinkClass}>
+            Clientes
+          </NavLink>
+          <NavLink to="/admin/multimedia" className={navLinkClass}>
+            Multimedia
+          </NavLink>
+          <NavLink to="/admin/configuracion" className={navLinkClass}>
+            Configuración
+          </NavLink>
+
+          <p className={styles.sectionLabel}>Próximamente</p>
+          <span className={styles.disabledItem}>Cupones</span>
+          <span className={styles.disabledItem}>Reseñas</span>
+          <span className={styles.disabledItem}>Analítica</span>
+        </nav>
+
+        <Link to="/" className={styles.siteLink}>
+          Ver sitio →
+        </Link>
+      </aside>
+
+      <div className={styles.main}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>{title}</h1>
+          <div className={styles.headerRight}>
+            {headerActions}
+            <span className={styles.avatar}>AD</span>
+          </div>
+        </header>
+
+        <main className={styles.content}>{children}</main>
+      </div>
+    </div>
+  );
+}

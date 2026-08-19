@@ -1,0 +1,15 @@
+export type StatusTone = 'success' | 'pending' | 'danger' | 'refunded' | 'neutral';
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  Aprobado: 'success',
+  Pendiente: 'pending',
+  Rechazado: 'danger',
+  Reembolsado: 'refunded',
+  Publicado: 'success',
+  Borrador: 'neutral',
+};
+
+/** Maps the known status label strings straight to a `StatusBadge` tone. */
+export function toneForStatus(status: string): StatusTone {
+  return STATUS_TONE[status] ?? 'neutral';
+}

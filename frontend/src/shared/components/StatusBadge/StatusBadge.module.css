@@ -1,0 +1,33 @@
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.success {
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success-icon);
+}
+
+.pending {
+  background: var(--color-status-pending-bg);
+  color: var(--color-status-pending-icon);
+}
+
+.danger {
+  background: var(--color-status-danger-bg);
+  color: var(--color-status-danger-icon);
+}
+
+.refunded {
+  background: var(--color-status-refunded-bg);
+  color: var(--color-status-refunded-icon);
+}
+
+.neutral {
+  background: var(--color-neutral-badge-bg);
+  color: var(--color-neutral-badge-text);
+}

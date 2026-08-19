@@ -4,7 +4,7 @@ import { PublicFooter } from '../../../shared/components/PublicFooter/PublicFoot
 import { GradientTopBar } from '../../../shared/components/GradientTopBar/GradientTopBar';
 import { BrandMark } from '../../../shared/components/BrandMark/BrandMark';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { BOOKS } from '../../data/books';
+import { PUBLISHED_BOOKS as BOOKS } from '../../data/books';
 import { formatPrice } from '../../../shared/utils/money';
 import { ORDERS_URL } from '../../../shared/config/api';
 import { hardNavigate } from '../../../shared/utils/navigation';

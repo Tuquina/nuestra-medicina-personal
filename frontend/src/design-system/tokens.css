@@ -40,13 +40,30 @@
   --color-neutral-badge-bg: oklch(92% 0.01 90);
   --color-neutral-badge-text: oklch(45% 0.01 90);
 
-  /* ---- Color: order/payment status (checkout result, future admin badges) ---- */
+  /* ---- Color: order/payment status (checkout result, admin badges) ---- */
   --color-status-success-bg: oklch(88% 0.09 145);
   --color-status-success-icon: oklch(35% 0.1 145);
   --color-status-pending-bg: oklch(88% 0.1 70);
   --color-status-pending-icon: oklch(45% 0.1 60);
   --color-status-danger-bg: oklch(90% 0.08 25);
   --color-status-danger-icon: oklch(45% 0.13 25);
+  --color-status-refunded-bg: var(--color-sky-soft);
+  --color-status-refunded-icon: oklch(35% 0.06 250);
+
+  /* ---- Color: admin backoffice chrome (dark sidebar, warm-neutral canvas) ---- */
+  --color-admin-bg: oklch(97% 0.006 90);
+  --color-admin-border: oklch(90% 0.01 90);
+  --color-admin-border-subtle: oklch(94% 0.006 90);
+  --color-admin-row-hover: oklch(98% 0.004 90);
+  --color-admin-text-muted: oklch(50% 0.02 90);
+  --color-admin-text-faint: oklch(52% 0.01 90);
+  --color-admin-sidebar-bg: oklch(19% 0.045 254);
+  --color-admin-sidebar-active-bg: oklch(30% 0.06 254);
+  --color-admin-sidebar-text: oklch(88% 0.02 240);
+  --color-admin-sidebar-text-dim: oklch(60% 0.03 240);
+  --color-admin-sidebar-text-faint: oklch(50% 0.02 240);
+  --color-admin-sidebar-border: oklch(35% 0.05 254);
+  --color-admin-chart-bar-start: oklch(60% 0.1 235);
 
   /* ---- Color: deep blue (brand / links / primary ink accents) ---- */
   --color-deep-blue: oklch(32% 0.07 254);
