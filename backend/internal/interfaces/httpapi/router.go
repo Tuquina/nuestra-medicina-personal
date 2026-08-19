@@ -20,6 +20,8 @@ type Dependencies struct {
 	Pages               PageService
 	Media               MediaService
 	Backoffice          BackofficeService
+	Settings            SettingsService
+	IntegrationStatus   IntegrationStatus
 	WebhookValidator    MercadoPagoWebhookValidator
 	Database            DatabaseHealth
 	AdminAuthorizer     AdminAuthorizer
@@ -39,6 +41,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	pageHandler := NewPageHandler(dependencies.Pages, dependencies.Logger)
 	mediaHandler := NewMediaHandler(dependencies.Media, dependencies.Logger, dependencies.MediaMaxUploadBytes)
 	backofficeHandler := NewBackofficeHandler(dependencies.Backoffice, dependencies.Logger)
+	settingsHandler := NewSettingsHandler(dependencies.Settings, dependencies.Logger, dependencies.IntegrationStatus)
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -86,6 +89,8 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("GET /api/v1/admin/dashboard", backofficeHandler.Dashboard)
 	admin.HandleFunc("GET /api/v1/admin/sales", backofficeHandler.Sales)
 	admin.HandleFunc("GET /api/v1/admin/customers", backofficeHandler.Customers)
+	admin.HandleFunc("GET /api/v1/admin/settings", settingsHandler.Get)
+	admin.HandleFunc("PUT /api/v1/admin/settings", settingsHandler.Update)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
 		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, admin))
 	root.Handle("/api/v1/admin/", adminHandler)

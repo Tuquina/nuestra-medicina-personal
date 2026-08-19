@@ -17,6 +17,7 @@ import (
 	mediaapp "github.com/nuestra-medicina-personal/backend/internal/application/media"
 	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
 	"github.com/nuestra-medicina-personal/backend/internal/application/pages"
+	settingsapp "github.com/nuestra-medicina-personal/backend/internal/application/settings"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/gmail"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/google"
@@ -73,6 +74,8 @@ func run(logger *slog.Logger) error {
 	mediaService := mediaapp.NewService(mediaRepository, mediaStorage, cfg.MediaMaxUploadBytes)
 	backofficeRepository := postgres.NewBackofficeRepository(pool)
 	backofficeService := backoffice.NewService(backofficeRepository, cfg.AdminGoogleSub)
+	settingsRepository := postgres.NewSettingsRepository(pool)
+	settingsService := settingsapp.NewService(settingsRepository)
 	emailRenderer, err := emailapp.NewRenderer(cfg.BaseURL, cfg.SupportEmail)
 	if err != nil {
 		return err
@@ -94,7 +97,12 @@ func run(logger *slog.Logger) error {
 	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService, Backoffice: backofficeService,
+		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
+		IntegrationStatus: httpapi.IntegrationStatus{
+			GoogleConfigured:      cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
+			MercadoPagoConfigured: cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",
+			EmailConfigured:       cfg.GoogleMailCredentials != "" && cfg.GoogleMailSender != "",
+		},
 		WebhookValidator: webhookValidator, Database: pool, AdminAuthorizer: authorizer,
 		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie, SecureCookies: cfg.SecureCookies(),
 		EbookInternalPrefix: cfg.EbookInternalPrefix, EbookMaxUploadBytes: cfg.EbookMaxUploadBytes,
