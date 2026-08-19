@@ -120,6 +120,13 @@ El esquema inicial admite `hero`, `richText`, `imageText`, `features`, `faq`,
 nodos y marcas controladas, no HTML. Los enlaces sólo aceptan rutas relativas o
 URLs `http`/`https`.
 
+Además de `HOME` y `BOOK`, el CMS admite páginas singleton
+`MEDITACIONES`, `HERRAMIENTAS`, `CONTACTO`, `SOPORTE`, `FAQ`, `TERMINOS` y
+`PRIVACIDAD`. Sólo `BOOK` puede y debe tener `bookId`. Las colecciones, páginas
+de ayuda, FAQ y documentos legales tienen propiedades cerradas y límites
+propios. Los documentos legales usan texto markdown-lite interpretado por un
+renderer seguro; el backend no acepta HTML libre.
+
 ## Biblioteca multimedia
 
 `POST /api/v1/admin/media` acepta `multipart/form-data` y guarda únicamente
@@ -149,3 +156,15 @@ el precio vigente del catálogo. `orderStatus`, `paymentStatus` y
 El listado de clientes excluye la identidad Google configurada como
 administradora. Los usuarios sin compras aparecen con totales en cero; el
 historial de libros incluye sólo órdenes pagadas.
+
+## Configuración administrativa
+
+`GET /api/v1/admin/settings` devuelve nombre y descripción del sitio, correos
+editoriales, remitente y valores SEO generales. También informa si Google,
+Mercado Pago y Gmail están configurados según el entorno de ejecución, sin
+exponer secretos.
+
+`PUT /api/v1/admin/settings` persiste únicamente los campos editoriales y
+requiere sesión administrativa y `Origin` válido. El estado de las integraciones
+es de sólo lectura: las credenciales continúan fuera de PostgreSQL y del
+repositorio.

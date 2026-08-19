@@ -47,8 +47,10 @@ El contrato disponible y las decisiones de seguridad de esta fase están en
 - outbox transaccional e idempotente para eventos de pago y disponibilidad;
 - worker con reintentos exponenciales y envío por Gmail API/Google Workspace;
 - CMS con borradores aislados, publicación transaccional e historial de versiones;
+- CMS ampliado para colecciones, ayuda, FAQ y documentos legales estructurados;
 - biblioteca multimedia local con validación JPEG/PNG y borrado seguro;
 - dashboard, ventas y clientes administrativos con importes históricos y paginación;
+- configuración editorial persistente con estado de integraciones de sólo lectura;
 - validación de origen, cuerpos JSON limitados, request IDs y logs JSON;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 

@@ -42,3 +42,16 @@ contrato adicional basado en requerimientos visibles de esa pantalla.
 
 La correspondencia completa del CMS y de las pantallas públicas se revisará en
 la fase final, cuando los cambios de frontend en paralelo estén estabilizados.
+
+## Configuración y páginas editoriales
+
+`/admin/configuracion` puede cargar y guardar su modelo actual mediante
+`GET/PUT /api/v1/admin/settings`. Los badges de Google, Mercado Pago y Correo
+deben leer `integrations.*.configured`; no deben continuar como constantes ni
+enviarse en el `PUT`.
+
+El backend ya admite los nueve valores actuales de `PageType` y los bloques
+`collection`, `contacto`, `soporte`, el formato de página `faq` y `legal-doc`.
+La integración pendiente consiste en reemplazar `contentStore.ts` por llamadas
+al API conservando borrador, publicación y versiones. Las páginas públicas
+deben seguir usando exclusivamente `publishedContent`.

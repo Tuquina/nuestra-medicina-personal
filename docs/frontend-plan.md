@@ -75,12 +75,8 @@ copy. Same pattern as Home/book pages: a seed content builder + a small
 admin form, reading/writing through `contentStore.ts`.
 
 - `PageType` gains `'MEDITACIONES' | 'HERRAMIENTAS'` alongside
-  `'HOME' | 'BOOK'`. **This is wider than the real backend's `pages.type`
-  CHECK constraint** (`migrations/001_initial_schema.up.sql` only allows
-  `'HOME'` and `'BOOK'` today) — whoever wires the real `pages` API needs
-  a migration adding these values (or a generic `'PAGE'` type +
-  slug-based lookup) before this can point at a real endpoint. Flagged
-  with a comment at the `PageType` definition.
+  `'HOME' | 'BOOK'`. The backend now supports these singleton types through
+  `migrations/006_expand_page_types.up.sql`; wiring the frontend still remains.
 - Each collection page's content = hero copy (title/description) + a
   list of "coming soon" cards (title/description/imageCaption per card),
   matching `ComingSoonCollectionPage`'s existing props shape.
@@ -179,10 +175,9 @@ sidebar sections separate from "Páginas": **Ayuda**
   `CollectionPageEditor` and promoted here once a third and fourth
   editor needed the same look.
 - `PageType` (`shared/cms/types.ts`) now also has `'CONTACTO'`,
-  `'SOPORTE'`, `'FAQ'`, `'TERMINOS'`, `'PRIVACIDAD'` — same caveat as
-  Meditaciones/Herramientas: wider than the real `pages.type` CHECK
-  constraint today, flagged in that file's doc comment for whoever
-  wires the real endpoint.
+  `'SOPORTE'`, `'FAQ'`, `'TERMINOS'`, `'PRIVACIDAD'`; these types and their
+  closed content schemas are accepted by the backend. Replacing the local store
+  with API calls remains a later integration task.
 
 ## Notes for whoever picks this up next
 
