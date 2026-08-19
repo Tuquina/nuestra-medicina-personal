@@ -38,6 +38,30 @@ sesión server-side. Si las tres variables de Google no están configuradas, el
 endpoint de inicio responde `AUTH_NOT_CONFIGURED` y las rutas admin permanecen
 cerradas.
 
+## Órdenes y pagos
+
+`POST /api/v1/orders` requiere sesión y recibe un único `bookSlug`. La orden y
+su item se insertan en una transacción antes de crear la preferencia de Checkout
+Pro. El item conserva título, precio y moneda históricos; cambios posteriores
+en el libro no alteran la venta.
+
+La redirección de Checkout Pro sólo informa estado visual. Una orden pasa a
+`PAID` exclusivamente cuando `/api/v1/webhooks/mercadopago` valida la firma
+HMAC, reconsulta el pago por API y comprueba `external_reference`, monto y
+moneda dentro de la transacción. `payments` usa `UPSERT` por proveedor e ID de
+pago, por lo que repetir la notificación no duplica ventas.
+
+Para activar el módulo deben configurarse juntas:
+
+```env
+MERCADOPAGO_ACCESS_TOKEN=...
+MERCADOPAGO_WEBHOOK_SECRET=...
+MERCADOPAGO_PUBLIC_BASE_URL=https://tienda.example.com
+```
+
+El origen público debe ser HTTPS y no puede ser `localhost` porque se usa para
+`back_urls` y `notification_url`.
+
 ## Errores
 
 Todos los errores de API usan este sobre y nunca incluyen errores internos de

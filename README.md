@@ -22,7 +22,7 @@ Verificaciones del backend:
 ```bash
 docker run --rm -v "$(pwd)/backend:/src" -w /src golang:1.26.5-alpine go test ./...
 docker run --rm -v "$(pwd)/backend:/src" -w /src golang:1.26.5-alpine go vet ./...
-docker compose build api
+docker compose build api migrate
 ```
 
 El contrato disponible y las decisiones de seguridad de esta fase están en
@@ -38,9 +38,17 @@ El contrato disponible y las decisiones de seguridad de esta fase están en
 - Google OIDC mediante Authorization Code, PKCE, state y nonce;
 - sesiones opacas persistidas server-side y logout con revocación;
 - sesión opaca y autorización server-side para todo `/api/v1/admin/*`;
+- órdenes con precio histórico y Checkout Pro de Mercado Pago;
+- webhook HMAC que reconsulta y valida pago, monto, moneda y referencia;
+- persistencia idempotente de pagos separada de las órdenes;
 - validación de origen, cuerpos JSON limitados, request IDs y logs JSON;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 
 Para habilitar login, definir juntas `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 y `GOOGLE_REDIRECT_URL`. Sin esas variables la API sigue operativa, pero la
 autenticación queda cerrada explícitamente.
+
+Para habilitar cobros, definir juntas `MERCADOPAGO_ACCESS_TOKEN`,
+`MERCADOPAGO_WEBHOOK_SECRET` y `MERCADOPAGO_PUBLIC_BASE_URL`. Esta última debe
+ser un origen HTTPS público; Mercado Pago no admite `localhost` en las URLs de
+retorno de Checkout Pro.

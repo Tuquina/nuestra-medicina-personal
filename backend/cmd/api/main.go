@@ -11,8 +11,10 @@ import (
 
 	"github.com/nuestra-medicina-personal/backend/internal/application/authentication"
 	"github.com/nuestra-medicina-personal/backend/internal/application/books"
+	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/google"
+	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/mercadopago"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/postgres"
 	"github.com/nuestra-medicina-personal/backend/internal/interfaces/httpapi"
 )
@@ -45,8 +47,13 @@ func run(logger *slog.Logger) error {
 	googleProvider := google.NewOIDCProvider(ctx, cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect)
 	authService := authentication.NewService(googleProvider, authRepository, cfg.AdminGoogleSub, cfg.SessionTTL)
 	authorizer := postgres.NewSessionAuthorizer(pool, cfg.AdminGoogleSub)
+	orderRepository := postgres.NewOrderRepository(pool)
+	mercadoPagoClient := mercadopago.NewClient(cfg.MercadoPagoToken, cfg.MercadoPagoPublicBaseURL)
+	orderService := orders.NewService(bookService, orderRepository, mercadoPagoClient)
+	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Authentication: authService, Database: pool, AdminAuthorizer: authorizer,
+		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService,
+		WebhookValidator: webhookValidator, Database: pool, AdminAuthorizer: authorizer,
 		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie, SecureCookies: cfg.SecureCookies(),
 	})
 	server := &http.Server{

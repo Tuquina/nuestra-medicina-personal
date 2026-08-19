@@ -3,48 +3,55 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
 )
 
 type Config struct {
-	Environment     string
-	BaseURL         string
-	HTTPAddress     string
-	DatabaseURL     string
-	AdminGoogleSub  string
-	GoogleClientID  string
-	GoogleSecret    string
-	GoogleRedirect  string
-	SessionCookie   string
-	SessionTTL      time.Duration
-	ShutdownTimeout time.Duration
-	ReadTimeout     time.Duration
-	WriteTimeout    time.Duration
-	IdleTimeout     time.Duration
-	DatabaseTimeout time.Duration
-	MaxDBConns      int32
+	Environment              string
+	BaseURL                  string
+	HTTPAddress              string
+	DatabaseURL              string
+	AdminGoogleSub           string
+	GoogleClientID           string
+	GoogleSecret             string
+	GoogleRedirect           string
+	MercadoPagoToken         string
+	MercadoPagoWebhookSecret string
+	MercadoPagoPublicBaseURL string
+	SessionCookie            string
+	SessionTTL               time.Duration
+	ShutdownTimeout          time.Duration
+	ReadTimeout              time.Duration
+	WriteTimeout             time.Duration
+	IdleTimeout              time.Duration
+	DatabaseTimeout          time.Duration
+	MaxDBConns               int32
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		Environment:     envOrDefault("APP_ENV", "development"),
-		BaseURL:         envOrDefault("APP_BASE_URL", "http://localhost:5173"),
-		HTTPAddress:     envOrDefault("HTTP_ADDRESS", ":8080"),
-		DatabaseURL:     os.Getenv("DATABASE_URL"),
-		AdminGoogleSub:  os.Getenv("ADMIN_GOOGLE_SUB"),
-		GoogleClientID:  os.Getenv("GOOGLE_CLIENT_ID"),
-		GoogleSecret:    os.Getenv("GOOGLE_CLIENT_SECRET"),
-		GoogleRedirect:  os.Getenv("GOOGLE_REDIRECT_URL"),
-		SessionCookie:   envOrDefault("SESSION_COOKIE_NAME", "nmp_session"),
-		SessionTTL:      durationOrDefault("SESSION_TTL", 30*24*time.Hour),
-		ShutdownTimeout: durationOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
-		ReadTimeout:     durationOrDefault("HTTP_READ_TIMEOUT", 10*time.Second),
-		WriteTimeout:    durationOrDefault("HTTP_WRITE_TIMEOUT", 15*time.Second),
-		IdleTimeout:     durationOrDefault("HTTP_IDLE_TIMEOUT", 60*time.Second),
-		DatabaseTimeout: durationOrDefault("DATABASE_TIMEOUT", 5*time.Second),
-		MaxDBConns:      int32OrDefault("DATABASE_MAX_CONNECTIONS", 5),
+		Environment:              envOrDefault("APP_ENV", "development"),
+		BaseURL:                  envOrDefault("APP_BASE_URL", "http://localhost:5173"),
+		HTTPAddress:              envOrDefault("HTTP_ADDRESS", ":8080"),
+		DatabaseURL:              os.Getenv("DATABASE_URL"),
+		AdminGoogleSub:           os.Getenv("ADMIN_GOOGLE_SUB"),
+		GoogleClientID:           os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleSecret:             os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleRedirect:           os.Getenv("GOOGLE_REDIRECT_URL"),
+		MercadoPagoToken:         os.Getenv("MERCADOPAGO_ACCESS_TOKEN"),
+		MercadoPagoWebhookSecret: os.Getenv("MERCADOPAGO_WEBHOOK_SECRET"),
+		MercadoPagoPublicBaseURL: os.Getenv("MERCADOPAGO_PUBLIC_BASE_URL"),
+		SessionCookie:            envOrDefault("SESSION_COOKIE_NAME", "nmp_session"),
+		SessionTTL:               durationOrDefault("SESSION_TTL", 30*24*time.Hour),
+		ShutdownTimeout:          durationOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
+		ReadTimeout:              durationOrDefault("HTTP_READ_TIMEOUT", 10*time.Second),
+		WriteTimeout:             durationOrDefault("HTTP_WRITE_TIMEOUT", 15*time.Second),
+		IdleTimeout:              durationOrDefault("HTTP_IDLE_TIMEOUT", 60*time.Second),
+		DatabaseTimeout:          durationOrDefault("DATABASE_TIMEOUT", 5*time.Second),
+		MaxDBConns:               int32OrDefault("DATABASE_MAX_CONNECTIONS", 5),
 	}
 
 	var validationErrors []error
@@ -68,6 +75,21 @@ func Load() (Config, error) {
 	}
 	if cfg.SessionTTL < time.Hour {
 		validationErrors = append(validationErrors, errors.New("SESSION_TTL must be at least 1h"))
+	}
+	mercadoPagoValues := 0
+	for _, value := range []string{cfg.MercadoPagoToken, cfg.MercadoPagoWebhookSecret, cfg.MercadoPagoPublicBaseURL} {
+		if value != "" {
+			mercadoPagoValues++
+		}
+	}
+	if mercadoPagoValues != 0 && mercadoPagoValues != 3 {
+		validationErrors = append(validationErrors, errors.New("MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_WEBHOOK_SECRET and MERCADOPAGO_PUBLIC_BASE_URL must be configured together"))
+	}
+	if mercadoPagoValues == 3 {
+		parsed, err := url.Parse(cfg.MercadoPagoPublicBaseURL)
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			validationErrors = append(validationErrors, errors.New("MERCADOPAGO_PUBLIC_BASE_URL must be an absolute HTTPS URL"))
+		}
 	}
 	return cfg, errors.Join(validationErrors...)
 }

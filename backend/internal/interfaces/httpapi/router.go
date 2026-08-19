@@ -12,19 +12,22 @@ type DatabaseHealth interface {
 }
 
 type Dependencies struct {
-	Logger          *slog.Logger
-	Books           BookService
-	Authentication  AuthenticationService
-	Database        DatabaseHealth
-	AdminAuthorizer AdminAuthorizer
-	BaseURL         string
-	SessionCookie   string
-	SecureCookies   bool
+	Logger           *slog.Logger
+	Books            BookService
+	Authentication   AuthenticationService
+	Orders           OrderService
+	WebhookValidator MercadoPagoWebhookValidator
+	Database         DatabaseHealth
+	AdminAuthorizer  AdminAuthorizer
+	BaseURL          string
+	SessionCookie    string
+	SecureCookies    bool
 }
 
 func NewRouter(dependencies Dependencies) http.Handler {
 	booksHandler := NewBookHandler(dependencies.Books, dependencies.Logger)
 	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies)
+	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -44,6 +47,10 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
 	root.HandleFunc("GET /api/v1/me", authHandler.Me)
 	root.Handle("POST /api/v1/auth/logout", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(authHandler.Logout)))
+	userOrderCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Create))
+	root.Handle("POST /api/v1/orders", requireSameOrigin(dependencies.BaseURL, userOrderCreation))
+	root.Handle("GET /api/v1/orders/{id}", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Get)))
+	root.HandleFunc("POST /api/v1/webhooks/mercadopago", orderHandler.MercadoPagoWebhook)
 
 	admin := http.NewServeMux()
 	admin.HandleFunc("GET /api/v1/admin/books", booksHandler.ListAdmin)

@@ -16,6 +16,7 @@ services:
       retries: 10
 
   migrate:
+    image: nuestra-medicina-personal-backend:dev
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -28,6 +29,7 @@ services:
         condition: service_healthy
 
   api:
+    image: nuestra-medicina-personal-backend:dev
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -44,6 +46,9 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8080/api/v1/auth/google/callback}
       SESSION_TTL: ${SESSION_TTL:-720h}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
+      MERCADOPAGO_WEBHOOK_SECRET: ${MERCADOPAGO_WEBHOOK_SECRET:-}
+      MERCADOPAGO_PUBLIC_BASE_URL: ${MERCADOPAGO_PUBLIC_BASE_URL:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

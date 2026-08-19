@@ -10,6 +10,8 @@ tags:
   - name: Health
   - name: Authentication
   - name: Books
+  - name: Orders
+  - name: Webhooks
   - name: Admin books
 paths:
   /health/live:
@@ -107,6 +109,75 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Book'}
         '404': {$ref: '#/components/responses/BookNotFound'}
+  /api/v1/orders:
+    post:
+      tags: [Orders]
+      operationId: createOrder
+      description: Crea una orden con precio histórico y una preferencia de Checkout Pro.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [bookSlug]
+              properties:
+                bookSlug: {type: string}
+      responses:
+        '201':
+          description: Orden pendiente con URL de Checkout Pro.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Order'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '422':
+          description: El libro no está publicado o no tiene precio válido.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '503':
+          description: Mercado Pago no está configurado.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/orders/{id}:
+    get:
+      tags: [Orders]
+      operationId: getOrder
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Orden perteneciente al usuario autenticado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Order'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '404':
+          description: Orden inexistente o perteneciente a otro usuario.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/webhooks/mercadopago:
+    post:
+      tags: [Webhooks]
+      operationId: processMercadoPagoWebhook
+      description: Valida x-signature y reconsulta el pago; no confía en el cuerpo recibido.
+      parameters:
+        - {name: data.id, in: query, required: true, schema: {type: string}}
+        - {name: type, in: query, schema: {type: string, const: payment}}
+        - {name: X-Signature, in: header, required: true, schema: {type: string}}
+        - {name: X-Request-ID, in: header, required: true, schema: {type: string}}
+      responses:
+        '204': {description: Notificación procesada o pago ajeno ignorado de forma segura.}
+        '401':
+          description: Firma ausente, inválida o vencida.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '502':
+          description: Fallo transitorio al consultar o persistir el pago.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
   /api/v1/admin/books:
     get:
       tags: [Admin books]
@@ -232,6 +303,34 @@ components:
         displayName: {type: string}
         pictureUrl: {type: string}
         isAdmin: {type: boolean}
+    OrderStatus:
+      type: string
+      enum: [PENDING, PAID, CANCELLED, EXPIRED]
+    OrderItem:
+      type: object
+      required: [bookId, bookSlug, bookTitle, unitPriceMinorUnits, quantity, currency]
+      properties:
+        bookId: {type: string, format: uuid}
+        bookSlug: {type: string}
+        bookTitle: {type: string}
+        unitPriceMinorUnits: {type: integer, format: int64, minimum: 0}
+        quantity: {type: integer, minimum: 1}
+        currency: {type: string, minLength: 3, maxLength: 3}
+    Order:
+      type: object
+      required: [id, status, totalMinorUnits, currency, items, createdAt, updatedAt, paidAt]
+      properties:
+        id: {type: string, format: uuid}
+        status: {$ref: '#/components/schemas/OrderStatus'}
+        totalMinorUnits: {type: integer, format: int64, minimum: 0}
+        currency: {type: string, minLength: 3, maxLength: 3}
+        checkoutUrl: {type: string, format: uri}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/OrderItem'}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        paidAt: {type: [string, 'null'], format: date-time}
     BookInput:
       type: object
       additionalProperties: false

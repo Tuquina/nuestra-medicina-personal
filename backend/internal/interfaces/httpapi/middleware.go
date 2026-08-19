@@ -18,8 +18,9 @@ import (
 type contextKey string
 
 const (
-	requestIDKey contextKey = "request_id"
-	userIDKey    contextKey = "user_id"
+	requestIDKey   contextKey = "request_id"
+	userIDKey      contextKey = "user_id"
+	currentUserKey contextKey = "current_user"
 )
 
 type AdminAuthorizer interface {
@@ -132,6 +133,29 @@ func requireAdmin(logger *slog.Logger, authorizer AdminAuthorizer, cookieName st
 	})
 }
 
+func requireUser(logger *slog.Logger, authentication AuthenticationService, cookieName string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(cookieName)
+		if err != nil || cookie.Value == "" {
+			writeError(w, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required", nil)
+			return
+		}
+		user, err := authentication.CurrentUser(r.Context(), cookie.Value)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			writeError(w, http.StatusUnauthorized, "AUTHENTICATION_REQUIRED", "Authentication is required", nil)
+			return
+		}
+		if err != nil {
+			logger.Error("user authentication failed", "request_id", requestID(r.Context()), "error", err)
+			writeError(w, http.StatusInternalServerError, "AUTHENTICATION_FAILED", "Authentication could not be verified", nil)
+			return
+		}
+		ctx := context.WithValue(r.Context(), userIDKey, user.ID)
+		ctx = context.WithValue(ctx, currentUserKey, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 type responseRecorder struct {
 	http.ResponseWriter
 	status int
@@ -149,5 +173,10 @@ func requestID(ctx context.Context) string {
 
 func userID(ctx context.Context) string {
 	value, _ := ctx.Value(userIDKey).(string)
+	return value
+}
+
+func currentUser(ctx context.Context) auth.User {
+	value, _ := ctx.Value(currentUserKey).(auth.User)
 	return value
 }
