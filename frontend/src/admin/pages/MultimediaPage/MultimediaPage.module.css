@@ -27,27 +27,8 @@
   font-family: var(--font-sans);
 }
 
-.filterRow {
-  display: flex;
-  gap: 6px;
-}
-
-.filterButton {
-  background: oklch(95% 0.006 90);
-  color: var(--color-admin-text-muted);
-  border: none;
-  font-size: 12.5px;
-  font-weight: 500;
-  padding: 7px 14px;
-  border-radius: 16px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-}
-
-.filterButtonActive {
-  background: var(--color-deep-blue);
-  color: var(--color-surface);
-  font-weight: 600;
+.fileInput {
+  display: none;
 }
 
 .grid {
@@ -75,6 +56,8 @@
 
 .tileThumb {
   aspect-ratio: 1;
+  width: 100%;
+  object-fit: cover;
 }
 
 .tileName {
@@ -107,6 +90,19 @@
   text-align: center;
   color: var(--color-admin-text-muted);
   font-size: 14px;
+}
+
+.emptyState p {
+  margin: 0 0 16px;
+}
+
+.actionError {
+  margin: 16px clamp(20px, 3vw, 36px) 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--color-status-danger-bg);
+  color: var(--color-status-danger-icon);
+  font-size: 13px;
 }
 
 /* ---- Drawer ---- */
@@ -146,6 +142,7 @@
   aspect-ratio: 1;
   border-radius: 6px;
   margin-bottom: 18px;
+  object-fit: cover;
 }
 
 .drawerTitle {

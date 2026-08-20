@@ -59,3 +59,19 @@ export const ORDERS_URL = `${API_PREFIX}/orders`;
 export function orderUrl(orderId: string): string {
   return `${ORDERS_URL}/${orderId}`;
 }
+
+export const ADMIN_BOOKS_URL = `${API_PREFIX}/admin/books`;
+
+export function adminBookUrl(identifier: string): string {
+  return `${ADMIN_BOOKS_URL}/${identifier}`;
+}
+
+export function adminBookEbookUrl(identifier: string): string {
+  return `${adminBookUrl(identifier)}/ebook`;
+}
+
+export const ADMIN_MEDIA_URL = `${API_PREFIX}/admin/media`;
+
+export function adminMediaUrl(mediaId: string): string {
+  return `${ADMIN_MEDIA_URL}/${mediaId}`;
+}
