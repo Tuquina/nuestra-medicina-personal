@@ -3,6 +3,7 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestMercadoPagoConfigurationIsAllOrNothing(t *testing.T) {
@@ -67,6 +68,35 @@ func TestEmailWorkerConfigurationValidation(t *testing.T) {
 	}
 }
 
+func TestRateLimitAndHTTPBoundaryConfiguration(t *testing.T) {
+	setRequiredTestEnvironment(t)
+	t.Setenv("RATE_LIMIT_WINDOW", "not-a-duration")
+	t.Setenv("RATE_LIMIT_AUTH_REQUESTS", "0")
+	t.Setenv("TRUST_PROXY_HEADERS", "sometimes")
+	t.Setenv("HTTP_MAX_HEADER_BYTES", "100")
+	t.Setenv("HTTP_MAX_REQUEST_URI_BYTES", "999999")
+	_, err := Load()
+	for _, expected := range []string{
+		"RATE_LIMIT_WINDOW", "RATE_LIMIT_AUTH_REQUESTS", "TRUST_PROXY_HEADERS",
+		"HTTP_MAX_HEADER_BYTES", "HTTP_MAX_REQUEST_URI_BYTES",
+	} {
+		if err == nil || !strings.Contains(err.Error(), expected) {
+			t.Fatalf("expected %s validation error, got %v", expected, err)
+		}
+	}
+}
+
+func TestRateLimitDefaultsLoad(t *testing.T) {
+	setRequiredTestEnvironment(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.RateLimitWindow != time.Minute || cfg.RateLimitAuthRequests != 10 || cfg.MaxHeaderBytes != 32<<10 || cfg.TrustProxyHeaders {
+		t.Fatalf("unexpected boundary defaults: %#v", cfg)
+	}
+}
+
 func setRequiredTestEnvironment(t *testing.T) {
 	t.Helper()
 	t.Setenv("DATABASE_URL", "postgres://test")
@@ -79,4 +109,12 @@ func setRequiredTestEnvironment(t *testing.T) {
 	t.Setenv("GOOGLE_MAIL_CREDENTIALS_PATH", "")
 	t.Setenv("GOOGLE_MAIL_SENDER", "")
 	t.Setenv("SUPPORT_EMAIL", "")
+	t.Setenv("RATE_LIMIT_WINDOW", "")
+	t.Setenv("RATE_LIMIT_AUTH_REQUESTS", "")
+	t.Setenv("RATE_LIMIT_ORDER_REQUESTS", "")
+	t.Setenv("RATE_LIMIT_DOWNLOAD_REQUESTS", "")
+	t.Setenv("RATE_LIMIT_ADMIN_WRITE_REQUESTS", "")
+	t.Setenv("TRUST_PROXY_HEADERS", "")
+	t.Setenv("HTTP_MAX_HEADER_BYTES", "")
+	t.Setenv("HTTP_MAX_REQUEST_URI_BYTES", "")
 }

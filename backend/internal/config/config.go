@@ -11,80 +11,126 @@ import (
 )
 
 type Config struct {
-	Environment              string
-	BaseURL                  string
-	HTTPAddress              string
-	DatabaseURL              string
-	AdminGoogleSub           string
-	GoogleClientID           string
-	GoogleSecret             string
-	GoogleRedirect           string
-	MercadoPagoToken         string
-	MercadoPagoWebhookSecret string
-	MercadoPagoPublicBaseURL string
-	EbookStoragePath         string
-	EbookInternalPrefix      string
-	EbookMaxUploadBytes      int64
-	MediaStoragePath         string
-	MediaMaxUploadBytes      int64
-	GoogleMailCredentials    string
-	GoogleMailSender         string
-	SupportEmail             string
-	EmailWorkerInterval      time.Duration
-	EmailLeaseTimeout        time.Duration
-	EmailBatchSize           int
-	EmailMaxAttempts         int
-	SessionCookie            string
-	SessionTTL               time.Duration
-	ShutdownTimeout          time.Duration
-	ReadTimeout              time.Duration
-	WriteTimeout             time.Duration
-	IdleTimeout              time.Duration
-	DatabaseTimeout          time.Duration
-	MaxDBConns               int32
+	Environment               string
+	BaseURL                   string
+	HTTPAddress               string
+	DatabaseURL               string
+	AdminGoogleSub            string
+	GoogleClientID            string
+	GoogleSecret              string
+	GoogleRedirect            string
+	MercadoPagoToken          string
+	MercadoPagoWebhookSecret  string
+	MercadoPagoPublicBaseURL  string
+	EbookStoragePath          string
+	EbookInternalPrefix       string
+	EbookMaxUploadBytes       int64
+	MediaStoragePath          string
+	MediaMaxUploadBytes       int64
+	GoogleMailCredentials     string
+	GoogleMailSender          string
+	SupportEmail              string
+	EmailWorkerInterval       time.Duration
+	EmailLeaseTimeout         time.Duration
+	EmailBatchSize            int
+	EmailMaxAttempts          int
+	SessionCookie             string
+	SessionTTL                time.Duration
+	ShutdownTimeout           time.Duration
+	ReadTimeout               time.Duration
+	WriteTimeout              time.Duration
+	IdleTimeout               time.Duration
+	DatabaseTimeout           time.Duration
+	MaxDBConns                int32
+	RateLimitWindow           time.Duration
+	RateLimitAuthRequests     int
+	RateLimitOrderRequests    int
+	RateLimitDownloadRequests int
+	RateLimitAdminWrites      int
+	TrustProxyHeaders         bool
+	MaxHeaderBytes            int
+	MaxRequestURIBytes        int
 }
 
 func Load() (Config, error) {
+	rateLimitWindow, rateLimitWindowErr := strictDurationOrDefault("RATE_LIMIT_WINDOW", time.Minute)
+	rateLimitAuth, rateLimitAuthErr := strictIntOrDefault("RATE_LIMIT_AUTH_REQUESTS", 10)
+	rateLimitOrders, rateLimitOrdersErr := strictIntOrDefault("RATE_LIMIT_ORDER_REQUESTS", 5)
+	rateLimitDownloads, rateLimitDownloadsErr := strictIntOrDefault("RATE_LIMIT_DOWNLOAD_REQUESTS", 30)
+	rateLimitAdmin, rateLimitAdminErr := strictIntOrDefault("RATE_LIMIT_ADMIN_WRITE_REQUESTS", 60)
+	trustProxyHeaders, trustProxyErr := strictBoolOrDefault("TRUST_PROXY_HEADERS", false)
+	maxHeaderBytes, maxHeaderBytesErr := strictIntOrDefault("HTTP_MAX_HEADER_BYTES", 32<<10)
+	maxRequestURIBytes, maxRequestURIErr := strictIntOrDefault("HTTP_MAX_REQUEST_URI_BYTES", 8<<10)
 	cfg := Config{
-		Environment:              envOrDefault("APP_ENV", "development"),
-		BaseURL:                  envOrDefault("APP_BASE_URL", "http://localhost:5173"),
-		HTTPAddress:              envOrDefault("HTTP_ADDRESS", ":8080"),
-		DatabaseURL:              os.Getenv("DATABASE_URL"),
-		AdminGoogleSub:           os.Getenv("ADMIN_GOOGLE_SUB"),
-		GoogleClientID:           os.Getenv("GOOGLE_CLIENT_ID"),
-		GoogleSecret:             os.Getenv("GOOGLE_CLIENT_SECRET"),
-		GoogleRedirect:           os.Getenv("GOOGLE_REDIRECT_URL"),
-		MercadoPagoToken:         os.Getenv("MERCADOPAGO_ACCESS_TOKEN"),
-		MercadoPagoWebhookSecret: os.Getenv("MERCADOPAGO_WEBHOOK_SECRET"),
-		MercadoPagoPublicBaseURL: os.Getenv("MERCADOPAGO_PUBLIC_BASE_URL"),
-		EbookStoragePath:         envOrDefault("EBOOK_STORAGE_PATH", "/data/ebooks"),
-		EbookInternalPrefix:      envOrDefault("EBOOK_INTERNAL_PREFIX", "/_protected/ebooks"),
-		EbookMaxUploadBytes:      int64OrDefault("EBOOK_MAX_UPLOAD_BYTES", 50<<20),
-		MediaStoragePath:         envOrDefault("MEDIA_STORAGE_PATH", "/data/media"),
-		MediaMaxUploadBytes:      int64OrDefault("MEDIA_MAX_UPLOAD_BYTES", 10<<20),
-		GoogleMailCredentials:    os.Getenv("GOOGLE_MAIL_CREDENTIALS_PATH"),
-		GoogleMailSender:         os.Getenv("GOOGLE_MAIL_SENDER"),
-		SupportEmail:             os.Getenv("SUPPORT_EMAIL"),
-		EmailWorkerInterval:      durationOrDefault("EMAIL_WORKER_INTERVAL", 10*time.Second),
-		EmailLeaseTimeout:        durationOrDefault("EMAIL_LEASE_TIMEOUT", 5*time.Minute),
-		EmailBatchSize:           intOrDefault("EMAIL_BATCH_SIZE", 5),
-		EmailMaxAttempts:         intOrDefault("EMAIL_MAX_ATTEMPTS", 5),
-		SessionCookie:            envOrDefault("SESSION_COOKIE_NAME", "nmp_session"),
-		SessionTTL:               durationOrDefault("SESSION_TTL", 30*24*time.Hour),
-		ShutdownTimeout:          durationOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
-		ReadTimeout:              durationOrDefault("HTTP_READ_TIMEOUT", 10*time.Second),
-		WriteTimeout:             durationOrDefault("HTTP_WRITE_TIMEOUT", 15*time.Second),
-		IdleTimeout:              durationOrDefault("HTTP_IDLE_TIMEOUT", 60*time.Second),
-		DatabaseTimeout:          durationOrDefault("DATABASE_TIMEOUT", 5*time.Second),
-		MaxDBConns:               int32OrDefault("DATABASE_MAX_CONNECTIONS", 5),
+		Environment:               envOrDefault("APP_ENV", "development"),
+		BaseURL:                   envOrDefault("APP_BASE_URL", "http://localhost:5173"),
+		HTTPAddress:               envOrDefault("HTTP_ADDRESS", ":8080"),
+		DatabaseURL:               os.Getenv("DATABASE_URL"),
+		AdminGoogleSub:            os.Getenv("ADMIN_GOOGLE_SUB"),
+		GoogleClientID:            os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleSecret:              os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleRedirect:            os.Getenv("GOOGLE_REDIRECT_URL"),
+		MercadoPagoToken:          os.Getenv("MERCADOPAGO_ACCESS_TOKEN"),
+		MercadoPagoWebhookSecret:  os.Getenv("MERCADOPAGO_WEBHOOK_SECRET"),
+		MercadoPagoPublicBaseURL:  os.Getenv("MERCADOPAGO_PUBLIC_BASE_URL"),
+		EbookStoragePath:          envOrDefault("EBOOK_STORAGE_PATH", "/data/ebooks"),
+		EbookInternalPrefix:       envOrDefault("EBOOK_INTERNAL_PREFIX", "/_protected/ebooks"),
+		EbookMaxUploadBytes:       int64OrDefault("EBOOK_MAX_UPLOAD_BYTES", 50<<20),
+		MediaStoragePath:          envOrDefault("MEDIA_STORAGE_PATH", "/data/media"),
+		MediaMaxUploadBytes:       int64OrDefault("MEDIA_MAX_UPLOAD_BYTES", 10<<20),
+		GoogleMailCredentials:     os.Getenv("GOOGLE_MAIL_CREDENTIALS_PATH"),
+		GoogleMailSender:          os.Getenv("GOOGLE_MAIL_SENDER"),
+		SupportEmail:              os.Getenv("SUPPORT_EMAIL"),
+		EmailWorkerInterval:       durationOrDefault("EMAIL_WORKER_INTERVAL", 10*time.Second),
+		EmailLeaseTimeout:         durationOrDefault("EMAIL_LEASE_TIMEOUT", 5*time.Minute),
+		EmailBatchSize:            intOrDefault("EMAIL_BATCH_SIZE", 5),
+		EmailMaxAttempts:          intOrDefault("EMAIL_MAX_ATTEMPTS", 5),
+		SessionCookie:             envOrDefault("SESSION_COOKIE_NAME", "nmp_session"),
+		SessionTTL:                durationOrDefault("SESSION_TTL", 30*24*time.Hour),
+		ShutdownTimeout:           durationOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
+		ReadTimeout:               durationOrDefault("HTTP_READ_TIMEOUT", 10*time.Second),
+		WriteTimeout:              durationOrDefault("HTTP_WRITE_TIMEOUT", 15*time.Second),
+		IdleTimeout:               durationOrDefault("HTTP_IDLE_TIMEOUT", 60*time.Second),
+		DatabaseTimeout:           durationOrDefault("DATABASE_TIMEOUT", 5*time.Second),
+		MaxDBConns:                int32OrDefault("DATABASE_MAX_CONNECTIONS", 5),
+		RateLimitWindow:           rateLimitWindow,
+		RateLimitAuthRequests:     rateLimitAuth,
+		RateLimitOrderRequests:    rateLimitOrders,
+		RateLimitDownloadRequests: rateLimitDownloads,
+		RateLimitAdminWrites:      rateLimitAdmin,
+		TrustProxyHeaders:         trustProxyHeaders,
+		MaxHeaderBytes:            maxHeaderBytes,
+		MaxRequestURIBytes:        maxRequestURIBytes,
 	}
 
-	var validationErrors []error
+	validationErrors := compactErrors([]error{
+		rateLimitWindowErr, rateLimitAuthErr, rateLimitOrdersErr, rateLimitDownloadsErr,
+		rateLimitAdminErr, trustProxyErr, maxHeaderBytesErr, maxRequestURIErr,
+	})
 	if cfg.DatabaseURL == "" {
 		validationErrors = append(validationErrors, errors.New("DATABASE_URL is required"))
 	}
 	if cfg.MaxDBConns < 1 || cfg.MaxDBConns > 20 {
 		validationErrors = append(validationErrors, errors.New("DATABASE_MAX_CONNECTIONS must be between 1 and 20"))
+	}
+	if cfg.RateLimitWindow < time.Second || cfg.RateLimitWindow > time.Hour {
+		validationErrors = append(validationErrors, errors.New("RATE_LIMIT_WINDOW must be between 1s and 1h"))
+	}
+	for name, value := range map[string]int{
+		"RATE_LIMIT_AUTH_REQUESTS":        cfg.RateLimitAuthRequests,
+		"RATE_LIMIT_ORDER_REQUESTS":       cfg.RateLimitOrderRequests,
+		"RATE_LIMIT_DOWNLOAD_REQUESTS":    cfg.RateLimitDownloadRequests,
+		"RATE_LIMIT_ADMIN_WRITE_REQUESTS": cfg.RateLimitAdminWrites,
+	} {
+		if value < 1 || value > 10_000 {
+			validationErrors = append(validationErrors, fmt.Errorf("%s must be between 1 and 10000", name))
+		}
+	}
+	if cfg.MaxHeaderBytes < 8<<10 || cfg.MaxHeaderBytes > 1<<20 {
+		validationErrors = append(validationErrors, errors.New("HTTP_MAX_HEADER_BYTES must be between 8192 and 1048576"))
+	}
+	if cfg.MaxRequestURIBytes < 1<<10 || cfg.MaxRequestURIBytes > 64<<10 {
+		validationErrors = append(validationErrors, errors.New("HTTP_MAX_REQUEST_URI_BYTES must be between 1024 and 65536"))
 	}
 	if cfg.BaseURL == "" {
 		validationErrors = append(validationErrors, errors.New("APP_BASE_URL is required"))
@@ -216,6 +262,52 @@ func intOrDefault(key string, fallback int) int {
 		return fallback
 	}
 	return parsed
+}
+
+func strictDurationOrDefault(key string, fallback time.Duration) (time.Duration, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback, fmt.Errorf("%s must be a valid duration", key)
+	}
+	return parsed, nil
+}
+
+func strictIntOrDefault(key string, fallback int) (int, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback, fmt.Errorf("%s must be an integer", key)
+	}
+	return parsed, nil
+}
+
+func strictBoolOrDefault(key string, fallback bool) (bool, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback, fmt.Errorf("%s must be true or false", key)
+	}
+	return parsed, nil
+}
+
+func compactErrors(values []error) []error {
+	result := make([]error, 0, len(values))
+	for _, value := range values {
+		if value != nil {
+			result = append(result, value)
+		}
+	}
+	return result
 }
 
 func (c Config) String() string {
