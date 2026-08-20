@@ -12,6 +12,7 @@ import (
 	"github.com/nuestra-medicina-personal/backend/internal/application/authentication"
 	"github.com/nuestra-medicina-personal/backend/internal/application/backoffice"
 	"github.com/nuestra-medicina-personal/backend/internal/application/books"
+	"github.com/nuestra-medicina-personal/backend/internal/application/coupons"
 	emailapp "github.com/nuestra-medicina-personal/backend/internal/application/email"
 	"github.com/nuestra-medicina-personal/backend/internal/application/library"
 	mediaapp "github.com/nuestra-medicina-personal/backend/internal/application/media"
@@ -57,6 +58,8 @@ func run(logger *slog.Logger) error {
 
 	bookRepository := postgres.NewBookRepository(pool)
 	bookService := books.NewService(bookRepository)
+	couponRepository := postgres.NewCouponRepository(pool)
+	couponService := coupons.NewService(couponRepository)
 	authRepository := postgres.NewAuthRepository(pool)
 	googleProvider := google.NewOIDCProvider(ctx, cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect)
 	authService := authentication.NewService(googleProvider, authRepository, cfg.AdminGoogleSub, cfg.SessionTTL)
@@ -103,7 +106,7 @@ func run(logger *slog.Logger) error {
 	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
+		Logger: logger, Books: bookService, Coupons: couponService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
 		IntegrationStatus: httpapi.IntegrationStatus{
 			GoogleConfigured:      cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
 			MercadoPagoConfigured: cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",

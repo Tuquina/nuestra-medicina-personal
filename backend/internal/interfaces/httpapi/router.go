@@ -14,6 +14,7 @@ type DatabaseHealth interface {
 type Dependencies struct {
 	Logger              *slog.Logger
 	Books               BookService
+	Coupons             CouponService
 	Authentication      AuthenticationService
 	Orders              OrderService
 	Library             LibraryService
@@ -37,6 +38,7 @@ type Dependencies struct {
 
 func NewRouter(dependencies Dependencies) http.Handler {
 	booksHandler := NewBookHandler(dependencies.Books, dependencies.Logger)
+	couponsHandler := NewCouponHandler(dependencies.Coupons, dependencies.Logger)
 	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies)
 	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
@@ -95,6 +97,10 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("GET /api/v1/admin/customers", backofficeHandler.Customers)
 	admin.HandleFunc("GET /api/v1/admin/settings", settingsHandler.Get)
 	admin.HandleFunc("PUT /api/v1/admin/settings", settingsHandler.Update)
+	admin.HandleFunc("GET /api/v1/admin/coupons", couponsHandler.List)
+	admin.HandleFunc("POST /api/v1/admin/coupons", couponsHandler.Create)
+	admin.HandleFunc("PUT /api/v1/admin/coupons/{id}", couponsHandler.Update)
+	admin.HandleFunc("DELETE /api/v1/admin/coupons/{id}", couponsHandler.Delete)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
 		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, rateLimiter.AdminWrites(admin)))
 	root.Handle("/api/v1/admin/", adminHandler)
