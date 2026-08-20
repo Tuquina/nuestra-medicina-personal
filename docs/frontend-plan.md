@@ -2,8 +2,8 @@
 
 **Status: all 17 mockups implemented.** Every public-store and admin page
 in the handoff bundle has a working route, verified against its mockup
-in the browser. Backend transport integration is in progress: session,
-published catalog and the authenticated library now use the real API. See
+in the browser. Backend transport integration now covers session, catalog,
+checkout, library, the core backoffice and all editorial CMS pages. See
 "Notes for whoever picks this up next" below for the remaining modules.
 
 Maps every mockup in the Claude Design handoff bundle
@@ -65,15 +65,15 @@ is unaffected — only this frontend path differs.
 
 ## Post-launch content & admin extensions
 
-Added after the 17-mockup handoff was fully implemented and `shared/cms`
-(the localStorage-backed content store, see its own doc comments) landed
-for Home and each book's landing page. Two kinds of follow-up work:
+Added after the 17-mockup handoff was fully implemented. These pages were
+initially built against a local adapter and now use the real CMS draft,
+publication, preview and version endpoints. Two kinds of follow-up work:
 
 **A. Extend `shared/cms` editability to Meditaciones, Herramientas, and
 the "Sobre el proyecto" bio** — these already render from
 `ComingSoonCollectionPage` / Home's `about` section, but with hardcoded
 copy. Same pattern as Home/book pages: a seed content builder + a small
-admin form, reading/writing through `contentStore.ts`.
+admin form, reading/writing through the shared CMS API adapter.
 
 - `PageType` gains `'MEDITACIONES' | 'HERRAMIENTAS'` alongside
   `'HOME' | 'BOOK'`. The backend now supports these singleton types through
@@ -88,8 +88,8 @@ admin form, reading/writing through `contentStore.ts`.
   support.
 - "Sobre el proyecto": a small dedicated form (not the full Page
   Builder) editing the Home page's `about` section content directly —
-  reuses `homeContent.ts`'s existing `AboutProps` shape and
-  `contentStore.ts`'s Home record, so it's the same underlying data the
+  reuses `homeContent.ts`'s existing `AboutProps` shape and the Home CMS
+  record, so it's the same underlying data the
   Page Builder's "Sobre el proyecto" block already edits, just reached
   through a simpler, purpose-built form. Lives at
   `/admin/sobre-el-proyecto`.
@@ -109,9 +109,8 @@ just with write operations too since these are admin-editable).
   usageLimit, usageCount, appliesTo: 'all' | string[] (book slugs) }`.
   List + create/edit dialog, matching the table conventions in
   `VentasPage`/`ClientesPage`. Store: `admin/data/couponsStore.ts`
-  (localStorage-backed CRUD, mirrors `shared/cms/contentStore.ts`'s
-  shape but for a plain resource list rather than draft/published page
-  content).
+  (localStorage-backed CRUD for a plain resource list; it remains outside
+  the CMS draft/published page contract).
 - **Reseñas** (`/admin/resenas`): `Review { id, bookSlug, customerName,
   rating (1-5), text, status: 'pending'|'approved'|'rejected',
   createdAtISO }`. List with per-status filter + approve/reject actions.
@@ -289,10 +288,10 @@ and the sidebar are the two places to extend.
 
 ## Notes for whoever picks this up next
 
-- The backend content validator now accepts the current Home section schemas
-  and the complete `book-landing` shape, including both middle-section
-  variants. The remaining CMS work is transport integration: replace the
-  localStorage adapter with the draft/publish/version endpoints.
+- The complete CMS now uses the API for all nine page types. Public routes
+  render only published content; explicit authenticated previews render the
+  current draft. Editors can save, publish, inspect versions and restore a
+  version as a draft without publishing it automatically.
 
 - Session, public catalog, book detail, checkout book lookup and library now
   consume the backend contracts. They include loading, empty and retryable
@@ -307,8 +306,9 @@ and the sidebar are the two places to extend.
   projections. Filters and pagination run on the server, sale details preserve
   order/payment separation and historical amounts, and settings load before
   editing while integration status remains read-only.
-- **Next real milestone for these screens**: replace the remaining CMS local
-  adapters with authenticated draft, publish and version API calls.
+- **Next real milestone for these screens**: retire the remaining unrelated
+  mock stores, demonstration toggles and placeholder success messages, then
+  review empty and authorization/error states consistently.
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing
