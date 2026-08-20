@@ -107,6 +107,19 @@ PostgreSQL:
 }
 ```
 
+## Observabilidad
+
+Cada solicitud genera un log JSON con `request_id`, método, patrón estable de
+endpoint, estado, duración, bytes de respuesta y `user_id` cuando la sesión fue
+autenticada. Se usa el patrón (`GET /api/v1/books/{slug}`), no el identificador
+real, para evitar cardinalidad innecesaria. Los errores recuperados también se
+registran con estado `500`.
+
+La creación de órdenes, los webhooks verificados y el worker de Gmail agregan
+identificadores de correlación de orden, pago, job y mensaje del proveedor. No
+se registran cookies, tokens, destinatarios, credenciales ni cuerpos completos.
+Nginx usa el mismo `request_id` y Docker rota los logs en producción.
+
 ## Biblioteca y archivos protegidos
 
 `GET /api/v1/me/books` requiere sesión y devuelve una sola entrada por libro

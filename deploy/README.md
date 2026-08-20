@@ -33,6 +33,26 @@ Nginx redirige HTTP a HTTPS, sirve el SPA y procesa las descargas autorizadas
 mediante la ubicación interna `/_protected/ebooks/`. Esa ubicación nunca es
 accesible directamente desde Internet.
 
+## Logs y diagnóstico
+
+La API y Nginx escriben logs estructurados JSON a stdout/stderr. Las solicitudes
+comparten `request_id`; la API agrega patrón de endpoint, estado, duración,
+tamaño de respuesta y `user_id` después de autenticar. Los eventos de compra,
+webhook y email agregan IDs de orden, pago o job, pero nunca tokens, credenciales,
+destinatarios ni payloads completos.
+
+El driver `local` de Docker rota los logs de todos los servicios. Por defecto
+conserva hasta 5 archivos de 10 MiB por contenedor; `LOG_MAX_SIZE` y
+`LOG_MAX_FILES` permiten ajustar ese límite. Para consultar una correlación:
+
+```bash
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml logs api nginx
+```
+
+Buscar el mismo `request_id` en ambos servicios permite seguir una solicitud a
+través del proxy. Los health checks permanecen disponibles en `/health/live` y
+`/health/ready`.
+
 Los volúmenes `postgres_data` y `ebooks_data` requieren backups externos al
 Netcup VPS y pruebas periódicas de restauración. Los snapshots del proveedor
 son una capa adicional, no reemplazan esos backups.
