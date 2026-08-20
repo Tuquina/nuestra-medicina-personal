@@ -1,7 +1,14 @@
+x-logging: &default-logging
+  driver: local
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILES:-5}
+
 services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -24,10 +31,12 @@ services:
       postgres:
         condition: service_healthy
     restart: 'no'
+    logging: *default-logging
 
   api:
     image: ${BACKEND_IMAGE}
     restart: unless-stopped
+    logging: *default-logging
     environment:
       APP_ENV: production
       APP_BASE_URL: https://${APP_DOMAIN}
@@ -79,6 +88,7 @@ services:
   nginx:
     image: ${WEB_IMAGE}
     restart: unless-stopped
+    logging: *default-logging
     environment:
       SERVER_NAME: ${APP_DOMAIN}
       EBOOK_CLIENT_MAX_BODY_SIZE: ${EBOOK_CLIENT_MAX_BODY_SIZE:-51m}
