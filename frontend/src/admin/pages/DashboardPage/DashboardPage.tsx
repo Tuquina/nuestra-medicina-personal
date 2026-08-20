@@ -38,6 +38,18 @@ export function DashboardPage() {
     setAttempt((value) => value + 1);
   }, []);
 
+  const changePeriod = (nextPeriod: ReportingRange) => {
+    if (nextPeriod === period) return;
+    setState((current) => ({ status: 'loading', books: current.books }));
+    setPeriod(nextPeriod);
+  };
+
+  const changeBook = (nextBookSlug: string) => {
+    if (nextBookSlug === bookSlug) return;
+    setState((current) => ({ status: 'loading', books: current.books }));
+    setBookSlug(nextBookSlug);
+  };
+
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ range: period });
@@ -64,7 +76,7 @@ export function DashboardPage() {
           <span className={styles.filterLabel}>Período</span>
           <div className={styles.segmented}>
             {PERIOD_OPTIONS.map((option) => (
-              <button key={option.value} type="button" onClick={() => setPeriod(option.value)} className={[styles.segmentButton, period === option.value ? styles.segmentButtonActive : ''].join(' ')}>
+              <button key={option.value} type="button" onClick={() => changePeriod(option.value)} className={[styles.segmentButton, period === option.value ? styles.segmentButtonActive : ''].join(' ')}>
                 {option.label}
               </button>
             ))}
@@ -74,9 +86,9 @@ export function DashboardPage() {
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>Libro</span>
           <div className={styles.chipRow}>
-            <button type="button" onClick={() => setBookSlug('all')} className={[styles.chipButton, bookSlug === 'all' ? styles.chipButtonActive : ''].join(' ')}>Todos</button>
+            <button type="button" onClick={() => changeBook('all')} className={[styles.chipButton, bookSlug === 'all' ? styles.chipButtonActive : ''].join(' ')}>Todos</button>
             {books.filter((book) => book.status === 'PUBLISHED').map((book) => (
-              <button key={book.slug} type="button" onClick={() => setBookSlug(book.slug)} className={[styles.chipButton, bookSlug === book.slug ? styles.chipButtonActive : ''].join(' ')}>{book.title}</button>
+              <button key={book.slug} type="button" onClick={() => changeBook(book.slug)} className={[styles.chipButton, bookSlug === book.slug ? styles.chipButtonActive : ''].join(' ')}>{book.title}</button>
             ))}
           </div>
         </div>

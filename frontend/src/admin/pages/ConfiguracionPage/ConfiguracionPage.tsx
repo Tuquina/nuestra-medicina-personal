@@ -49,12 +49,17 @@ export function ConfiguracionPage() {
 
   const save = async () => {
     if (state.status !== 'ready') return;
+    const submittedDraft = state.draft;
     setSaving(true); setMessage(null);
     try {
       const response = await apiRequest<SiteSettings>(ADMIN_SETTINGS_URL, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state.draft),
       });
-      setState({ status: 'ready', response, draft: editableFields(response) });
+      setState((current) => current.status === 'ready' ? {
+        status: 'ready',
+        response,
+        draft: current.draft === submittedDraft ? editableFields(response) : current.draft,
+      } : current);
       setMessage('Cambios guardados.');
     } catch (error: unknown) {
       setMessage(error instanceof ApiError && error.status === 422 ? 'Revisá los campos: hay valores inválidos.' : error instanceof ApiError && error.status === 429 ? 'Alcanzaste el límite de cambios. Esperá un minuto y reintentá.' : 'No pudimos guardar los cambios. Intentá nuevamente.');

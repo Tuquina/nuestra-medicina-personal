@@ -27,7 +27,11 @@ export function formatAdminDate(value: string | null): string {
 
 export function formatTrendLabel(value: string, range: ReportingRange): string {
   const date = new Date(value);
-  if (range === 'year') return date.toLocaleDateString('es-AR', { month: 'short' });
+  if (range === 'year') return date.toLocaleDateString('es-AR', { month: 'short', timeZone: 'UTC' });
   if (range === 'all') return String(date.getUTCFullYear());
-  return date.toLocaleDateString('es-AR', { day: 'numeric', month: range === '30d' ? 'short' : undefined });
+  return date.toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: range === '30d' ? 'short' : undefined,
+    timeZone: 'UTC',
+  });
 }

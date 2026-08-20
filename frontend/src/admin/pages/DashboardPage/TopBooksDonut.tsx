@@ -27,7 +27,7 @@ export function TopBooksDonut({ title, slices, total }: TopBooksDonutProps) {
   });
 
   const donutStyle: CSSProperties = {
-    background: total === 0 ? 'oklch(93% 0.006 90)' : `conic-gradient(${stops.join(', ')})`,
+    background: total === 0 ? 'var(--color-admin-border)' : `conic-gradient(${stops.join(', ')})`,
   };
 
   return (
