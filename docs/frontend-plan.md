@@ -303,9 +303,12 @@ and the sidebar are the two places to extend.
 - Administrative books now load and persist complete `BookInput` contracts;
   archive uses `DELETE`, and cover/media/eBook uploads use their dedicated
   multipart endpoints without exposing private file paths.
-- **Next real milestone for these screens**: connect dashboard, sales,
-  customers and settings, then replace the remaining CMS local adapters with
-  authenticated API calls.
+- Dashboard, sales and customers now consume the authenticated backoffice
+  projections. Filters and pagination run on the server, sale details preserve
+  order/payment separation and historical amounts, and settings load before
+  editing while integration status remains read-only.
+- **Next real milestone for these screens**: replace the remaining CMS local
+  adapters with authenticated draft, publish and version API calls.
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing
