@@ -127,3 +127,24 @@
   border-bottom: 1px solid var(--color-deep-blue);
   cursor: pointer;
 }
+
+.resourceState {
+  text-align: center;
+  padding: 72px 20px;
+  color: var(--color-ink-muted);
+}
+
+.resourceState p {
+  margin: 0 0 18px;
+}
+
+.retryButton {
+  border: 0;
+  border-radius: 4px;
+  padding: 11px 22px;
+  background: var(--color-deep-blue);
+  color: var(--color-surface);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+}

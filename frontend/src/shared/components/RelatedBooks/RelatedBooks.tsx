@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ImagePlaceholder } from '../ImagePlaceholder/ImagePlaceholder';
+import { BookCover } from '../BookCover/BookCover';
 import { formatPrice } from '../../utils/money';
 import type { Book } from '../../../public-store/data/books';
 import styles from './RelatedBooks.module.css';
@@ -23,11 +23,12 @@ export function RelatedBooks({ books }: RelatedBooksProps) {
       <div className={styles.grid}>
         {books.map((book) => (
           <article key={book.slug} className={styles.card}>
-            <ImagePlaceholder
+            <BookCover
               className={styles.cover}
+              mediaId={book.coverMediaId}
+              title={book.title}
               accent={VARIANT_ACCENT[book.variant]}
               caption={book.coverCaption}
-              aspectRatio="2 / 3"
               borderRadius="4px"
             />
             <h3 className={styles.title}>{book.title}</h3>

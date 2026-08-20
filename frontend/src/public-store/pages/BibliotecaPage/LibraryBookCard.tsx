@@ -1,28 +1,28 @@
 import { Link } from 'react-router-dom';
-import { ImagePlaceholder } from '../../../shared/components/ImagePlaceholder/ImagePlaceholder';
+import { BookCover } from '../../../shared/components/BookCover/BookCover';
 import { downloadUrl } from '../../../shared/config/api';
-import type { Book } from '../../data/books';
+import type { LibraryBookResponse } from '../../library/types';
 import styles from './LibraryBookCard.module.css';
 
-const VARIANT_ACCENT: Record<Book['variant'], string> = {
-  gold: 'color-mix(in oklch, var(--color-accent-gold) 50%, transparent)',
-  blue: 'color-mix(in oklch, var(--color-sky) 60%, transparent)',
-};
-
 interface LibraryBookCardProps {
-  book: Book;
-  purchasedAtLabel: string;
+  book: LibraryBookResponse;
 }
 
 /** A single owned-book row: cover thumbnail, purchase date, download + details. */
-export function LibraryBookCard({ book, purchasedAtLabel }: LibraryBookCardProps) {
+export function LibraryBookCard({ book }: LibraryBookCardProps) {
+  const purchasedAtLabel = new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(book.purchasedAt));
+
   return (
     <article className={styles.card}>
-      <ImagePlaceholder
+      <BookCover
         className={styles.cover}
-        accent={VARIANT_ACCENT[book.variant]}
-        alt={`Portada — ${book.title}`}
-        aspectRatio="2 / 3"
+        mediaId={book.coverMediaId}
+        title={book.title}
+        accent="color-mix(in oklch, var(--color-accent-gold) 50%, transparent)"
         borderRadius="4px"
       />
       <div className={styles.info}>
@@ -30,12 +30,13 @@ export function LibraryBookCard({ book, purchasedAtLabel }: LibraryBookCardProps
         <p className={styles.purchasedAt}>{purchasedAtLabel}</p>
         <p className={styles.format}>{book.format}</p>
         <div className={styles.actions}>
-          {/* Real download contract (architecture.md §28) — 404s locally
-              until the backend exists, same treatment as the other
-              backend-dependent actions in this app. */}
-          <a href={downloadUrl(book.slug)} className={styles.download}>
-            Descargar
-          </a>
+          {book.downloadAvailable ? (
+            <a href={downloadUrl(book.id)} className={styles.download}>
+              Descargar
+            </a>
+          ) : (
+            <span className={styles.downloadUnavailable}>Archivo no disponible</span>
+          )}
           <Link to={`/libros/${book.slug}`} className={styles.details}>
             Ver detalles
           </Link>

@@ -22,3 +22,25 @@
   background: oklch(28% 0.06 254);
   color: oklch(96% 0.02 80);
 }
+
+.resourceState {
+  min-height: 320px;
+  padding: 72px var(--space-section-x);
+  text-align: center;
+  color: var(--color-ink-muted);
+}
+
+.resourceState p {
+  margin: 0 0 18px;
+}
+
+.retryButton {
+  border: 0;
+  border-radius: 4px;
+  padding: 11px 22px;
+  background: var(--color-deep-blue);
+  color: var(--color-surface);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+}
