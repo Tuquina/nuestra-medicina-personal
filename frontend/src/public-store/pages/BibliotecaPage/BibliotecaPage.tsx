@@ -5,7 +5,8 @@ import { SiteHeader } from '../../../shared/components/SiteHeader/SiteHeader';
 import { MinimalFooter } from '../../../shared/components/MinimalFooter/MinimalFooter';
 import { Eyebrow } from '../../../shared/components/Eyebrow/Eyebrow';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { CURRENT_USER } from '../../data/currentUser';
+import { useAuth } from '../../../shared/auth/useAuth';
+import { AuthLoading } from '../../../shared/components/AuthLoading/AuthLoading';
 import { BOOKS, type Book } from '../../data/books';
 import { LIBRARY_ENTRIES } from '../../data/library';
 import { LibraryBookCard } from './LibraryBookCard';
@@ -16,15 +17,19 @@ interface OwnedBook {
   purchasedAtLabel: string;
 }
 
-/** `/biblioteca` — the signed-in user's purchased books (architecture.md §27). */
+/** `/biblioteca` — the signed-in user's purchased books (architecture.md §27).
+ * Only ever reached through the `RequireAuth` route guard. */
 export function BibliotecaPage() {
   useDocumentTitle('Mi biblioteca · Nuestra Medicina Personal');
+  const auth = useAuth();
 
   // The mockup ships a "(demo)" toggle to preview both states without a
   // second file — kept as-is since it's explicitly labeled as a demo
   // affordance, not something a real reader would see once §27's
   // GET /api/v1/me/books backs this for real.
   const [hasBooks, setHasBooks] = useState(true);
+
+  if (auth.status !== 'authenticated') return <AuthLoading />;
 
   const ownedBooks: OwnedBook[] = LIBRARY_ENTRIES.flatMap((entry) => {
     const book = BOOKS.find((candidate) => candidate.slug === entry.bookSlug);
@@ -34,7 +39,7 @@ export function BibliotecaPage() {
   return (
     <div className={styles.page}>
       <GradientTopBar />
-      <SiteHeader user={CURRENT_USER} />
+      <SiteHeader />
 
       <section className={styles.hero}>
         <div className={styles.glow} aria-hidden="true" />

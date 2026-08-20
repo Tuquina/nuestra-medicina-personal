@@ -18,6 +18,17 @@ export const GOOGLE_AUTH_URL = `${API_PREFIX}/auth/google`;
 export const LOGOUT_URL = `${API_PREFIX}/auth/logout`;
 
 /**
+ * Who's currently signed in, per the session cookie (architecture.md
+ * §20/§21) — 200 with `{ id, email, displayName, pictureUrl, isAdmin }`
+ * if there's a valid session, 401 otherwise. This is what `shared/auth`
+ * calls to decide whether `/cuenta`, `/biblioteca`, and `/admin/*` should
+ * render or redirect to `/login`. Note: `/api/v1/me`, not
+ * `/api/v1/auth/me` — it lives alongside `/api/v1/me/books`, not under
+ * `/api/v1/auth/*` (see `router.go`).
+ */
+export const ME_URL = `${API_PREFIX}/me`;
+
+/**
  * Protected eBook download (architecture.md §28) — never a direct file
  * URL. `bookId` is the book's slug here since the mock data has no
  * numeric id; the real endpoint takes whatever id the backend assigns.

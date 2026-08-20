@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { GradientTopBar } from '../../../shared/components/GradientTopBar/GradientTopBar';
 import { SiteHeader } from '../../../shared/components/SiteHeader/SiteHeader';
 import { MinimalFooter } from '../../../shared/components/MinimalFooter/MinimalFooter';
@@ -8,33 +7,41 @@ import { Switch } from '../../../shared/components/Switch/Switch';
 import { Button } from '../../../shared/components/Button/Button';
 import { Dialog } from '../../../shared/components/Dialog/Dialog';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { CURRENT_USER } from '../../data/currentUser';
+import { useAuth } from '../../../shared/auth/useAuth';
+import { initialsFrom } from '../../../shared/auth/types';
+import { AuthLoading } from '../../../shared/components/AuthLoading/AuthLoading';
 import { LOGOUT_URL } from '../../../shared/config/api';
+import { hardNavigate } from '../../../shared/utils/navigation';
 import styles from './MiCuentaPage.module.css';
 
-/** `/cuenta` — the signed-in user's account settings. */
+/** `/cuenta` — the signed-in user's account settings. Only ever reached
+ * through the `RequireAuth` route guard, so `auth.status` is always
+ * `'authenticated'` in practice — the fallback below is just defensive. */
 export function MiCuentaPage() {
   useDocumentTitle('Mi cuenta · Nuestra Medicina Personal');
-  const navigate = useNavigate();
+  const auth = useAuth();
 
   const [newsletterOn, setNewsletterOn] = useState(true);
   const [showDelete, setShowDelete] = useState(false);
 
+  if (auth.status !== 'authenticated') return <AuthLoading />;
+  const user = auth.user;
+
   const handleLogout = async () => {
     try {
-      await fetch(LOGOUT_URL, { method: 'POST' });
-    } catch {
-      // No backend yet — this 404s locally; the session-clearing intent
-      // is still correct once it exists (architecture.md §20).
+      await fetch(LOGOUT_URL, { method: 'POST', credentials: 'include' });
     } finally {
-      navigate('/');
+      // A full reload, not SPA navigation: AuthProvider only fetches
+      // `/api/v1/auth/me` once per app load, so an in-SPA `navigate('/')`
+      // would leave the header showing the now-stale signed-in state.
+      hardNavigate('/');
     }
   };
 
   return (
     <div className={styles.page}>
       <GradientTopBar />
-      <SiteHeader user={CURRENT_USER} />
+      <SiteHeader />
 
       <main className={styles.main}>
         <div className={styles.eyebrow}>
@@ -44,10 +51,10 @@ export function MiCuentaPage() {
 
         <div className={styles.card}>
           <div className={styles.identity}>
-            <span className={styles.avatar}>{CURRENT_USER.initials}</span>
+            <span className={styles.avatar}>{initialsFrom(user.displayName)}</span>
             <div>
-              <p className={styles.name}>{CURRENT_USER.name}</p>
-              <p className={styles.email}>{CURRENT_USER.email}</p>
+              <p className={styles.name}>{user.displayName}</p>
+              <p className={styles.email}>{user.email}</p>
             </div>
           </div>
           <p className={styles.googleNote}>

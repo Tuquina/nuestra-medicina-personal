@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { BrandMark } from '../BrandMark/BrandMark';
-import type { CurrentUser } from '../../../public-store/data/currentUser';
+import { useAuth } from '../../auth/useAuth';
+import { initialsFrom } from '../../auth/types';
 import styles from './SiteHeader.module.css';
 
 const NAV_LINKS = [
@@ -17,21 +18,22 @@ const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
 const libraryLinkClassName = ({ isActive }: { isActive: boolean }) =>
   [styles.libraryLink, isActive ? styles.libraryActive : ''].filter(Boolean).join(' ');
 
-interface SiteHeaderProps {
-  /** Pass the mock signed-in user (see data/currentUser.ts) to render the
-   * avatar state instead of "Iniciar sesión" — used by Mi Cuenta and
-   * Biblioteca, which represent a logged-in area. */
-  user?: CurrentUser;
-}
-
 /**
  * Full site navigation header: sticky, gains a shadow past a small scroll
  * threshold, collapses to a hamburger menu below ~1040px, and highlights
  * the current section (e.g. "Libros" on `/libros`). Used on every public
  * page except Login (which uses the bare `PublicHeader` on purpose — see
  * its doc comment).
+ *
+ * Reads the signed-in state from `useAuth()` directly (see
+ * `shared/auth`) rather than taking a prop — every page that renders
+ * this gets the real avatar/"Iniciar sesión" state automatically, based
+ * on the session cookie, not on whether that particular page remembered
+ * to pass one.
  */
-export function SiteHeader({ user }: SiteHeaderProps) {
+export function SiteHeader() {
+  const auth = useAuth();
+  const user = auth.status === 'authenticated' ? auth.user : null;
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -65,7 +67,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
           </NavLink>
           {user ? (
             <Link to="/cuenta" className={styles.avatar} aria-label="Mi cuenta">
-              {user.initials}
+              {initialsFrom(user.displayName)}
             </Link>
           ) : (
             <Link to="/login" className={styles.loginButton}>

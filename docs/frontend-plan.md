@@ -225,6 +225,67 @@ need a different interaction model entirely (tabs instead of panes),
 not a CSS fix, matching how every comparable visual-builder product
 (Webflow, Framer, WordPress's block editor) treats small screens.
 
+## Frontend route guards (`shared/auth`)
+
+Until now the frontend had **no** notion of the real session at all:
+`/admin/*`, `/cuenta` and `/biblioteca` rendered unconditionally for any
+visitor who navigated to them directly, and `SiteHeader`/`MiCuentaPage`/
+`BibliotecaPage` showed a hardcoded mock user (`public-store/data/currentUser.ts`,
+now deleted) regardless of whether anyone was actually logged in.
+
+**This was never a security gap** — architecture.md §21 is explicit that
+every `/api/v1/admin/*` (and other user-scoped) request is authorized
+server-side by `requireAdmin`/`requireUser` (`backend/internal/interfaces/httpapi/middleware.go`)
+validating the session cookie, independent of whatever the frontend
+does or doesn't show. But it was a real UX gap: a logged-out visitor
+saw the full admin UI (with every request inside it then failing), and
+a logged-in visitor saw "Iniciar sesión" everywhere instead of their
+own account.
+
+Added `shared/auth/`:
+- `types.ts` — `AuthUser`/`AuthState` (mirrors the backend's `GET
+  /api/v1/me` response shape) and `initialsFrom()`.
+- `useAuth.ts` — the `AuthContext` plus the `useAuth()` hook. Kept
+  separate from `AuthContext.tsx` (Fast Refresh breaks on a file that
+  exports both a component and a plain function) and deliberately
+  **not** named `authContext.ts` — that differs from `AuthContext.tsx`
+  only in casing, which case-insensitive filesystems (Windows, some
+  Docker bind mounts) collide on even though the extensions differ.
+- `AuthContext.tsx` — `AuthProvider`, which calls `GET /api/v1/me`
+  once per app load (`credentials: 'include'`) and resolves to
+  `'authenticated' | 'anonymous'`.
+- `RequireAuth.tsx` / `RequireAdmin.tsx` — React Router layout-route
+  guards. `RequireAuth` redirects anonymous visitors to `/login`.
+  `RequireAdmin` does the same, plus renders an inline "no tenés
+  permisos de administrador" card (rather than a redirect) for a
+  logged-in non-admin, so they're not silently bounced with no
+  explanation.
+- `shared/components/AuthLoading/` — the brief "Cargando…" state shown
+  while the `/api/v1/me` call is in flight.
+
+`App.tsx` now wraps the whole route tree in `<AuthProvider>`, nests
+`/cuenta` and `/biblioteca` under `<Route element={<RequireAuth />}>`,
+and nests every `/admin/*` route (converted to relative children)
+under `<Route path="/admin" element={<RequireAdmin />}>`.
+`SiteHeader` reads `useAuth()` internally instead of taking a `user`
+prop, so all ten of its call sites now show the real signed-in state
+automatically instead of only the two pages that used to remember to
+pass one.
+
+**Caught during manual verification**: `shared/config/api.ts`'s
+`ME_URL` was initially written as `/api/v1/auth/me`, guessed by
+analogy with `/api/v1/auth/google` and `/api/v1/auth/logout`. The real
+route (`router.go`) is `GET /api/v1/me` — it lives next to `/api/v1/me/books`,
+not under `/api/v1/auth/*`. Fixed; worth remembering if this endpoint
+ever needs touching again.
+
+One layer here is genuinely still missing, not by oversight but
+because there's nothing to guard yet: **admin sidebar items aren't
+filtered by admin sub-role/permission**, because the backend only has
+a single boolean `isAdmin` today (no finer-grained roles). If
+architecture.md ever grows role-scoped admin permissions, `RequireAdmin`
+and the sidebar are the two places to extend.
+
 ## Notes for whoever picks this up next
 
 - The backend content validator now accepts the current Home section schemas

@@ -1,5 +1,6 @@
 /**
- * Mock purchase records for the current mock user (see currentUser.ts).
+ * Mock purchase records for the signed-in user (see shared/auth for the
+ * real identity — this file only stands in for the *purchases* half).
  * Stands in for `GET /api/v1/me/books` (architecture.md §27) — that
  * endpoint returns books joined through PAID orders, so this only ever
  * references real catalog slugs rather than duplicating book data.
