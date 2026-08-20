@@ -129,8 +129,8 @@ contrato antes de tener un requerimiento real para listar referencias.
 ## Orden de integración posterior
 
 1. ✅ sesión, catálogo y biblioteca;
-2. **Siguiente:** checkout con verificación de orden;
-3. libros, eBook y multimedia administrativos;
+2. ✅ checkout con verificación de orden;
+3. **Siguiente:** libros, eBook y multimedia administrativos;
 4. dashboard, ventas, clientes y configuración;
 5. CMS público, borrador, publicación y versiones;
 6. retirar mocks, toggles y mensajes de demostración;
