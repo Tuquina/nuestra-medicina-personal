@@ -118,6 +118,58 @@ func TestPageRepositoryPersistsSingletonEditorialType(t *testing.T) {
 	}
 }
 
+func TestBookUpdateKeepsItsCMSPageSlugAndTitleAligned(t *testing.T) {
+	ctx := context.Background()
+	pool, err := Open(ctx, os.Getenv("DATABASE_URL"), 2, 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	const (
+		bookID = "22000000-0000-4000-8000-000000000002"
+		pageID = "32000000-0000-4000-8000-000000000003"
+	)
+	cleanup := func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM pages WHERE id = $1::uuid`, pageID)
+		_, _ = pool.Exec(ctx, `DELETE FROM books WHERE id = $1::uuid`, bookID)
+	}
+	cleanup()
+	t.Cleanup(cleanup)
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO books (id, slug, title, price_minor_units, currency, status)
+		VALUES ($1::uuid, 'cms-old-slug', 'Old title', 100, 'ARS', 'DRAFT')`, bookID); err != nil {
+		t.Fatalf("seed book: %v", err)
+	}
+	content := contentWithHero(t, "Book page")
+	if _, err := NewPageRepository(pool).Create(ctx, page.Page{
+		ID: pageID, Type: string(page.TypeBook), BookID: pointer(bookID), Slug: "cms-old-slug",
+		Title: "Old title", DraftContent: content, CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("seed page: %v", err)
+	}
+
+	books := NewBookRepository(pool)
+	value, err := books.GetByIdentifier(ctx, bookID)
+	if err != nil {
+		t.Fatalf("get book: %v", err)
+	}
+	value.Slug = "cms-new-slug"
+	value.Title = "New title"
+	value.UpdatedAt = time.Now().UTC()
+	if _, err := books.Update(ctx, value); err != nil {
+		t.Fatalf("update book: %v", err)
+	}
+
+	updated, err := NewPageRepository(pool).Get(ctx, "cms-new-slug")
+	if err != nil || updated.Title != "New title" || updated.BookID == nil || *updated.BookID != bookID {
+		t.Fatalf("aligned page: %#v %v", updated, err)
+	}
+	if _, err := NewPageRepository(pool).Get(ctx, "cms-old-slug"); err != page.ErrNotFound {
+		t.Fatalf("old page slug should not resolve: %v", err)
+	}
+}
+
 func contentWithHero(t *testing.T, title string) page.Content {
 	t.Helper()
 	props, err := json.Marshal(map[string]any{
