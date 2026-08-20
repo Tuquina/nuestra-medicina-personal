@@ -1,180 +1,110 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
+import { Button } from '../../../shared/components/Button/Button';
 import { StatusBadge } from '../../../shared/components/StatusBadge/StatusBadge';
 import { toneForStatus } from '../../../shared/utils/statusTone';
 import { formatPrice } from '../../../shared/utils/money';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { SALES, saleBook, type SaleStatus } from '../../data/sales';
-import { formatSaleDate } from '../DashboardPage/dashboardData';
-import { ADMIN_NOW } from '../../adminNow';
+import { apiRequest } from '../../../shared/api/client';
+import { ADMIN_SALES_URL } from '../../../shared/config/api';
+import type { AdminSale, AdminSalesPage, ReportingRange, SaleDisplayStatus } from '../../backoffice/types';
+import { formatAdminDate, SALE_STATUS_LABELS } from '../../backoffice/presentation';
 import styles from './VentasPage.module.css';
 
-const STATUS_OPTIONS: (SaleStatus | 'Todos los estados')[] = [
-  'Todos los estados',
-  'Aprobado',
-  'Pendiente',
-  'Rechazado',
-  'Reembolsado',
+const PAGE_SIZE = 20;
+const STATUS_OPTIONS: Array<{ value: SaleDisplayStatus | ''; label: string }> = [
+  { value: '', label: 'Todos los estados' },
+  ...Object.entries(SALE_STATUS_LABELS).map(([value, label]) => ({ value: value as SaleDisplayStatus, label })),
+];
+const DATE_OPTIONS: Array<{ value: ReportingRange; label: string }> = [
+  { value: 'all', label: 'Todas las fechas' },
+  { value: '7d', label: 'Últimos 7 días' },
+  { value: '30d', label: 'Últimos 30 días' },
+  { value: 'year', label: 'Este año' },
 ];
 
-type DateFilter = 'Todas las fechas' | 'Últimos 7 días' | 'Últimos 30 días';
-const DATE_OPTIONS: DateFilter[] = ['Todas las fechas', 'Últimos 7 días', 'Últimos 30 días'];
+type SalesState = { status: 'loading' } | { status: 'ready'; page: AdminSalesPage } | { status: 'error' };
 
-function withinDateFilter(dateISO: string, filter: DateFilter): boolean {
-  if (filter === 'Todas las fechas') return true;
-  const diffDays = Math.round((ADMIN_NOW.getTime() - new Date(dateISO).getTime()) / 86_400_000);
-  return filter === 'Últimos 7 días' ? diffDays >= 0 && diffDays < 7 : diffDays >= 0 && diffDays < 30;
-}
-
-/** `/admin/ventas` — every sale, with a click-through detail view, built from Admin Ventas.dc.html. */
 export function VentasPage() {
   useDocumentTitle('Ventas · Admin · Nuestra Medicina Personal');
-
+  const [queryInput, setQueryInput] = useState('');
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_OPTIONS)[number]>('Todos los estados');
-  const [dateFilter, setDateFilter] = useState<DateFilter>('Todas las fechas');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<SaleDisplayStatus | ''>('');
+  const [range, setRange] = useState<ReportingRange>('all');
+  const [offset, setOffset] = useState(0);
+  const [selected, setSelected] = useState<AdminSale | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState<SalesState>({ status: 'loading' });
 
-  const selected = SALES.find((sale) => sale.id === selectedId);
+  const retry = useCallback(() => { setState({ status: 'loading' }); setAttempt((value) => value + 1); }, []);
 
-  if (selected) {
-    const book = saleBook(selected);
-    return (
-      <AdminLayout title="Ventas">
-        <button type="button" className={styles.backButton} onClick={() => setSelectedId(null)}>
-          ← Volver a ventas
-        </button>
-        <div className={styles.detailCard}>
-          <div className={styles.detailHeader}>
-            <h2 className={styles.detailHeading}>Venta #{selected.id}</h2>
-            <StatusBadge tone={toneForStatus(selected.status)}>{selected.status}</StatusBadge>
-          </div>
-          <div className={styles.detailRows}>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Fecha</span>
-              <span className={styles.detailValue}>{formatSaleDate(selected.dateISO)}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Cliente</span>
-              <span className={styles.detailValue}>{selected.client}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Correo</span>
-              <span className={styles.detailValue}>{selected.email}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Libro</span>
-              <span className={styles.detailValue}>{book?.title ?? '—'}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Precio</span>
-              <span className={styles.detailValue}>
-                {book ? formatPrice(book.priceMinorUnits, book.currency) : '—'}
-              </span>
-            </div>
-            <div className={[styles.detailRow, styles.detailRowDivider].join(' ')}>
-              <span className={styles.detailLabel}>Estado de la orden</span>
-              <span className={styles.detailValue}>{selected.status}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>Estado del pago</span>
-              <span className={styles.detailValue}>{selected.status}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span className={styles.detailLabel}>ID de Mercado Pago</span>
-              <span className={[styles.detailValue, styles.mono].join(' ')}>{selected.mpId}</span>
-            </div>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ range, limit: String(PAGE_SIZE), offset: String(offset) });
+    if (query) params.set('query', query);
+    if (statusFilter) params.set('status', statusFilter);
+    apiRequest<AdminSalesPage>(`${ADMIN_SALES_URL}?${params}`, { signal: controller.signal })
+      .then((page) => setState({ status: 'ready', page }))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setState({ status: 'error' });
+      });
+    return () => controller.abort();
+  }, [attempt, offset, query, range, statusFilter]);
 
-  const filtered = SALES.filter((sale) => {
-    const book = saleBook(sale);
-    const matchesQuery =
-      !query.trim() ||
-      sale.client.toLowerCase().includes(query.trim().toLowerCase()) ||
-      book?.title.toLowerCase().includes(query.trim().toLowerCase());
-    const matchesStatus = statusFilter === 'Todos los estados' || sale.status === statusFilter;
-    const matchesDate = withinDateFilter(sale.dateISO, dateFilter);
-    return matchesQuery && matchesStatus && matchesDate;
-  });
+  const applySearch = (event: FormEvent) => { event.preventDefault(); setState({ status: 'loading' }); setOffset(0); setQuery(queryInput.trim()); setAttempt((value) => value + 1); };
+  if (selected) return <SaleDetail sale={selected} onBack={() => setSelected(null)} />;
 
+  const page = state.status === 'ready' ? state.page : null;
   return (
     <AdminLayout title="Ventas">
       <div className={styles.panel}>
-        <div className={styles.toolbar}>
-          <input
-            type="text"
-            placeholder="Buscar por cliente o libro..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className={styles.search}
-            aria-label="Buscar por cliente o libro"
-          />
-          <select
-            className={styles.select}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as (typeof STATUS_OPTIONS)[number])}
-            aria-label="Filtrar por estado"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
+        <form className={styles.toolbar} onSubmit={applySearch}>
+          <input type="search" placeholder="Buscar por cliente, correo o libro..." value={queryInput} onChange={(event) => setQueryInput(event.target.value)} className={styles.search} aria-label="Buscar por cliente, correo o libro" />
+          <Button variant="secondary" type="submit">Buscar</Button>
+          <select className={styles.select} value={statusFilter} onChange={(event) => { setState({ status: 'loading' }); setOffset(0); setStatusFilter(event.target.value as SaleDisplayStatus | ''); }} aria-label="Filtrar por estado">
+            {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
-          <select
-            className={styles.select}
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-            aria-label="Filtrar por fecha"
-          >
-            {DATE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
+          <select className={styles.select} value={range} onChange={(event) => { setState({ status: 'loading' }); setOffset(0); setRange(event.target.value as ReportingRange); }} aria-label="Filtrar por fecha">
+            {DATE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
-        </div>
-
-        {filtered.length === 0 ? (
-          <p className={styles.emptyState}>Ninguna venta coincide con estos filtros.</p>
-        ) : (
-          <div className={styles.tableScroll}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Cliente</th>
-                  <th>Libro</th>
-                  <th>Importe</th>
-                  <th>Pago</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((sale) => {
-                  const book = saleBook(sale);
-                  return (
-                    <tr key={sale.id} className={styles.row} onClick={() => setSelectedId(sale.id)}>
-                      <td>{formatSaleDate(sale.dateISO)}</td>
-                      <td className={styles.clientCell}>{sale.client}</td>
-                      <td>{book?.title ?? '—'}</td>
-                      <td>{book ? formatPrice(book.priceMinorUnits, book.currency) : '—'}</td>
-                      <td className={styles.paymentCell}>Mercado Pago</td>
-                      <td>
-                        <StatusBadge tone={toneForStatus(sale.status)}>{sale.status}</StatusBadge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        </form>
+        {state.status === 'loading' ? <p className={styles.emptyState} role="status">Cargando ventas…</p> : state.status === 'error' ? (
+          <div className={styles.emptyState} role="alert"><p>No pudimos cargar las ventas.</p><Button variant="secondary" onClick={retry}>Reintentar</Button></div>
+        ) : page && page.items.length === 0 ? <p className={styles.emptyState}>Ninguna venta coincide con estos filtros.</p> : page && (
+          <>
+            <div className={styles.tableScroll}><table className={styles.table}>
+              <thead><tr><th>Fecha</th><th>Cliente</th><th>Libro</th><th>Importe</th><th>Pago</th><th>Estado</th></tr></thead>
+              <tbody>{page.items.map((sale) => { const label = SALE_STATUS_LABELS[sale.displayStatus]; return (
+                <tr key={sale.id} className={styles.row} onClick={() => setSelected(sale)}>
+                  <td>{formatAdminDate(sale.createdAt)}</td><td className={styles.clientCell}>{sale.customerName}</td><td>{sale.bookTitle}</td><td>{formatPrice(sale.amountMinorUnits, sale.currency)}</td><td className={styles.paymentCell}>{sale.paymentProvider ?? '—'}</td><td><StatusBadge tone={toneForStatus(label)}>{label}</StatusBadge></td>
+                </tr>); })}</tbody>
+            </table></div>
+            <Pagination offset={page.offset} limit={page.limit} total={page.total} onChange={(value) => { setState({ status: 'loading' }); setOffset(value); }} />
+          </>
         )}
       </div>
     </AdminLayout>
   );
+}
+
+function SaleDetail({ sale, onBack }: { sale: AdminSale; onBack: () => void }) {
+  const label = SALE_STATUS_LABELS[sale.displayStatus];
+  return <AdminLayout title="Ventas"><button type="button" className={styles.backButton} onClick={onBack}>← Volver a ventas</button><div className={styles.detailCard}>
+    <div className={styles.detailHeader}><h2 className={styles.detailHeading}>Venta #{sale.id}</h2><StatusBadge tone={toneForStatus(label)}>{label}</StatusBadge></div>
+    <div className={styles.detailRows}>
+      <Detail label="Fecha" value={formatAdminDate(sale.createdAt)} /><Detail label="Fecha de pago" value={formatAdminDate(sale.paidAt)} /><Detail label="Cliente" value={sale.customerName} /><Detail label="Correo" value={sale.customerEmail} /><Detail label="Libro" value={sale.bookTitle} /><Detail label="Precio histórico" value={formatPrice(sale.amountMinorUnits, sale.currency)} />
+      <Detail label="Estado de la orden" value={sale.orderStatus} divider /><Detail label="Estado del pago" value={sale.paymentStatus ?? '—'} /><Detail label="Proveedor" value={sale.paymentProvider ?? '—'} /><Detail label="ID del proveedor" value={sale.providerPaymentId ?? '—'} mono />
+    </div>
+  </div></AdminLayout>;
+}
+
+function Detail({ label, value, divider = false, mono = false }: { label: string; value: string; divider?: boolean; mono?: boolean }) {
+  return <div className={[styles.detailRow, divider ? styles.detailRowDivider : ''].join(' ')}><span className={styles.detailLabel}>{label}</span><span className={[styles.detailValue, mono ? styles.mono : ''].join(' ')}>{value}</span></div>;
+}
+
+function Pagination({ offset, limit, total, onChange }: { offset: number; limit: number; total: number; onChange: (offset: number) => void }) {
+  const from = total === 0 ? 0 : offset + 1;
+  const to = Math.min(offset + limit, total);
+  return <div className={styles.pagination}><span>{from}–{to} de {total}</span><div className={styles.paginationActions}><Button variant="secondary" disabled={offset === 0} onClick={() => onChange(Math.max(0, offset - limit))}>Anterior</Button><Button variant="secondary" disabled={offset + limit >= total} onClick={() => onChange(offset + limit)}>Siguiente</Button></div></div>;
 }

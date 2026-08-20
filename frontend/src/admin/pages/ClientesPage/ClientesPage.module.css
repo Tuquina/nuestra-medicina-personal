@@ -16,6 +16,8 @@
 .toolbar {
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-admin-border);
+  display: flex;
+  gap: 10px;
 }
 
 .search {
@@ -93,6 +95,25 @@
   font-size: 14px;
 }
 
+.emptyState p {
+  margin: 0 0 16px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  color: var(--color-admin-text-muted);
+  font-size: 13px;
+}
+
+.paginationActions {
+  display: flex;
+  gap: 8px;
+}
+
 /* ---- Detail ---- */
 
 .detail {
@@ -116,6 +137,38 @@
   font-size: 15px;
   font-weight: 700;
   margin-bottom: 14px;
+}
+
+.avatarImage {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-bottom: 14px;
+}
+
+.summary {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 20px;
+}
+
+.summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summary dt {
+  color: var(--color-admin-text-muted);
+  font-size: 12px;
+}
+
+.summary dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
 }
 
 .detailName {
@@ -149,4 +202,21 @@
 
 .bookItem {
   margin: 0;
+}
+
+.purchaseDate {
+  display: block;
+  margin-left: 12px;
+  color: var(--color-admin-text-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .detail {
+    width: 100%;
+  }
 }
