@@ -11,9 +11,7 @@ import styles from './LoginPage.module.css';
  *
  * There is no password login in this product (architecture.md §19): the
  * only entry point is "Continuar con Google", which does a full-page
- * navigation to the backend's OIDC start endpoint. That endpoint doesn't
- * exist yet (no Go backend), so the click currently 404s — the contract is
- * wired up correctly for when it does.
+ * navigation to the backend's OIDC start endpoint.
  */
 export function LoginPage() {
   useDocumentTitle('Iniciar sesión · Nuestra Medicina Personal');

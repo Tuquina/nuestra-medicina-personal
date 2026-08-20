@@ -54,3 +54,8 @@ export function downloadUrl(bookId: string): string {
  * webhook-confirmed order status is.
  */
 export const ORDERS_URL = `${API_PREFIX}/orders`;
+
+/** Reads an order owned by the current authenticated user. */
+export function orderUrl(orderId: string): string {
+  return `${ORDERS_URL}/${orderId}`;
+}
