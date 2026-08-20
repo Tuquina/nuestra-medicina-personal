@@ -53,6 +53,8 @@ export function CuponesPage() {
     }
   }, []);
 
+  // The state changes happen after the API promises settle.
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, [load]);
   const filtered = coupons.filter((coupon) => (!query.trim() || coupon.code.toLowerCase().includes(query.trim().toLowerCase())) && (statusFilter === 'ALL' || coupon.status === statusFilter));
   const scopeLabel = (coupon: Coupon) => coupon.appliesToAll ? 'Todos los libros' : coupon.bookIds.length === 1 ? books.find((book) => book.id === coupon.bookIds[0])?.title ?? '1 libro' : `${coupon.bookIds.length} libros`;

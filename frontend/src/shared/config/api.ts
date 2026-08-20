@@ -86,6 +86,20 @@ export function adminCouponUrl(couponId: string): string {
   return `${ADMIN_COUPONS_URL}/${encodeURIComponent(couponId)}`;
 }
 
+export const ADMIN_REVIEWS_URL = `${API_PREFIX}/admin/reviews`;
+
+export function adminReviewUrl(reviewId: string): string {
+  return `${ADMIN_REVIEWS_URL}/${encodeURIComponent(reviewId)}`;
+}
+
+export function adminReviewStatusUrl(reviewId: string): string {
+  return `${adminReviewUrl(reviewId)}/status`;
+}
+
+export function bookReviewsUrl(bookSlug: string): string {
+  return `${BOOKS_URL}/${encodeURIComponent(bookSlug)}/reviews`;
+}
+
 export const PAGES_URL = `${API_PREFIX}/pages`;
 
 export function pageUrl(slug: string): string {
