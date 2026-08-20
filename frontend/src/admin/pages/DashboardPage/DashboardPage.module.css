@@ -293,6 +293,10 @@
   flex-wrap: wrap;
 }
 
+.tableTitle {
+  margin: 0;
+}
+
 .tableLink {
   color: var(--color-deep-blue);
   text-decoration: none;
@@ -343,4 +347,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.feedback {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--color-admin-text-muted);
+}
+
+.feedback p {
+  margin: 0 0 16px;
 }

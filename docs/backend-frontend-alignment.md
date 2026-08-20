@@ -131,7 +131,7 @@ contrato antes de tener un requerimiento real para listar referencias.
 1. ✅ sesión, catálogo y biblioteca;
 2. ✅ checkout con verificación de orden;
 3. ✅ libros, eBook y multimedia administrativos;
-4. **Siguiente:** dashboard, ventas, clientes y configuración;
-5. CMS público, borrador, publicación y versiones;
+4. ✅ dashboard, ventas, clientes y configuración;
+5. **Siguiente:** CMS público, borrador, publicación y versiones;
 6. retirar mocks, toggles y mensajes de demostración;
 7. revisar estados vacíos y errores `401/403/409/422/429` en cada pantalla.

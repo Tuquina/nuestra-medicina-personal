@@ -1,5 +1,9 @@
-import type { ChartBar } from './dashboardData';
 import styles from './DashboardPage.module.css';
+
+export interface ChartBar {
+  label: string;
+  count: number;
+}
 
 interface SalesChartProps {
   title: string;

@@ -1,22 +1,21 @@
 import { Link } from 'react-router-dom';
-import { BOOKS } from '../../../public-store/data/books';
 import { StatusBadge } from '../../../shared/components/StatusBadge/StatusBadge';
 import { toneForStatus } from '../../../shared/utils/statusTone';
+import type { AdminBook } from '../../books/types';
 import styles from './DashboardPage.module.css';
 
-const STATUS_LABEL: Record<(typeof BOOKS)[number]['status'], string> = {
+const STATUS_LABEL: Record<AdminBook['status'], string> = {
   PUBLISHED: 'Publicado',
   DRAFT: 'Borrador',
   ARCHIVED: 'Archivado',
 };
 
-/** Publication status of every book, admin-only (uses the full BOOKS, not PUBLISHED_BOOKS). */
-export function PublicationStatus() {
+export function PublicationStatus({ books }: { books: AdminBook[] }) {
   return (
     <div className={[styles.panel, styles.panelInner].join(' ')}>
       <h2 className={styles.panelTitle}>Estado de publicación</h2>
       <div className={styles.statusList}>
-        {BOOKS.map((book) => {
+        {books.map((book) => {
           const label = STATUS_LABEL[book.status];
           return (
             <div key={book.slug} className={styles.statusRow}>
@@ -25,6 +24,7 @@ export function PublicationStatus() {
             </div>
           );
         })}
+        {books.length === 0 && <p className={styles.emptyRow}>Todavía no hay libros.</p>}
       </div>
       <Link to="/admin/libros" className={styles.statusLink}>
         Ver todos los libros →

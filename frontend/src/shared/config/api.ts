@@ -75,3 +75,8 @@ export const ADMIN_MEDIA_URL = `${API_PREFIX}/admin/media`;
 export function adminMediaUrl(mediaId: string): string {
   return `${ADMIN_MEDIA_URL}/${mediaId}`;
 }
+
+export const ADMIN_DASHBOARD_URL = `${API_PREFIX}/admin/dashboard`;
+export const ADMIN_SALES_URL = `${API_PREFIX}/admin/sales`;
+export const ADMIN_CUSTOMERS_URL = `${API_PREFIX}/admin/customers`;
+export const ADMIN_SETTINGS_URL = `${API_PREFIX}/admin/settings`;

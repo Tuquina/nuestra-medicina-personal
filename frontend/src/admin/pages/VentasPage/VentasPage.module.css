@@ -94,6 +94,25 @@
   font-size: 14px;
 }
 
+.emptyState p {
+  margin: 0 0 16px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  color: var(--color-admin-text-muted);
+  font-size: 13px;
+}
+
+.paginationActions {
+  display: flex;
+  gap: 8px;
+}
+
 /* ---- Detail ---- */
 
 .backButton {

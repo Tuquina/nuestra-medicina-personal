@@ -5,6 +5,7 @@ const STATUS_TONE: Record<string, StatusTone> = {
   Pendiente: 'pending',
   Rechazado: 'danger',
   Reembolsado: 'refunded',
+  Cancelado: 'danger',
   Publicado: 'success',
   Borrador: 'neutral',
   Activo: 'success',

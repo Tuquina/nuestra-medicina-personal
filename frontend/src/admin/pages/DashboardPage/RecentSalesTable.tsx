@@ -2,20 +2,20 @@ import { Link } from 'react-router-dom';
 import { formatPrice } from '../../../shared/utils/money';
 import { StatusBadge } from '../../../shared/components/StatusBadge/StatusBadge';
 import { toneForStatus } from '../../../shared/utils/statusTone';
-import { saleBook, type Sale } from '../../data/sales';
-import { formatSaleDate } from './dashboardData';
+import type { AdminSale } from '../../backoffice/types';
+import { formatAdminDate, SALE_STATUS_LABELS } from '../../backoffice/presentation';
 import styles from './DashboardPage.module.css';
 
 interface RecentSalesTableProps {
   title: string;
-  sales: Sale[];
+  sales: AdminSale[];
 }
 
 export function RecentSalesTable({ title, sales }: RecentSalesTableProps) {
   return (
     <div className={[styles.panel, styles.tableCard].join(' ')}>
       <div className={styles.tableHeader}>
-        <h2 className={styles.panelTitle} style={{ margin: 0 }}>
+        <h2 className={[styles.panelTitle, styles.tableTitle].join(' ')}>
           {title}
         </h2>
         <Link to="/admin/ventas" className={styles.tableLink}>
@@ -39,15 +39,15 @@ export function RecentSalesTable({ title, sales }: RecentSalesTableProps) {
             </thead>
             <tbody>
               {sales.map((sale) => {
-                const book = saleBook(sale);
+                const statusLabel = SALE_STATUS_LABELS[sale.displayStatus];
                 return (
                   <tr key={sale.id}>
-                    <td>{formatSaleDate(sale.dateISO)}</td>
-                    <td>{sale.client}</td>
-                    <td>{book?.title ?? '—'}</td>
-                    <td>{book ? formatPrice(book.priceMinorUnits, book.currency) : '—'}</td>
+                    <td>{formatAdminDate(sale.createdAt)}</td>
+                    <td>{sale.customerName}</td>
+                    <td>{sale.bookTitle}</td>
+                    <td>{formatPrice(sale.amountMinorUnits, sale.currency)}</td>
                     <td>
-                      <StatusBadge tone={toneForStatus(sale.status)}>{sale.status}</StatusBadge>
+                      <StatusBadge tone={toneForStatus(statusLabel)}>{statusLabel}</StatusBadge>
                     </td>
                   </tr>
                 );

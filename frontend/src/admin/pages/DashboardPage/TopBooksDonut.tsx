@@ -1,12 +1,14 @@
 import type { CSSProperties } from 'react';
-import { BOOKS } from '../../../public-store/data/books';
-import type { DonutSlice } from './dashboardData';
 import styles from './DashboardPage.module.css';
 
-const VARIANT_COLOR: Record<(typeof BOOKS)[number]['variant'], string> = {
-  gold: 'var(--color-accent-gold)',
-  blue: 'var(--color-deep-blue)',
-};
+const SLICE_COLORS = ['var(--color-accent-gold)', 'var(--color-deep-blue)', 'var(--color-sky)'];
+
+export interface DonutSlice {
+  slug: string;
+  title: string;
+  count: number;
+  pct: number;
+}
 
 interface TopBooksDonutProps {
   title: string;
@@ -17,15 +19,15 @@ interface TopBooksDonutProps {
 /** Book-breakdown donut, built with a single conic-gradient — no charting library. */
 export function TopBooksDonut({ title, slices, total }: TopBooksDonutProps) {
   let cursor = 0;
-  const stops = slices.map((slice) => {
-    const color = VARIANT_COLOR[BOOKS.find((book) => book.slug === slice.slug)?.variant ?? 'gold'];
+  const stops = slices.map((slice, index) => {
+    const color = SLICE_COLORS[index % SLICE_COLORS.length];
     const start = cursor;
     cursor += slice.pct;
     return `${color} ${start}% ${cursor}%`;
   });
 
   const donutStyle: CSSProperties = {
-    background: total === 0 ? 'oklch(93% 0.006 90)' : `conic-gradient(${stops.join(', ')})`,
+    background: total === 0 ? 'var(--color-admin-border)' : `conic-gradient(${stops.join(', ')})`,
   };
 
   return (
@@ -39,12 +41,12 @@ export function TopBooksDonut({ title, slices, total }: TopBooksDonutProps) {
           </div>
         </div>
         <div className={styles.donutLegend}>
-          {slices.map((slice) => (
+          {slices.map((slice, index) => (
             <div key={slice.slug} className={styles.legendRow}>
               <span
                 className={styles.legendDot}
                 style={{
-                  background: VARIANT_COLOR[BOOKS.find((book) => book.slug === slice.slug)?.variant ?? 'gold'],
+                  background: SLICE_COLORS[index % SLICE_COLORS.length],
                 }}
               />
               <span className={styles.legendLabel}>{slice.title}</span>
