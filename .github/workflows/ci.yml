@@ -60,6 +60,48 @@ jobs:
       - name: PostgreSQL integration tests
         run: go test -tags=integration ./internal/infrastructure/postgres
 
+      - name: Backup and restore smoke test
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker cp ../deploy/operations/backup.sh "$POSTGRES_CONTAINER:/tmp/backup.sh"
+          docker cp ../deploy/operations/restore.sh "$POSTGRES_CONTAINER:/tmp/restore.sh"
+          docker exec "$POSTGRES_CONTAINER" sh -c "mkdir -p /data/ebooks /data/media /backups /restore/ebooks /restore/media && printf ebook-fixture > /data/ebooks/book.epub && printf media-fixture > /data/media/cover.png"
+          docker exec \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_DB=nmp_test \
+            -e POSTGRES_USER=nmp \
+            -e POSTGRES_PASSWORD=nmp_ci_only \
+            "$POSTGRES_CONTAINER" sh /tmp/backup.sh
+          RESTORE_ARCHIVE="$(docker exec "$POSTGRES_CONTAINER" sh -c 'basename "$(ls -1 /backups/nmp-backup-*.tar.gz | tail -n 1)"')"
+          docker exec -e PGPASSWORD=nmp_ci_only "$POSTGRES_CONTAINER" createdb --host 127.0.0.1 --username nmp nmp_restore
+          docker exec \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_DB=nmp_restore \
+            -e POSTGRES_USER=nmp \
+            -e POSTGRES_PASSWORD=nmp_ci_only \
+            -e EBOOK_STORAGE_PATH=/restore/ebooks \
+            -e MEDIA_STORAGE_PATH=/restore/media \
+            -e RESTORE_ARCHIVE="$RESTORE_ARCHIVE" \
+            -e RESTORE_CONFIRM=restore-into-empty-targets \
+            "$POSTGRES_CONTAINER" sh /tmp/restore.sh
+          test "$(docker exec -e PGPASSWORD=nmp_ci_only "$POSTGRES_CONTAINER" psql --host 127.0.0.1 --username nmp --dbname nmp_restore --tuples-only --no-align --command "SELECT count(*) FROM schema_migrations;")" -gt 0
+          test "$(docker exec "$POSTGRES_CONTAINER" cat /restore/ebooks/book.epub)" = "ebook-fixture"
+          test "$(docker exec "$POSTGRES_CONTAINER" cat /restore/media/cover.png)" = "media-fixture"
+          if docker exec \
+            -e POSTGRES_HOST=127.0.0.1 \
+            -e POSTGRES_DB=nmp_restore \
+            -e POSTGRES_USER=nmp \
+            -e POSTGRES_PASSWORD=nmp_ci_only \
+            -e EBOOK_STORAGE_PATH=/restore/ebooks \
+            -e MEDIA_STORAGE_PATH=/restore/media \
+            -e RESTORE_ARCHIVE="$RESTORE_ARCHIVE" \
+            -e RESTORE_CONFIRM=restore-into-empty-targets \
+            "$POSTGRES_CONTAINER" sh /tmp/restore.sh; then
+            echo "restore unexpectedly accepted non-empty targets" >&2
+            exit 1
+          fi
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest

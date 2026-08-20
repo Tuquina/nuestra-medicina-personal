@@ -1856,6 +1856,12 @@ El backup debe ser restaurable.
 
 Realizar pruebas de restauración periódicas.
 
+La implementación usa el profile manual `operations` de
+`deploy/docker-compose.yml`. Cada paquete combina el dump custom de PostgreSQL,
+eBooks, media, metadata y checksums. La restauración falla si la base o los
+directorios destino no están vacíos, y el CI verifica el ciclo completo sobre
+recursos efímeros.
+
 ---
 
 # 45. CI/CD

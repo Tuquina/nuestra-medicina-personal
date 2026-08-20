@@ -4,6 +4,26 @@ x-logging: &default-logging
     max-size: ${LOG_MAX_SIZE:-10m}
     max-file: ${LOG_MAX_FILES:-5}
 
+x-database-operation: &database-operation
+  image: postgres:17-alpine
+  profiles: [operations]
+  restart: 'no'
+  logging: *default-logging
+  environment:
+    POSTGRES_HOST: postgres
+    POSTGRES_DB: ${POSTGRES_DB}
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    BACKUP_DIR: /backups
+    BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-0}
+    EBOOK_STORAGE_PATH: /data/ebooks
+    MEDIA_STORAGE_PATH: /data/media
+    RESTORE_ARCHIVE: ${RESTORE_ARCHIVE:-}
+    RESTORE_CONFIRM: ${RESTORE_CONFIRM:-}
+  depends_on:
+    postgres:
+      condition: service_healthy
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -102,6 +122,24 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+  backup:
+    <<: *database-operation
+    command: ['/bin/sh', '/opt/operations/backup.sh']
+    volumes:
+      - ebooks_data:/data/ebooks:ro
+      - media_data:/data/media:ro
+      - ${BACKUP_PATH}:/backups
+      - ./operations:/opt/operations:ro
+
+  restore:
+    <<: *database-operation
+    command: ['/bin/sh', '/opt/operations/restore.sh']
+    volumes:
+      - ebooks_data:/data/ebooks
+      - media_data:/data/media
+      - ${BACKUP_PATH}:/backups
+      - ./operations:/opt/operations:ro
 
 volumes:
   postgres_data:
