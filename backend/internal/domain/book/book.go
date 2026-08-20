@@ -16,9 +16,10 @@ const (
 )
 
 var (
-	ErrNotFound     = errors.New("book not found")
-	ErrSlugConflict = errors.New("book slug already exists")
-	slugPattern     = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+	ErrNotFound            = errors.New("book not found")
+	ErrSlugConflict        = errors.New("book slug already exists")
+	ErrLandingNotPublished = errors.New("book landing page is not published")
+	slugPattern            = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 )
 
 type Book struct {

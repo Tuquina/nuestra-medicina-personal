@@ -28,11 +28,26 @@ func NewBookRepository(pool *pgxpool.Pool) *BookRepository {
 }
 
 func (r *BookRepository) ListPublished(ctx context.Context) ([]book.Book, error) {
-	return r.list(ctx, `SELECT `+bookColumns+` FROM books WHERE status = 'PUBLISHED' ORDER BY published_at DESC, title`)
+	return r.list(ctx, `
+		SELECT `+bookColumns+`
+		FROM books
+		WHERE status = 'PUBLISHED' AND EXISTS (
+			SELECT 1 FROM pages
+			WHERE pages.type = 'BOOK' AND pages.book_id = books.id
+				AND pages.status = 'PUBLISHED' AND pages.published_content IS NOT NULL
+		)
+		ORDER BY published_at DESC, title`)
 }
 
 func (r *BookRepository) GetPublishedBySlug(ctx context.Context, slug string) (book.Book, error) {
-	return scanBook(r.pool.QueryRow(ctx, `SELECT `+bookColumns+` FROM books WHERE slug = $1 AND status = 'PUBLISHED'`, slug))
+	return scanBook(r.pool.QueryRow(ctx, `
+		SELECT `+bookColumns+`
+		FROM books
+		WHERE slug = $1 AND status = 'PUBLISHED' AND EXISTS (
+			SELECT 1 FROM pages
+			WHERE pages.type = 'BOOK' AND pages.book_id = books.id
+				AND pages.status = 'PUBLISHED' AND pages.published_content IS NOT NULL
+		)`, slug))
 }
 
 func (r *BookRepository) ListAll(ctx context.Context) ([]book.Book, error) {
@@ -45,6 +60,21 @@ func (r *BookRepository) GetByIdentifier(ctx context.Context, identifier string)
 		FROM books
 		WHERE id::text = $1 OR slug = $1
 		LIMIT 1`, identifier))
+}
+
+func (r *BookRepository) HasPublishedLanding(ctx context.Context, bookID string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM pages
+			WHERE type = 'BOOK' AND book_id = $1::uuid
+				AND status = 'PUBLISHED' AND published_content IS NOT NULL
+		)`, bookID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check published book landing: %w", err)
+	}
+	return exists, nil
 }
 
 func (r *BookRepository) Create(ctx context.Context, value book.Book) (book.Book, error) {

@@ -70,6 +70,14 @@ portada y eBook se cargan por sus endpoints separados. Una edición debe partir
 del DTO administrativo leído al servidor para no borrar metadata que la vista
 no muestra.
 
+Un libro nuevo se crea como borrador. El backend sólo permite pasarlo a
+`PUBLISHED` cuando su página `BOOK` ya tiene una publicación; si falta responde
+`BOOK_LANDING_NOT_PUBLISHED`. La pestaña de página de venta trabaja con el slug
+y título persistidos para que cambios todavía no guardados en Información no
+creen ni consulten una página bajo una identidad incorrecta. Las consultas
+públicas excluyen además cualquier registro heredado que estuviera marcado
+como publicado pero no tenga landing publicada.
+
 ## Backoffice de datos
 
 La pantalla de ventas aplica:
@@ -105,6 +113,11 @@ vista previa explícita usa la sesión administrativa y lee `draftContent`; ante
 de abrirla se persiste el borrador actual. Publicar guarda primero ese borrador
 y luego crea la versión. Restaurar una versión reemplaza únicamente el
 borrador y requiere una publicación posterior.
+
+La migración editorial inicial preserva el contenido que antes acompañaba al
+frontend: crea publicaciones para los ocho singleton únicamente cuando no
+existen y agrega las landings conocidas sólo si sus libros ya están en la base.
+Nunca reemplaza una página o borrador administrativo existente.
 
 Home y las páginas de libro comparten las propiedades actuales. El `slug`
 dentro de `book-landing.props` es compatibilidad temporal; el slug canónico

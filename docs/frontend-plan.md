@@ -291,7 +291,9 @@ and the sidebar are the two places to extend.
 - The complete CMS now uses the API for all nine page types. Public routes
   render only published content; explicit authenticated previews render the
   current draft. Editors can save, publish, inspect versions and restore a
-  version as a draft without publishing it automatically.
+  version as a draft without publishing it automatically. The initial
+  editorial migration preserves the shipped public copy without overwriting
+  CMS records that already exist.
 
 - Session, public catalog, book detail, checkout book lookup and library now
   consume the backend contracts. They include loading, empty and retryable
@@ -301,7 +303,9 @@ and the sidebar are the two places to extend.
   parameters never unlock an approved result by themselves.
 - Administrative books now load and persist complete `BookInput` contracts;
   archive uses `DELETE`, and cover/media/eBook uploads use their dedicated
-  multipart endpoints without exposing private file paths.
+  multipart endpoints without exposing private file paths. A book cannot be
+  published until its landing is published, and the page editor always uses
+  the book identity last persisted by the API.
 - Dashboard, sales and customers now consume the authenticated backoffice
   projections. Filters and pagination run on the server, sale details preserve
   order/payment separation and historical amounts, and settings load before

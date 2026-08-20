@@ -171,6 +171,14 @@ Este último admite las variantes `image-text` y `benefits`, FAQ opcional y los
 borradores vacíos que crea el formulario de un libro nuevo. Los colores se
 restringen a tokens `var(--color-...)` o valores `oklch` literales seguros.
 
+Un libro nuevo se guarda primero como `DRAFT`, porque su página `BOOK` necesita
+el UUID persistido. La transición del libro a `PUBLISHED` requiere que esa
+landing ya tenga contenido publicado; de lo contrario la API responde `409`
+con `BOOK_LANDING_NOT_PUBLISHED`. Esto evita ofrecer en el catálogo un libro
+cuya página de venta todavía no está disponible. Las consultas públicas de
+libros aplican la misma condición, cubriendo también registros heredados que
+hubieran quedado publicados antes de incorporar esta regla.
+
 ## Biblioteca multimedia
 
 `POST /api/v1/admin/media` acepta `multipart/form-data` y guarda únicamente

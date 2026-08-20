@@ -121,6 +121,8 @@ func (h *BookHandler) handleBookError(w http.ResponseWriter, r *http.Request, er
 		writeError(w, http.StatusNotFound, "BOOK_NOT_FOUND", "Book not found", nil)
 	case errors.Is(err, book.ErrSlugConflict):
 		writeError(w, http.StatusConflict, "BOOK_SLUG_CONFLICT", "A book with this slug already exists", map[string]string{"slug": "already exists"})
+	case errors.Is(err, book.ErrLandingNotPublished):
+		writeError(w, http.StatusConflict, "BOOK_LANDING_NOT_PUBLISHED", "Publish the book landing page before publishing the book", map[string]string{"landingPage": "must be published first"})
 	case errors.As(err, &validationError):
 		writeError(w, http.StatusUnprocessableEntity, "BOOK_VALIDATION_FAILED", "Book data is invalid", validationError.Fields)
 	default:

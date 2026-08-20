@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuestra-medicina-personal/backend/internal/domain/book"
 	"github.com/nuestra-medicina-personal/backend/internal/domain/page"
 )
 
@@ -92,29 +93,17 @@ func TestPageDraftPublicationAndRestoreAgainstPostgres(t *testing.T) {
 	}
 }
 
-func TestPageRepositoryPersistsSingletonEditorialType(t *testing.T) {
+func TestEditorialSeedMigrationPublishesSingletonPage(t *testing.T) {
 	ctx := context.Background()
 	pool, err := Open(ctx, os.Getenv("DATABASE_URL"), 2, 5*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	const pageID = "32000000-0000-4000-8000-000000000002"
-	_, _ = pool.Exec(ctx, `DELETE FROM pages WHERE id = $1::uuid OR type = 'CONTACTO'`, pageID)
-	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM pages WHERE id = $1::uuid`, pageID) })
 
-	props, _ := json.Marshal(map[string]any{
-		"title": "Contacto", "intro": "Escribinos", "methods": []map[string]string{{
-			"id": "email", "label": "Correo", "value": "support@example.com", "href": "mailto:support@example.com",
-		}},
-	})
-	content := page.Content{SchemaVersion: 1, Sections: []page.Block{{ID: "contacto", Type: "contacto", Props: props}}}
-	created, err := NewPageRepository(pool).Create(ctx, page.Page{
-		ID: pageID, Type: string(page.TypeContact), Slug: "contacto", Title: "Contacto",
-		DraftContent: content, CreatedAt: time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC),
-	})
-	if err != nil || created.Type != string(page.TypeContact) || created.BookID != nil {
-		t.Fatalf("persist contact page: %#v %v", created, err)
+	seeded, err := NewPageRepository(pool).GetPublished(ctx, "contacto")
+	if err != nil || seeded.Type != string(page.TypeContact) || seeded.BookID != nil || seeded.PublishedContent == nil {
+		t.Fatalf("published contact seed: %#v %v", seeded, err)
 	}
 }
 
@@ -150,6 +139,27 @@ func TestBookUpdateKeepsItsCMSPageSlugAndTitleAligned(t *testing.T) {
 	}
 
 	books := NewBookRepository(pool)
+	if _, err := pool.Exec(ctx, `UPDATE books SET status = 'PUBLISHED', published_at = now() WHERE id = $1::uuid`, bookID); err != nil {
+		t.Fatalf("publish book fixture: %v", err)
+	}
+	if _, err := books.GetPublishedBySlug(ctx, "cms-old-slug"); err != book.ErrNotFound {
+		t.Fatalf("book without a published landing must stay out of the public catalog: %v", err)
+	}
+	if published, err := books.HasPublishedLanding(ctx, bookID); err != nil || published {
+		t.Fatalf("draft landing should not allow book publication: %v %v", published, err)
+	}
+	if _, err := pool.Exec(ctx, `
+		UPDATE pages
+		SET status = 'PUBLISHED', published_content = draft_content, published_at = now()
+		WHERE id = $1::uuid`, pageID); err != nil {
+		t.Fatalf("publish seeded landing: %v", err)
+	}
+	if published, err := books.HasPublishedLanding(ctx, bookID); err != nil || !published {
+		t.Fatalf("published landing should allow book publication: %v %v", published, err)
+	}
+	if _, err := books.GetPublishedBySlug(ctx, "cms-old-slug"); err != nil {
+		t.Fatalf("book with a published landing should resolve publicly: %v", err)
+	}
 	value, err := books.GetByIdentifier(ctx, bookID)
 	if err != nil {
 		t.Fatalf("get book: %v", err)
