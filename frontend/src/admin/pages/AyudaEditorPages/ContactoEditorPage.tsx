@@ -1,8 +1,8 @@
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
-import { Button } from '../../../shared/components/Button/Button';
 import { FormField } from '../../../shared/components/FormField/FormField';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { useEditablePage } from '../../../shared/cms/useEditablePage';
+import { CmsEditorActions, CmsEditorLoadState } from '../../components/CmsEditorTools/CmsEditorTools';
 import {
   buildContactoSeedContent,
   CONTACTO_SECTION_TYPE,
@@ -18,11 +18,10 @@ import styles from '../../components/EditorForm/EditorForm.module.css';
 export function ContactoEditorPage() {
   useDocumentTitle('Contacto · Admin · Nuestra Medicina Personal');
 
-  const { content, setContent, saveDraftNow, publish, dirtySincePublish } = useEditablePage(
-    'CONTACTO',
-    CONTACTO_SLUG,
-    buildContactoSeedContent,
-  );
+  const editor = useEditablePage({
+    type: 'CONTACTO', slug: CONTACTO_SLUG, title: 'Contacto', seed: buildContactoSeedContent,
+  });
+  const { content, setContent } = editor;
   const page = readContactoProps(content);
 
   const update = (patch: Partial<ContactoProps>) => {
@@ -32,30 +31,13 @@ export function ContactoEditorPage() {
     });
   };
 
+  if (editor.loadStatus !== 'ready') {
+    return <AdminLayout title="Contacto"><CmsEditorLoadState editor={editor} /></AdminLayout>;
+  }
+
   return (
     <AdminLayout title="Contacto">
-      <div className={styles.toolbar}>
-        <span className={[styles.statusBadge, dirtySincePublish ? styles.statusUnsaved : styles.statusPublished].join(' ')}>
-          {dirtySincePublish ? 'Cambios sin publicar' : 'Publicado'}
-        </span>
-        <div className={styles.toolbarActions}>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              saveDraftNow(content);
-              window.open('/contacto?preview=1', '_blank', 'noopener');
-            }}
-          >
-            Vista previa
-          </Button>
-          <Button variant="secondary" onClick={() => saveDraftNow(content)}>
-            Guardar borrador
-          </Button>
-          <Button variant="primary" onClick={publish}>
-            Publicar
-          </Button>
-        </div>
-      </div>
+      <CmsEditorActions editor={editor} content={content} publicPath="/contacto?preview=1" />
 
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Presentación</h2>

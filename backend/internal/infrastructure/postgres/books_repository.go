@@ -28,11 +28,26 @@ func NewBookRepository(pool *pgxpool.Pool) *BookRepository {
 }
 
 func (r *BookRepository) ListPublished(ctx context.Context) ([]book.Book, error) {
-	return r.list(ctx, `SELECT `+bookColumns+` FROM books WHERE status = 'PUBLISHED' ORDER BY published_at DESC, title`)
+	return r.list(ctx, `
+		SELECT `+bookColumns+`
+		FROM books
+		WHERE status = 'PUBLISHED' AND EXISTS (
+			SELECT 1 FROM pages
+			WHERE pages.type = 'BOOK' AND pages.book_id = books.id
+				AND pages.status = 'PUBLISHED' AND pages.published_content IS NOT NULL
+		)
+		ORDER BY published_at DESC, title`)
 }
 
 func (r *BookRepository) GetPublishedBySlug(ctx context.Context, slug string) (book.Book, error) {
-	return scanBook(r.pool.QueryRow(ctx, `SELECT `+bookColumns+` FROM books WHERE slug = $1 AND status = 'PUBLISHED'`, slug))
+	return scanBook(r.pool.QueryRow(ctx, `
+		SELECT `+bookColumns+`
+		FROM books
+		WHERE slug = $1 AND status = 'PUBLISHED' AND EXISTS (
+			SELECT 1 FROM pages
+			WHERE pages.type = 'BOOK' AND pages.book_id = books.id
+				AND pages.status = 'PUBLISHED' AND pages.published_content IS NOT NULL
+		)`, slug))
 }
 
 func (r *BookRepository) ListAll(ctx context.Context) ([]book.Book, error) {
@@ -45,6 +60,21 @@ func (r *BookRepository) GetByIdentifier(ctx context.Context, identifier string)
 		FROM books
 		WHERE id::text = $1 OR slug = $1
 		LIMIT 1`, identifier))
+}
+
+func (r *BookRepository) HasPublishedLanding(ctx context.Context, bookID string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM pages
+			WHERE type = 'BOOK' AND book_id = $1::uuid
+				AND status = 'PUBLISHED' AND published_content IS NOT NULL
+		)`, bookID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check published book landing: %w", err)
+	}
+	return exists, nil
 }
 
 func (r *BookRepository) Create(ctx context.Context, value book.Book) (book.Book, error) {
@@ -71,15 +101,23 @@ func (r *BookRepository) Create(ctx context.Context, value book.Book) (book.Book
 
 func (r *BookRepository) Update(ctx context.Context, value book.Book) (book.Book, error) {
 	result, err := scanBook(r.pool.QueryRow(ctx, `
-		UPDATE books SET
+		WITH updated_book AS (
+			UPDATE books SET
 			slug = $2, title = $3, subtitle = $4, author_name = $5, category = $6,
 			variant = $7, short_description = $8, price_minor_units = $9, currency = $10,
 			isbn = $11, publication_date = $12, publication_date_label = $13, format = $14,
 			file_size_bytes = $15, cover_media_id = $16::uuid, cover_caption = $17,
 			ebook_file_path = $18, status = $19, seo_title = $20, seo_description = $21,
 			seo_indexable = $22, updated_at = $23, published_at = $24
-		WHERE id = $1::uuid
-		RETURNING `+bookColumns,
+			WHERE id = $1::uuid
+			RETURNING *
+		), updated_page AS (
+			UPDATE pages
+			SET slug = $2, title = $3, updated_at = $23
+			WHERE type = 'BOOK' AND book_id = $1::uuid
+			RETURNING id
+		)
+		SELECT `+bookColumns+` FROM updated_book`,
 		value.ID, value.Slug, value.Title, value.Subtitle, value.AuthorName, value.Category,
 		value.Variant, value.ShortDescription, value.PriceMinorUnits, value.Currency, value.ISBN,
 		value.PublicationDate, value.PublicationDateLabel, value.Format, value.FileSizeBytes,
@@ -151,7 +189,8 @@ func normalizeBookError(err error) error {
 		return err
 	}
 	var postgresError *pgconn.PgError
-	if errors.As(err, &postgresError) && postgresError.Code == "23505" && postgresError.ConstraintName == "books_slug_key" {
+	if errors.As(err, &postgresError) && postgresError.Code == "23505" &&
+		(postgresError.ConstraintName == "books_slug_key" || postgresError.ConstraintName == "pages_slug_key") {
 		return book.ErrSlugConflict
 	}
 	return err

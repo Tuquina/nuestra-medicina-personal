@@ -1,13 +1,15 @@
+import { useCallback } from 'react';
 import { FormField } from '../../../shared/components/FormField/FormField';
-import { Button } from '../../../shared/components/Button/Button';
 import f from '../../../shared/components/FormField/FormField.module.css';
 import { useEditablePage } from '../../../shared/cms/useEditablePage';
+import { CmsEditorActions, CmsEditorLoadState } from '../../components/CmsEditorTools/CmsEditorTools';
 import { BOOK_LANDING_SECTION_TYPE, buildBookLandingSeedContent, readBookLandingProps, type BookLandingProps } from '../../../shared/cms/bookLandingContent';
 import { BOOKS } from '../../../public-store/data/books';
 import type { BenefitsSection, ImageTextSection } from '../../../public-store/data/bookLandings';
 import styles from './PaginaVentaTab.module.css';
 
 interface PaginaVentaTabProps {
+  bookId: string | null;
   slug: string;
   bookTitle: string;
 }
@@ -16,12 +18,12 @@ interface PaginaVentaTabProps {
  * The book's own landing-page editor — simpler and more specific than the
  * generic Page Builder: no blocks to add or reorder, just the real fields
  * `/libros/:slug` renders (see public-store/pages/BookLandingPage). Every
- * field here is wired straight to `shared/cms`, the same content store
- * the public page reads from, so "Publicar" here changes what a visitor
- * actually sees.
+ * field here is wired straight to the CMS API through `shared/cms`; the
+ * public page reads only its published representation, so "Publicar" here
+ * changes what a visitor actually sees.
  */
-export function PaginaVentaTab({ slug, bookTitle }: PaginaVentaTabProps) {
-  if (!slug) {
+export function PaginaVentaTab({ bookId, slug, bookTitle }: PaginaVentaTabProps) {
+  if (!bookId || !slug) {
     return (
       <div className={styles.emptyCard}>
         <p className={styles.emptyText}>
@@ -31,12 +33,15 @@ export function PaginaVentaTab({ slug, bookTitle }: PaginaVentaTabProps) {
     );
   }
 
-  return <PaginaVentaEditor slug={slug} bookTitle={bookTitle} />;
+  return <PaginaVentaEditor bookId={bookId} slug={slug} bookTitle={bookTitle} />;
 }
 
-function PaginaVentaEditor({ slug, bookTitle }: PaginaVentaTabProps) {
-  const seed = () => buildBookLandingSeedContent(slug);
-  const { content, setContent, saveDraftNow, publish, dirtySincePublish } = useEditablePage('BOOK', slug, seed);
+function PaginaVentaEditor({ bookId, slug, bookTitle }: PaginaVentaTabProps) {
+  const seed = useCallback(() => buildBookLandingSeedContent(slug), [slug]);
+  const editor = useEditablePage({
+    type: 'BOOK', slug, title: bookTitle, bookId: bookId ?? undefined, seed,
+  });
+  const { content, setContent } = editor;
   const landing = readBookLandingProps(content);
 
   const update = (patch: Partial<BookLandingProps>) => {
@@ -48,30 +53,11 @@ function PaginaVentaEditor({ slug, bookTitle }: PaginaVentaTabProps) {
 
   const otherBooks = BOOKS.filter((book) => book.slug !== slug);
 
+  if (editor.loadStatus !== 'ready') return <CmsEditorLoadState editor={editor} />;
+
   return (
     <div className={f.stack}>
-      <div className={styles.toolbar}>
-        <span className={[styles.statusBadge, dirtySincePublish ? styles.statusUnsaved : styles.statusPublished].join(' ')}>
-          {dirtySincePublish ? 'Cambios sin publicar' : 'Publicado'}
-        </span>
-        <div className={styles.toolbarActions}>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              saveDraftNow(content);
-              window.open(`/libros/${slug}?preview=1`, '_blank', 'noopener');
-            }}
-          >
-            Vista previa
-          </Button>
-          <Button variant="secondary" onClick={() => saveDraftNow(content)}>
-            Guardar borrador
-          </Button>
-          <Button variant="primary" onClick={publish}>
-            Publicar
-          </Button>
-        </div>
-      </div>
+      <CmsEditorActions editor={editor} content={content} publicPath={`/libros/${slug}?preview=1`} />
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Presentación</h2>

@@ -14,6 +14,7 @@ type Repository interface {
 	GetPublishedBySlug(context.Context, string) (book.Book, error)
 	ListAll(context.Context) ([]book.Book, error)
 	GetByIdentifier(context.Context, string) (book.Book, error)
+	HasPublishedLanding(context.Context, string) (bool, error)
 	Create(context.Context, book.Book) (book.Book, error)
 	Update(context.Context, book.Book) (book.Book, error)
 	Archive(context.Context, string, time.Time) error
@@ -50,6 +51,12 @@ func (s *Service) Create(ctx context.Context, candidate book.Book) (book.Book, e
 	if err := candidate.Validate(); err != nil {
 		return book.Book{}, err
 	}
+	// A BOOK page requires the persisted book UUID, so a new book must first
+	// be saved as a draft. Publication becomes available after its landing is
+	// created and published through the CMS.
+	if candidate.Status == book.StatusPublished {
+		return book.Book{}, book.ErrLandingNotPublished
+	}
 	id, err := s.newID()
 	if err != nil {
 		return book.Book{}, fmt.Errorf("generate book id: %w", err)
@@ -76,6 +83,15 @@ func (s *Service) Update(ctx context.Context, identifier string, candidate book.
 	candidate.ID = existing.ID
 	candidate.CreatedAt = existing.CreatedAt
 	candidate.EbookFilePath = existing.EbookFilePath
+	if candidate.Status == book.StatusPublished {
+		published, err := s.repository.HasPublishedLanding(ctx, existing.ID)
+		if err != nil {
+			return book.Book{}, fmt.Errorf("check published book landing: %w", err)
+		}
+		if !published {
+			return book.Book{}, book.ErrLandingNotPublished
+		}
+	}
 	candidate.UpdatedAt = s.now().UTC()
 	candidate.PublishedAt = existing.PublishedAt
 	if candidate.Status == book.StatusPublished && existing.Status != book.StatusPublished {

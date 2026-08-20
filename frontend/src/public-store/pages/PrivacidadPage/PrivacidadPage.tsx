@@ -2,8 +2,9 @@ import { useSearchParams } from 'react-router-dom';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { LegalPage } from '../../../shared/components/LegalPage/LegalPage';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
-import { buildPrivacidadSeedContent, PRIVACIDAD_SLUG, readLegalDocProps } from '../../../shared/cms/legalDocContent';
+import { PRIVACIDAD_SLUG, readLegalDocProps } from '../../../shared/cms/legalDocContent';
 import { LegalDocBody } from '../../../shared/cms/legalDocRenderer';
+import { CmsPageState } from '../../../shared/cms/CmsPageState';
 
 /**
  * `/privacidad` — Política de Privacidad. Content comes from the admin's
@@ -15,8 +16,9 @@ export function PrivacidadPage() {
   useDocumentTitle('Política de Privacidad · Nuestra Medicina Personal');
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
-  const content = usePublishedContent('PRIVACIDAD', PRIVACIDAD_SLUG, buildPrivacidadSeedContent, preview);
-  const doc = readLegalDocProps(content);
+  const page = usePublishedContent('PRIVACIDAD', PRIVACIDAD_SLUG, preview);
+  if (page.status !== 'ready') return <CmsPageState state={page} />;
+  const doc = readLegalDocProps(page.content);
 
   return (
     <LegalPage

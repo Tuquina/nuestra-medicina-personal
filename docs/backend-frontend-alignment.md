@@ -1,9 +1,8 @@
 # Contratos finales entre backend y frontend
 
-Este documento registra la revisión previa a reemplazar mocks y `localStorage`.
+Este documento registra la revisión y ejecución de la integración de contratos.
 La fuente de verdad HTTP es [`openapi.yaml`](openapi.yaml); este archivo define
-los adaptadores de presentación y las funciones que quedan fuera del MVP. No
-conecta todavía las pantallas.
+los adaptadores de presentación y las funciones que quedan fuera del MVP.
 
 ## Reglas transversales
 
@@ -71,6 +70,14 @@ portada y eBook se cargan por sus endpoints separados. Una edición debe partir
 del DTO administrativo leído al servidor para no borrar metadata que la vista
 no muestra.
 
+Un libro nuevo se crea como borrador. El backend sólo permite pasarlo a
+`PUBLISHED` cuando su página `BOOK` ya tiene una publicación; si falta responde
+`BOOK_LANDING_NOT_PUBLISHED`. La pestaña de página de venta trabaja con el slug
+y título persistidos para que cambios todavía no guardados en Información no
+creen ni consulten una página bajo una identidad incorrecta. Las consultas
+públicas excluyen además cualquier registro heredado que estuviera marcado
+como publicado pero no tenga landing publicada.
+
 ## Backoffice de datos
 
 La pantalla de ventas aplica:
@@ -95,14 +102,31 @@ el volumen previsto de esta tienda.
 ## CMS y páginas editoriales
 
 El backend y frontend coinciden en los nueve `PageType`, `schemaVersion: 1` y
-los bloques actuales. El adaptador local debe incorporar del DTO administrativo
+los bloques actuales. El adaptador HTTP incorpora del DTO administrativo
 `id`, `title`, `createdAt`, `updatedAt` y los `null` explícitos. Para páginas
-conocidas se obtiene por slug; un `404` habilita su creación y cualquier otro
-error debe conservar el contenido local sin intentar publicar.
+conocidas se obtiene por slug; sólo un `404` habilita su creación. Un `409`
+durante esa creación vuelve a leer la página para tolerar solicitudes
+concurrentes; cualquier otro error bloquea el editor sin intentar publicar.
+
+Las páginas públicas consultan exclusivamente `GET /api/v1/pages/{slug}`. La
+vista previa explícita usa la sesión administrativa y lee `draftContent`; antes
+de abrirla se persiste el borrador actual. Publicar guarda primero ese borrador
+y luego crea la versión. Restaurar una versión reemplaza únicamente el
+borrador y requiere una publicación posterior.
+
+La migración editorial inicial preserva el contenido que antes acompañaba al
+frontend: crea publicaciones para los ocho singleton únicamente cuando no
+existen y agrega las landings conocidas sólo si sus libros ya están en la base.
+Nunca reemplaza una página o borrador administrativo existente.
 
 Home y las páginas de libro comparten las propiedades actuales. El `slug`
 dentro de `book-landing.props` es compatibilidad temporal; el slug canónico
 pertenece a `Page`.
+
+Al cambiar el slug o título de un libro, el repositorio actualiza en la misma
+sentencia su página `BOOK` asociada. Así la ruta pública y el CMS no quedan
+desalineados, y un conflicto con otro slug se expone como el mismo conflicto de
+dominio del libro.
 
 ## Multimedia
 
@@ -132,6 +156,6 @@ contrato antes de tener un requerimiento real para listar referencias.
 2. ✅ checkout con verificación de orden;
 3. ✅ libros, eBook y multimedia administrativos;
 4. ✅ dashboard, ventas, clientes y configuración;
-5. **Siguiente:** CMS público, borrador, publicación y versiones;
-6. retirar mocks, toggles y mensajes de demostración;
+5. ✅ CMS público, borrador, publicación, vista previa y versiones;
+6. **Siguiente:** retirar mocks, toggles y mensajes de demostración;
 7. revisar estados vacíos y errores `401/403/409/422/429` en cada pantalla.

@@ -6,7 +6,8 @@ import { CollectionHero } from '../../../shared/components/CollectionHero/Collec
 import { FeatureGrid } from '../../../shared/components/FeatureGrid/FeatureGrid';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
-import { buildSoporteSeedContent, readSoporteProps, SOPORTE_SLUG } from '../../../shared/cms/helpContent';
+import { readSoporteProps, SOPORTE_SLUG } from '../../../shared/cms/helpContent';
+import { CmsPageState } from '../../../shared/cms/CmsPageState';
 import styles from './SoportePage.module.css';
 
 /** `/soporte` — content comes from the admin's "Ayuda" editor via shared/cms. */
@@ -14,8 +15,9 @@ export function SoportePage() {
   useDocumentTitle('Soporte · Nuestra Medicina Personal');
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
-  const content = usePublishedContent('SOPORTE', SOPORTE_SLUG, buildSoporteSeedContent, preview);
-  const { title, intro, topics } = readSoporteProps(content);
+  const page = usePublishedContent('SOPORTE', SOPORTE_SLUG, preview);
+  if (page.status !== 'ready') return <CmsPageState state={page} />;
+  const { title, intro, topics } = readSoporteProps(page.content);
 
   return (
     <div>

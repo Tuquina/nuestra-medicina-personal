@@ -67,7 +67,7 @@ export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = fals
           <NavLink to="/admin/paginas" end className={navLinkClass}>
             Inicio
           </NavLink>
-          <NavLink to="/admin/paginas" end className={navLinkClass}>
+          <NavLink to="/admin/libros" end className={navLinkClass}>
             Páginas de libros
           </NavLink>
           <NavLink to="/admin/sobre-el-proyecto" className={navLinkClass}>

@@ -365,7 +365,7 @@ paths:
               schema: {$ref: '#/components/schemas/Book'}
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
-        '409': {$ref: '#/components/responses/BookSlugConflict'}
+        '409': {$ref: '#/components/responses/BookConflict'}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422': {$ref: '#/components/responses/BookValidationFailed'}
   /api/v1/admin/books/{identifier}:
@@ -404,7 +404,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {$ref: '#/components/responses/BookNotFound'}
-        '409': {$ref: '#/components/responses/BookSlugConflict'}
+        '409': {$ref: '#/components/responses/BookConflict'}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422': {$ref: '#/components/responses/BookValidationFailed'}
     delete:
@@ -1448,8 +1448,8 @@ components:
     BookNotFound:
       description: El libro no existe o no está publicado en una ruta pública.
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
-    BookSlugConflict:
-      description: El slug ya pertenece a otro libro.
+    BookConflict:
+      description: El slug ya pertenece a otro libro o se intentó publicar sin una landing CMS publicada.
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
     BookValidationFailed:
       description: Los datos del libro no cumplen el contrato.

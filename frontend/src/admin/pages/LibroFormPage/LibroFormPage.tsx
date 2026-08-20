@@ -206,7 +206,11 @@ function LibroFormContent({ initialBook }: { initialBook: AdminBook | null }) {
         navigate(`/admin/libros/${saved.slug}/editar`, { replace: true });
       }
     } catch (error: unknown) {
-      if (error instanceof ApiError && error.status === 409) {
+      if (error instanceof ApiError && error.code === 'BOOK_LANDING_NOT_PUBLISHED') {
+        setSaveError(savedBook
+          ? 'Publicá primero la página de venta y después publicá el libro.'
+          : 'Guardá primero el libro como borrador para poder crear y publicar su página de venta.');
+      } else if (error instanceof ApiError && error.status === 409) {
         setSaveError('Ya existe un libro con ese slug.');
       } else if (error instanceof ApiError && error.status === 422) {
         setSaveError('Revisá los campos obligatorios y el precio antes de guardar.');
@@ -275,7 +279,13 @@ function LibroFormContent({ initialBook }: { initialBook: AdminBook | null }) {
           />
         )}
         {activeTab === 'manuscript' && <ManuscritoTab bookTitle={form.title || 'Nuevo libro'} />}
-        {activeTab === 'page' && <PaginaVentaTab slug={form.slug} bookTitle={form.title || 'Nuevo libro'} />}
+        {activeTab === 'page' && (
+          <PaginaVentaTab
+            bookId={savedBook?.id ?? null}
+            slug={savedBook?.slug ?? ''}
+            bookTitle={savedBook?.title ?? 'Nuevo libro'}
+          />
+        )}
         {activeTab === 'seo' && <SeoTab form={form} onChange={updateField} />}
       </div>
     </AdminLayout>

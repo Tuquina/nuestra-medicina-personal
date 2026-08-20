@@ -9,9 +9,12 @@ import (
 )
 
 type repositoryStub struct {
-	created  book.Book
-	archived string
-	existing book.Book
+	created          book.Book
+	updated          book.Book
+	archived         string
+	existing         book.Book
+	landingPublished bool
+	landingError     error
 }
 
 func (r *repositoryStub) ListPublished(context.Context) ([]book.Book, error) { return nil, nil }
@@ -25,11 +28,15 @@ func (r *repositoryStub) GetByIdentifier(context.Context, string) (book.Book, er
 	}
 	return r.existing, nil
 }
+func (r *repositoryStub) HasPublishedLanding(context.Context, string) (bool, error) {
+	return r.landingPublished, r.landingError
+}
 func (r *repositoryStub) Create(_ context.Context, value book.Book) (book.Book, error) {
 	r.created = value
 	return value, nil
 }
 func (r *repositoryStub) Update(_ context.Context, value book.Book) (book.Book, error) {
+	r.updated = value
 	return value, nil
 }
 func (r *repositoryStub) Archive(_ context.Context, identifier string, _ time.Time) error {
@@ -37,7 +44,7 @@ func (r *repositoryStub) Archive(_ context.Context, identifier string, _ time.Ti
 	return nil
 }
 
-func TestCreateAppliesIdentityAndPublicationTime(t *testing.T) {
+func TestCreateAppliesIdentityToDraft(t *testing.T) {
 	t.Parallel()
 	repository := &repositoryStub{}
 	service := NewService(repository)
@@ -47,13 +54,60 @@ func TestCreateAppliesIdentityAndPublicationTime(t *testing.T) {
 
 	created, err := service.Create(context.Background(), book.Book{
 		Slug: "un-libro", Title: "Un libro", PriceMinorUnits: 1000,
-		Currency: "ars", Variant: "gold", Status: book.StatusPublished,
+		Currency: "ars", Variant: "gold", Status: book.StatusDraft,
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if created.ID == "" || created.Currency != "ARS" || created.PublishedAt == nil || !created.PublishedAt.Equal(now) {
+	if created.ID == "" || created.Currency != "ARS" || created.PublishedAt != nil {
 		t.Fatalf("unexpected created book: %#v", created)
+	}
+}
+
+func TestCreateRejectsPublishedBookBeforeLandingCanExist(t *testing.T) {
+	t.Parallel()
+	repository := &repositoryStub{}
+	service := NewService(repository)
+	_, err := service.Create(context.Background(), book.Book{
+		Slug: "un-libro", Title: "Un libro", PriceMinorUnits: 1000,
+		Currency: "ARS", Variant: "gold", Status: book.StatusPublished,
+	})
+	if err != book.ErrLandingNotPublished || repository.created.ID != "" {
+		t.Fatalf("expected unpublished landing conflict, got %#v %v", repository.created, err)
+	}
+}
+
+func TestUpdateRequiresPublishedLanding(t *testing.T) {
+	t.Parallel()
+	repository := &repositoryStub{existing: book.Book{
+		ID: "b1d6e76e-6c3a-4fe5-906a-8f248d88023d", Slug: "un-libro", Title: "Un libro",
+		Status: book.StatusDraft, CreatedAt: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+	}}
+	service := NewService(repository)
+	_, err := service.Update(context.Background(), "un-libro", book.Book{
+		Slug: "un-libro", Title: "Un libro", PriceMinorUnits: 1000,
+		Currency: "ARS", Variant: "gold", Status: book.StatusPublished,
+	})
+	if err != book.ErrLandingNotPublished || repository.updated.ID != "" {
+		t.Fatalf("expected unpublished landing conflict, got %#v %v", repository.updated, err)
+	}
+}
+
+func TestUpdatePublishesBookWithPublishedLanding(t *testing.T) {
+	t.Parallel()
+	repository := &repositoryStub{landingPublished: true, existing: book.Book{
+		ID: "b1d6e76e-6c3a-4fe5-906a-8f248d88023d", Slug: "un-libro", Title: "Un libro",
+		Status: book.StatusDraft, CreatedAt: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+	}}
+	service := NewService(repository)
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now }
+	updated, err := service.Update(context.Background(), "un-libro", book.Book{
+		Slug: "un-libro", Title: "Un libro", PriceMinorUnits: 1000,
+		Currency: "ARS", Variant: "gold", Status: book.StatusPublished,
+	})
+	if err != nil || updated.PublishedAt == nil || !updated.PublishedAt.Equal(now) {
+		t.Fatalf("expected published book, got %#v %v", updated, err)
 	}
 }
 

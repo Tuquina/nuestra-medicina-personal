@@ -5,6 +5,7 @@ import { hardNavigate } from '../../../shared/utils/navigation';
 import { Dialog } from '../../../shared/components/Dialog/Dialog';
 import { Button } from '../../../shared/components/Button/Button';
 import { useEditablePage } from '../../../shared/cms/useEditablePage';
+import { CmsEditorLoadState, VersionHistoryButton } from '../../components/CmsEditorTools/CmsEditorTools';
 import { buildHomeSeedContent } from '../../../shared/cms/homeContent';
 import { HOME_SLUG, type Section } from '../../../shared/cms/types';
 import { BlockLibrary } from './BlockLibrary';
@@ -27,8 +28,8 @@ const DEVICE_OPTIONS: { value: BuilderView; label: string }[] = [
  * accessibility/complexity problems a real drag-and-drop implementation
  * would add for no architecture.md requirement backing it.
  *
- * Content is read from and written to `shared/cms` (localStorage today,
- * the real `pages` API once it exists) — every field here maps to a real
+ * Content is read from and written to the authenticated `pages` API through
+ * `shared/cms` — every field here maps to a real
  * prop the public Home page renders (see Canvas.tsx's live preview and
  * shared/cms/homeContent.ts), so there's no gap between "lo que edito acá"
  * and "lo que se ve en el sitio" (per the explicit brief on this feature).
@@ -41,11 +42,13 @@ const DEVICE_OPTIONS: { value: BuilderView; label: string }[] = [
 export function PageBuilderPage() {
   useDocumentTitle('Editor de páginas · Admin · Nuestra Medicina Personal');
 
-  const { content, setContent, saveDraftNow, publish, dirtySincePublish } = useEditablePage(
-    'HOME',
-    HOME_SLUG,
-    buildHomeSeedContent,
-  );
+  const editor = useEditablePage({
+    type: 'HOME',
+    slug: HOME_SLUG,
+    title: 'Inicio',
+    seed: buildHomeSeedContent,
+  });
+  const { content, setContent, saveDraftNow, publish, dirtySincePublish } = editor;
   const sections = content.sections;
 
   const [selectedId, setSelectedId] = useState<string | null>(sections[0]?.id ?? null);
@@ -103,6 +106,12 @@ export function PageBuilderPage() {
 
   const selected = sections.find((section) => section.id === selectedId);
 
+  if (editor.loadStatus !== 'ready') {
+    return <div className={styles.shell}><CmsEditorLoadState editor={editor} /></div>;
+  }
+
+  const busy = editor.actionStatus !== null;
+
   return (
     <div className={styles.shell}>
       <header className={styles.toolbar}>
@@ -139,13 +148,14 @@ export function PageBuilderPage() {
         </div>
 
         <div className={styles.toolbarRight}>
+          <VersionHistoryButton editor={editor} className={styles.ghostButton} />
           <button
             type="button"
             className={styles.ghostButton}
             title="Ver los cambios sin publicar en el sitio real"
-            onClick={() => {
-              saveDraftNow(content);
-              hardNavigate('/?preview=1');
+            disabled={busy}
+            onClick={async () => {
+              if (await saveDraftNow(content)) hardNavigate('/?preview=1');
             }}
           >
             Vista previa
@@ -153,25 +163,27 @@ export function PageBuilderPage() {
           <button
             type="button"
             className={[styles.ghostButton, styles.ghostButtonStrong].join(' ')}
-            onClick={() => {
-              saveDraftNow(content);
-              flashSaved('draft');
+            disabled={busy}
+            onClick={async () => {
+              if (await saveDraftNow(content)) flashSaved('draft');
             }}
           >
-            Guardar borrador
+            {editor.actionStatus === 'saving' ? 'Guardando…' : 'Guardar borrador'}
           </button>
           <button
             type="button"
             className={styles.publishButton}
-            onClick={() => {
-              publish();
-              flashSaved('published');
+            disabled={busy}
+            onClick={async () => {
+              if (await publish()) flashSaved('published');
             }}
           >
-            Publicar
+            {editor.actionStatus === 'publishing' ? 'Publicando…' : 'Publicar'}
           </button>
         </div>
       </header>
+
+      {editor.message && <p className={styles.editorMessage} role="status">{editor.message}</p>}
 
       <div className={styles.body}>
         <BlockLibrary onAdd={addBlockType} />

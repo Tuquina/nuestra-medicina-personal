@@ -17,7 +17,8 @@ import type { Book } from '../../data/books';
 import { useCatalog } from '../../catalog/useCatalog';
 import { formatPrice } from '../../../shared/utils/money';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
-import { buildBookLandingSeedContent, readBookLandingProps } from '../../../shared/cms/bookLandingContent';
+import { readBookLandingProps } from '../../../shared/cms/bookLandingContent';
+import { CmsPageState } from '../../../shared/cms/CmsPageState';
 import { NotFoundPage } from '../NotFoundPage/NotFoundPage';
 import styles from './BookLandingPage.module.css';
 
@@ -27,9 +28,8 @@ import styles from './BookLandingPage.module.css';
  * Storytelling content (tagline, synopsis, quote, FAQ, etc.) comes from
  * the admin's book-page editor via `shared/cms` — see
  * admin/pages/LibroFormPage/PaginaVentaTab.tsx. The catalog fields (title,
- * price, format, status) still come from `books.ts`, edited on the
- * "Información" tab — that split mirrors how the data has always been
- * modeled here (books.ts vs. bookLandings.ts).
+ * price, format and status) come from the public books API, while the CMS
+ * owns the editorial storytelling blocks.
  */
 export function BookLandingPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -68,10 +68,11 @@ export function BookLandingPage() {
 function BookLandingContent({ book, slug }: { book: Book; slug: string }) {
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
-  const content = usePublishedContent('BOOK', slug, () => buildBookLandingSeedContent(slug), preview);
-  const landing = readBookLandingProps(content);
-
+  const page = usePublishedContent('BOOK', slug, preview);
   const catalog = useCatalog();
+  if (page.status !== 'ready') return <CmsPageState state={page} />;
+  const landing = readBookLandingProps(page.content);
+
   const relatedBook = catalog.status === 'ready'
     ? catalog.books.find((entry) => entry.slug === landing.relatedSlug)
     : undefined;
