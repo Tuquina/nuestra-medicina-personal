@@ -114,7 +114,8 @@ function LibroFormContent({ existingBook }: { existingBook: (typeof BOOKS)[numbe
         }),
       });
     } catch {
-      // No backend yet.
+      // Full BookInput mapping and API error states are deferred to the
+      // final transport integration.
     } finally {
       setSaveStatus('Guardado');
     }

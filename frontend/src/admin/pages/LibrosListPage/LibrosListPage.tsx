@@ -39,7 +39,8 @@ export function LibrosListPage() {
         body: JSON.stringify({ status: 'ARCHIVED' }),
       });
     } catch {
-      // No backend yet.
+      // Mock reconciliation and API error states are part of the final
+      // transport integration.
     }
   };
 

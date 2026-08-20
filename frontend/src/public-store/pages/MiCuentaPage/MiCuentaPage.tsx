@@ -32,7 +32,7 @@ export function MiCuentaPage() {
       await fetch(LOGOUT_URL, { method: 'POST', credentials: 'include' });
     } finally {
       // A full reload, not SPA navigation: AuthProvider only fetches
-      // `/api/v1/auth/me` once per app load, so an in-SPA `navigate('/')`
+      // `/api/v1/me` once per app load, so an in-SPA `navigate('/')`
       // would leave the header showing the now-stale signed-in state.
       hardNavigate('/');
     }

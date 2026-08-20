@@ -64,7 +64,8 @@ export function MultimediaPage() {
     try {
       await fetch(`/api/v1/admin/media/${selected.id}`, { method: 'DELETE' });
     } catch {
-      // No backend yet.
+      // Mock reconciliation and API error states are part of the final
+      // transport integration.
     }
   };
 

@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 import type { AuthState } from './types';
 
 /**
- * Who's signed in, fetched once per app load from `GET /api/v1/auth/me`
+ * Who's signed in, fetched once per app load from `GET /api/v1/me`
  * (the session cookie, if any, goes along automatically — architecture.md
  * §20). This is a **UX** convenience only: it decides what the frontend
  * shows (redirect to `/login`, hide the admin sidebar, …), never a

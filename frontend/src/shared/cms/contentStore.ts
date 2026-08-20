@@ -5,7 +5,7 @@
  *
  * Every read/write goes through this module so that once real endpoints
  * exist (`GET/PUT /api/v1/admin/pages/{id}`, `POST .../publish`, and a
- * public `GET /api/v1/pages/{type}/{slug}`), only this file needs to change
+ * public `GET /api/v1/pages/{slug}`), only this file needs to change
  * — every admin editor and every public page keeps calling the same
  * functions.
  */

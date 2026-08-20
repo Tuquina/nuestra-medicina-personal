@@ -17,11 +17,9 @@ interface ArchivoPortadaTabProps {
 }
 
 /**
- * Cover + eBook file management. There's no object storage backend yet
- * (architecture.md §17) — "Reemplazar" just opens a file picker; nothing
- * is actually uploaded anywhere, matching how every other
- * backend-dependent action in this app is treated (real up to the point
- * a real endpoint would take over).
+ * Cover + eBook file management. The backend endpoints exist, but this
+ * prototype still only opens a file picker; transport is wired in the final
+ * integration phase.
  */
 export function ArchivoPortadaTab({ variant, coverCaption, ebookFileName, ebookFileMeta }: ArchivoPortadaTabProps) {
   const coverInputRef = useRef<HTMLInputElement>(null);
