@@ -920,7 +920,7 @@ components:
       required: [id, type, props]
       properties:
         id: {type: string, minLength: 1, maxLength: 100}
-        type: {type: string, enum: [hero, richText, imageText, features, faq, cta, buyButton, collection, contacto, soporte, legal-doc]}
+        type: {type: string, enum: [hero, richText, imageText, features, faq, cta, buyButton, collection, contacto, soporte, legal-doc, gallery, manifesto, featured-books, collection-teaser, about, newsletter, title, text, image, quote, divider, spacer, book-landing]}
         hidden: {type: boolean, default: false}
         props:
           oneOf:
@@ -936,6 +936,18 @@ components:
             - $ref: '#/components/schemas/SupportProps'
             - $ref: '#/components/schemas/FAQPageProps'
             - $ref: '#/components/schemas/LegalDocumentProps'
+            - $ref: '#/components/schemas/HomeHeroProps'
+            - $ref: '#/components/schemas/GalleryProps'
+            - $ref: '#/components/schemas/ManifestoProps'
+            - $ref: '#/components/schemas/FeaturedBooksProps'
+            - $ref: '#/components/schemas/CollectionTeaserProps'
+            - $ref: '#/components/schemas/AboutProps'
+            - $ref: '#/components/schemas/NewsletterProps'
+            - $ref: '#/components/schemas/SimpleTextBlockProps'
+            - $ref: '#/components/schemas/ImageBlockProps'
+            - $ref: '#/components/schemas/DividerBlockProps'
+            - $ref: '#/components/schemas/SpacerBlockProps'
+            - $ref: '#/components/schemas/BookLandingProps'
     SafeLink:
       type: object
       additionalProperties: false
@@ -1154,6 +1166,158 @@ components:
               id: {type: string, minLength: 1, maxLength: 100}
               title: {type: string, minLength: 1, maxLength: 300}
               body: {type: string, minLength: 1, maxLength: 20000, description: Markdown-lite interpretado como estructura segura; nunca HTML.}
+    HomeHeroProps:
+      type: object
+      additionalProperties: false
+      required: [eyebrow, headingLine1, headingLine2, lede, primaryCtaLabel, primaryCtaTo, secondaryCtaLabel, secondaryCtaTo, imageCaption]
+      properties:
+        eyebrow: {type: string, minLength: 1, maxLength: 200}
+        headingLine1: {type: string, minLength: 1, maxLength: 120}
+        headingLine2: {type: string, minLength: 1, maxLength: 120}
+        lede: {type: string, minLength: 1, maxLength: 1000}
+        primaryCtaLabel: {type: string, minLength: 1, maxLength: 80}
+        primaryCtaTo: {type: string, description: Ruta relativa, URL http/https o fragmento local.}
+        secondaryCtaLabel: {type: string, minLength: 1, maxLength: 80}
+        secondaryCtaTo: {type: string, description: Ruta relativa, URL http/https o fragmento local.}
+        imageCaption: {type: string, maxLength: 300}
+    GalleryProps:
+      type: object
+      additionalProperties: false
+      required: [captions]
+      properties:
+        captions: {type: array, minItems: 1, maxItems: 20, items: {type: string, minLength: 1, maxLength: 300}}
+    ManifestoProps:
+      type: object
+      additionalProperties: false
+      required: [quote, body]
+      properties:
+        quote: {type: string, minLength: 1, maxLength: 500}
+        body: {type: string, minLength: 1, maxLength: 2000}
+    FeaturedBooksProps:
+      type: object
+      additionalProperties: false
+      required: [eyebrow, title, description]
+      properties:
+        eyebrow: {type: string, maxLength: 200}
+        title: {type: string, minLength: 1, maxLength: 200}
+        description: {type: string, minLength: 1, maxLength: 1000}
+    CollectionTeaserProps:
+      type: object
+      additionalProperties: false
+      required: [eyebrow, title, description, ctaLabel, ctaTo, imageCaption, reverse, accent]
+      properties:
+        eyebrow: {type: string, maxLength: 200}
+        title: {type: string, minLength: 1, maxLength: 200}
+        description: {type: string, minLength: 1, maxLength: 1000}
+        ctaLabel: {type: string, minLength: 1, maxLength: 80}
+        ctaTo: {type: string}
+        imageCaption: {type: string, maxLength: 300}
+        reverse: {type: boolean}
+        accent: {type: string, enum: [sky, amber]}
+    AboutProps:
+      type: object
+      additionalProperties: false
+      required: [eyebrow, title, bio, imageCaption]
+      properties:
+        eyebrow: {type: string, maxLength: 200}
+        title: {type: string, minLength: 1, maxLength: 200}
+        bio: {type: string, minLength: 1, maxLength: 5000}
+        imageCaption: {type: string, maxLength: 300}
+    NewsletterProps:
+      type: object
+      additionalProperties: false
+      required: [title, subtitle, buttonLabel, confirmationText, fineprint]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        subtitle: {type: string, minLength: 1, maxLength: 1000}
+        buttonLabel: {type: string, minLength: 1, maxLength: 80}
+        confirmationText: {type: string, minLength: 1, maxLength: 500}
+        fineprint: {type: string, minLength: 1, maxLength: 500}
+    SimpleTextBlockProps:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: {type: string, minLength: 1, maxLength: 5000}
+    ImageBlockProps:
+      type: object
+      additionalProperties: false
+      required: [caption]
+      properties:
+        caption: {type: string, minLength: 1, maxLength: 300}
+    DividerBlockProps:
+      type: object
+      additionalProperties: false
+    SpacerBlockProps:
+      type: object
+      additionalProperties: false
+      required: [height]
+      properties:
+        height: {type: string, enum: [sm, md, lg]}
+    BookLandingProps:
+      type: object
+      additionalProperties: false
+      required: [taglineColor, heroGlowColor, authorName, tagline, heroDescription, synopsisEyebrowColor, synopsisParagraphs, middleSection, quote, quoteGlowSide, publicationDate, isbn, fileSize, relatedSlug, ctaGlowSide]
+      properties:
+        slug: {type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', description: Compatibilidad con los registros semilla actuales; el slug canónico sigue perteneciendo a Page.}
+        taglineColor: {$ref: '#/components/schemas/ControlledColor'}
+        heroGlowColor: {$ref: '#/components/schemas/ControlledColor'}
+        authorName: {type: string, minLength: 1, maxLength: 200}
+        tagline: {type: string, maxLength: 2000}
+        heroDescription: {type: string, maxLength: 2000}
+        synopsisEyebrowColor: {$ref: '#/components/schemas/ControlledColor'}
+        synopsisParagraphs: {type: array, minItems: 1, maxItems: 20, items: {type: string, maxLength: 5000}}
+        middleSection:
+          oneOf:
+            - $ref: '#/components/schemas/BookLandingImageText'
+            - $ref: '#/components/schemas/BookLandingBenefits'
+        quote: {type: string, maxLength: 2000}
+        quoteGlowSide: {type: string, enum: [left, right]}
+        publicationDate: {type: string, maxLength: 2000}
+        isbn: {type: string, maxLength: 2000}
+        fileSize: {type: string, maxLength: 2000}
+        faqs: {type: array, maxItems: 30, items: {$ref: '#/components/schemas/BookLandingFAQ'}}
+        relatedSlug: {type: string, pattern: '^(?:[a-z0-9]+(?:-[a-z0-9]+)*)?$'}
+        ctaGlowSide: {type: string, enum: [left, right]}
+    ControlledColor:
+      type: string
+      maxLength: 100
+      description: Token CSS var(--color-...) u oklch literal sin funciones anidadas.
+    BookLandingImageText:
+      type: object
+      additionalProperties: false
+      required: [type, heading, text, imageAccent, imageCaption]
+      properties:
+        type: {type: string, const: image-text}
+        heading: {type: string, maxLength: 200}
+        text: {type: string, maxLength: 5000}
+        imageAccent: {$ref: '#/components/schemas/ControlledColor'}
+        imageCaption: {type: string, maxLength: 300}
+    BookLandingBenefits:
+      type: object
+      additionalProperties: false
+      required: [type, heading, items]
+      properties:
+        type: {type: string, const: benefits}
+        heading: {type: string, maxLength: 200}
+        items:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items:
+            type: object
+            additionalProperties: false
+            required: [title, description]
+            properties:
+              title: {type: string, maxLength: 200}
+              description: {type: string, maxLength: 1000}
+    BookLandingFAQ:
+      type: object
+      additionalProperties: false
+      required: [q, a]
+      properties:
+        q: {type: string, maxLength: 300}
+        a: {type: string, maxLength: 2000}
     PageCreateInput:
       type: object
       additionalProperties: false

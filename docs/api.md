@@ -127,6 +127,13 @@ de ayuda, FAQ y documentos legales tienen propiedades cerradas y límites
 propios. Los documentos legales usan texto markdown-lite interpretado por un
 renderer seguro; el backend no acepta HTML libre.
 
+El contrato también cubre la composición real de Home (`gallery`,
+`manifesto`, `featured-books`, `collection-teaser`, `about`, `newsletter` y
+los bloques genéricos del editor) y el bloque estructurado `book-landing`.
+Este último admite las variantes `image-text` y `benefits`, FAQ opcional y los
+borradores vacíos que crea el formulario de un libro nuevo. Los colores se
+restringen a tokens `var(--color-...)` o valores `oklch` literales seguros.
+
 ## Biblioteca multimedia
 
 `POST /api/v1/admin/media` acepta `multipart/form-data` y guarda únicamente

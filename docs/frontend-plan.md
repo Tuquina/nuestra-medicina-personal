@@ -227,17 +227,18 @@ not a CSS fix, matching how every comparable visual-builder product
 
 ## Notes for whoever picks this up next
 
-- All of this is **frontend-only, no backend yet**. Pages render with
-  realistic mock data (`public-store/data/*`, `admin/data/*`) and wire
-  API calls to the contracts in architecture.md §34, but those calls
-  404 until the Go backend exists — that's expected, not a bug to work
-  around with fake success states. Search the frontend for `No backend
-  yet` comments to find every one of these seams.
-- **Next real milestone**: the backend. Architecture.md §73 has a
-  recommended build order (schema → domain → API → auth → …) — follow
-  that rather than re-deriving one, and use the DTOs implied by what
-  the frontend already calls (`shared/config/api.ts`, and each page's
-  `fetch(...)` calls) as the de facto contract to implement against.
+- The backend content validator now accepts the current Home section schemas
+  and the complete `book-landing` shape, including both middle-section
+  variants. The remaining CMS work is transport integration: replace the
+  localStorage adapter with the draft/publish/version endpoints.
+
+- The Go backend now implements the core resources and CMS contracts, but most
+  screens still render mock or localStorage data. Search for `No backend yet`,
+  mock stores and the alignment notes in `docs/backend-frontend-alignment.md`
+  when the final transport-integration phase begins.
+- **Next real milestone for these screens**: replace their local adapters with
+  authenticated API calls and handle loading, empty and error states without
+  changing the established visual components.
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing

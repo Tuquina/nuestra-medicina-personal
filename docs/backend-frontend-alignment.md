@@ -55,3 +55,10 @@ El backend ya admite los nueve valores actuales de `PageType` y los bloques
 La integración pendiente consiste en reemplazar `contentStore.ts` por llamadas
 al API conservando borrador, publicación y versiones. Las páginas públicas
 deben seguir usando exclusivamente `publishedContent`.
+
+Home y las páginas de venta de libros ya comparten contrato de contenido con el
+backend. Esto incluye los 13 tipos presentes en `HOME_SECTION_TYPES`, la forma
+editorial del `hero`, `book-landing`, sus dos variantes intermedias y FAQ
+opcional. Al reemplazar el almacenamiento local no se debe transformar esos
+props; sólo retirar el `slug` redundante dentro de `book-landing.props` cuando
+sea práctico, ya que el backend lo acepta temporalmente por compatibilidad.
