@@ -80,3 +80,31 @@ export const ADMIN_DASHBOARD_URL = `${API_PREFIX}/admin/dashboard`;
 export const ADMIN_SALES_URL = `${API_PREFIX}/admin/sales`;
 export const ADMIN_CUSTOMERS_URL = `${API_PREFIX}/admin/customers`;
 export const ADMIN_SETTINGS_URL = `${API_PREFIX}/admin/settings`;
+
+export const PAGES_URL = `${API_PREFIX}/pages`;
+
+export function pageUrl(slug: string): string {
+  return `${PAGES_URL}/${encodeURIComponent(slug)}`;
+}
+
+export const ADMIN_PAGES_URL = `${API_PREFIX}/admin/pages`;
+
+export function adminPageUrl(identifier: string): string {
+  return `${ADMIN_PAGES_URL}/${encodeURIComponent(identifier)}`;
+}
+
+export function adminPageDraftUrl(identifier: string): string {
+  return `${adminPageUrl(identifier)}/draft`;
+}
+
+export function adminPagePublishUrl(identifier: string): string {
+  return `${adminPageUrl(identifier)}/publish`;
+}
+
+export function adminPageVersionsUrl(identifier: string): string {
+  return `${adminPageUrl(identifier)}/versions`;
+}
+
+export function adminPageRestoreUrl(identifier: string, versionId: string): string {
+  return `${adminPageVersionsUrl(identifier)}/${encodeURIComponent(versionId)}/restore`;
+}

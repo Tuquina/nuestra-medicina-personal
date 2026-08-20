@@ -4,7 +4,7 @@ import { SiteHeader } from '../../../shared/components/SiteHeader/SiteHeader';
 import { SiteFooter } from '../../../shared/components/SiteFooter/SiteFooter';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
-import { buildHomeSeedContent } from '../../../shared/cms/homeContent';
+import { CmsPageState } from '../../../shared/cms/CmsPageState';
 import { HOME_SLUG } from '../../../shared/cms/types';
 import { HomeSection } from './HomeSections';
 import styles from './HomePage.module.css';
@@ -16,7 +16,9 @@ export function HomePage() {
   useDocumentTitle('Nuestra Medicina Personal');
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
-  const content = usePublishedContent('HOME', HOME_SLUG, buildHomeSeedContent, preview);
+  const page = usePublishedContent('HOME', HOME_SLUG, preview);
+  if (page.status !== 'ready') return <CmsPageState state={page} />;
+  const content = page.content;
 
   return (
     <div className={styles.page}>

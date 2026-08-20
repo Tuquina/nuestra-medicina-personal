@@ -5,7 +5,8 @@ import { SiteFooter } from '../../../shared/components/SiteFooter/SiteFooter';
 import { CollectionHero } from '../../../shared/components/CollectionHero/CollectionHero';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
-import { buildContactoSeedContent, CONTACTO_SLUG, readContactoProps } from '../../../shared/cms/helpContent';
+import { CONTACTO_SLUG, readContactoProps } from '../../../shared/cms/helpContent';
+import { CmsPageState } from '../../../shared/cms/CmsPageState';
 import styles from './ContactoPage.module.css';
 
 /** `/contacto` — content comes from the admin's "Ayuda" editor via shared/cms. */
@@ -13,8 +14,9 @@ export function ContactoPage() {
   useDocumentTitle('Contacto · Nuestra Medicina Personal');
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
-  const content = usePublishedContent('CONTACTO', CONTACTO_SLUG, buildContactoSeedContent, preview);
-  const { title, intro, methods } = readContactoProps(content);
+  const page = usePublishedContent('CONTACTO', CONTACTO_SLUG, preview);
+  if (page.status !== 'ready') return <CmsPageState state={page} />;
+  const { title, intro, methods } = readContactoProps(page.content);
 
   return (
     <div>

@@ -1,7 +1,8 @@
 import { useSearchParams } from 'react-router-dom';
 import { ComingSoonCollectionPage } from '../../components/ComingSoonCollectionPage/ComingSoonCollectionPage';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
-import { buildHerramientasSeedContent, HERRAMIENTAS_SLUG, readCollectionProps } from '../../../shared/cms/collectionContent';
+import { HERRAMIENTAS_SLUG, readCollectionProps } from '../../../shared/cms/collectionContent';
+import { CmsPageState } from '../../../shared/cms/CmsPageState';
 
 /** Decorative accents rotate by card index — editable content is just
  * title/description/caption, colors stay a design decision (same
@@ -17,8 +18,9 @@ const CARD_ACCENTS = [
 export function HerramientasPage() {
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
-  const content = usePublishedContent('HERRAMIENTAS', HERRAMIENTAS_SLUG, buildHerramientasSeedContent, preview);
-  const { title, description, cards } = readCollectionProps(content);
+  const page = usePublishedContent('HERRAMIENTAS', HERRAMIENTAS_SLUG, preview);
+  if (page.status !== 'ready') return <CmsPageState state={page} />;
+  const { title, description, cards } = readCollectionProps(page.content);
 
   return (
     <ComingSoonCollectionPage

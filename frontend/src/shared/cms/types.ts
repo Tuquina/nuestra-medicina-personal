@@ -5,13 +5,12 @@
  * see docs/architecture.md §13/§15): a page has a `type`, a `status`, and two
  * JSONB columns — `draft_content` and `published_content` — each holding
  * `{ schemaVersion, sections: [{ id, type, props }] }`. Keeping the exact same
- * shape here means swapping this localStorage-backed store for real API calls
- * later only touches `contentStore.ts`, not the editors or the public pages
- * that read through it.
+ * shape here mirrors the API directly so editors, previews and public
+ * renderers share one versioned content contract.
  *
- * Public pages only ever read `publishedContent` — never `draftContent` —
- * except in an explicit `?preview=1` mode, so unpublished admin edits never
- * leak onto the live site (architecture.md §15).
+ * Public pages read the published endpoint. Explicit admin previews use the
+ * authenticated admin endpoint and render `draftContent`, so unpublished
+ * edits never leak onto the live site (architecture.md §15).
  */
 
 /**
@@ -46,15 +45,49 @@ export interface PageContent {
 }
 
 export interface PageRecord {
+  id: string;
   type: PageType;
   /** 'inicio' for the Home page, the book's slug for a BOOK page. */
   slug: string;
-  bookId?: string;
+  bookId: string | null;
+  title: string;
   status: PageStatus;
   draftContent: PageContent;
   publishedContent: PageContent | null;
   updatedAt: string;
   publishedAt: string | null;
+  createdAt: string;
+}
+
+export interface PublishedPage {
+  id: string;
+  type: PageType;
+  bookId: string | null;
+  slug: string;
+  title: string;
+  content: PageContent;
+  publishedAt: string | null;
+}
+
+export interface PageVersion {
+  id: string;
+  versionNumber: number;
+  content: PageContent;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface PageVersionList {
+  items: PageVersion[];
+  total: number;
+}
+
+export interface PageCreateInput {
+  type: PageType;
+  bookId: string | null;
+  slug: string;
+  title: string;
+  content: PageContent;
 }
 
 export const HOME_SLUG = 'inicio';

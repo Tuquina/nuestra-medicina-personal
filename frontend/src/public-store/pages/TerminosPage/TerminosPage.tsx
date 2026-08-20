@@ -2,8 +2,9 @@ import { useSearchParams } from 'react-router-dom';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { LegalPage } from '../../../shared/components/LegalPage/LegalPage';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
-import { buildTerminosSeedContent, readLegalDocProps, TERMINOS_SLUG } from '../../../shared/cms/legalDocContent';
+import { readLegalDocProps, TERMINOS_SLUG } from '../../../shared/cms/legalDocContent';
 import { LegalDocBody } from '../../../shared/cms/legalDocRenderer';
+import { CmsPageState } from '../../../shared/cms/CmsPageState';
 
 /**
  * `/terminos` — Términos y Condiciones. Content comes from the admin's
@@ -15,8 +16,9 @@ export function TerminosPage() {
   useDocumentTitle('Términos y Condiciones · Nuestra Medicina Personal');
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
-  const content = usePublishedContent('TERMINOS', TERMINOS_SLUG, buildTerminosSeedContent, preview);
-  const doc = readLegalDocProps(content);
+  const page = usePublishedContent('TERMINOS', TERMINOS_SLUG, preview);
+  if (page.status !== 'ready') return <CmsPageState state={page} />;
+  const doc = readLegalDocProps(page.content);
 
   return (
     <LegalPage
