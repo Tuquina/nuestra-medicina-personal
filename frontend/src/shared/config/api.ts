@@ -80,6 +80,11 @@ export const ADMIN_DASHBOARD_URL = `${API_PREFIX}/admin/dashboard`;
 export const ADMIN_SALES_URL = `${API_PREFIX}/admin/sales`;
 export const ADMIN_CUSTOMERS_URL = `${API_PREFIX}/admin/customers`;
 export const ADMIN_SETTINGS_URL = `${API_PREFIX}/admin/settings`;
+export const ADMIN_COUPONS_URL = `${API_PREFIX}/admin/coupons`;
+
+export function adminCouponUrl(couponId: string): string {
+  return `${ADMIN_COUPONS_URL}/${encodeURIComponent(couponId)}`;
+}
 
 export const PAGES_URL = `${API_PREFIX}/pages`;
 
