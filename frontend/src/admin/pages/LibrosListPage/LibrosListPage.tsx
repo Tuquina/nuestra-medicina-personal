@@ -1,46 +1,88 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
 import { Button } from '../../../shared/components/Button/Button';
 import { StatusBadge } from '../../../shared/components/StatusBadge/StatusBadge';
-import { ImagePlaceholder } from '../../../shared/components/ImagePlaceholder/ImagePlaceholder';
+import { BookCover } from '../../../shared/components/BookCover/BookCover';
 import { formatPrice } from '../../../shared/utils/money';
 import { relativeDaysEs } from '../../../shared/utils/relativeTime';
 import { toneForStatus } from '../../../shared/utils/statusTone';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { BOOKS, type Book } from '../../../public-store/data/books';
-import { ADMIN_NOW } from '../../adminNow';
+import { apiRequest, ApiError } from '../../../shared/api/client';
+import { ADMIN_BOOKS_URL, adminBookUrl } from '../../../shared/config/api';
+import type { AdminBook, AdminBookList } from '../../books/types';
 import styles from './LibrosListPage.module.css';
 
-const STATUS_LABEL: Record<Book['status'], string> = {
+const STATUS_LABEL: Record<AdminBook['status'], string> = {
   PUBLISHED: 'Publicado',
   DRAFT: 'Borrador',
   ARCHIVED: 'Archivado',
 };
 
-const VARIANT_ACCENT: Record<Book['variant'], string> = {
+const VARIANT_ACCENT: Record<AdminBook['variant'], string> = {
   gold: 'color-mix(in oklch, var(--color-accent-gold) 50%, transparent)',
   blue: 'color-mix(in oklch, var(--color-sky) 60%, transparent)',
 };
 
-/** `/admin/libros` — every book, any status, built from Admin Libros.dc.html. */
+type BooksState =
+  | { status: 'loading' }
+  | { status: 'ready'; books: AdminBook[] }
+  | { status: 'error' };
+
+/** `/admin/libros` — all books, including drafts and archived records. */
 export function LibrosListPage() {
   useDocumentTitle('Libros · Admin · Nuestra Medicina Personal');
 
+  const [state, setState] = useState<BooksState>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
 
-  const filtered = BOOKS.filter((book) => book.title.toLowerCase().includes(query.trim().toLowerCase()));
+  const retry = useCallback(() => {
+    setState({ status: 'loading' });
+    setAttempt((value) => value + 1);
+  }, []);
 
-  const handleArchive = async (book: Book) => {
-    try {
-      await fetch(`/api/v1/admin/books/${book.slug}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'ARCHIVED' }),
+  useEffect(() => {
+    const controller = new AbortController();
+    apiRequest<AdminBookList>(ADMIN_BOOKS_URL, { signal: controller.signal })
+      .then((response) => setState({ status: 'ready', books: response.items }))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setState({ status: 'error' });
       });
-    } catch {
-      // Mock reconciliation and API error states are part of the final
-      // transport integration.
+    return () => controller.abort();
+  }, [attempt]);
+
+  const books = state.status === 'ready' ? state.books : [];
+  const filtered = books.filter((book) =>
+    book.title.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
+  const handleArchive = async (book: AdminBook) => {
+    setArchivingId(book.id);
+    setActionError(null);
+    try {
+      await apiRequest<void>(adminBookUrl(book.id), { method: 'DELETE' });
+      setState((current) =>
+        current.status === 'ready'
+          ? {
+              status: 'ready',
+              books: current.books.map((item) =>
+                item.id === book.id ? { ...item, status: 'ARCHIVED' } : item,
+              ),
+            }
+          : current,
+      );
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 429) {
+        setActionError('Alcanzaste el límite de operaciones. Esperá un minuto y reintentá.');
+      } else {
+        setActionError('No pudimos archivar el libro. Intentá nuevamente.');
+      }
+    } finally {
+      setArchivingId(null);
     }
   };
 
@@ -48,9 +90,7 @@ export function LibrosListPage() {
     <AdminLayout
       title="Libros"
       headerActions={
-        <Button variant="primary" to="/admin/libros/nuevo">
-          Nuevo libro
-        </Button>
+        <Button variant="primary" to="/admin/libros/nuevo">Nuevo libro</Button>
       }
     >
       <div className={styles.panel}>
@@ -68,8 +108,18 @@ export function LibrosListPage() {
           </span>
         </div>
 
-        {filtered.length === 0 ? (
-          <p className={styles.emptyState}>Ningún libro coincide con "{query}".</p>
+        {actionError && <p className={styles.actionError} role="alert">{actionError}</p>}
+        {state.status === 'loading' ? (
+          <p className={styles.emptyState} role="status">Cargando libros…</p>
+        ) : state.status === 'error' ? (
+          <div className={styles.emptyState} role="alert">
+            <p>No pudimos cargar los libros.</p>
+            <Button variant="secondary" onClick={retry}>Reintentar</Button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className={styles.emptyState}>
+            {query ? `Ningún libro coincide con “${query}”.` : 'Todavía no hay libros.'}
+          </p>
         ) : (
           <div className={styles.tableScroll}>
             <table className={styles.table}>
@@ -86,13 +136,13 @@ export function LibrosListPage() {
               </thead>
               <tbody>
                 {filtered.map((book) => (
-                  <tr key={book.slug}>
+                  <tr key={book.id}>
                     <td className={styles.cover}>
                       {book.hasCover ? (
-                        <ImagePlaceholder
+                        <BookCover
+                          mediaId={book.coverMediaId}
+                          title={book.title}
                           accent={VARIANT_ACCENT[book.variant]}
-                          alt={book.coverCaption}
-                          aspectRatio="2 / 3"
                           borderRadius="3px"
                         />
                       ) : (
@@ -107,18 +157,20 @@ export function LibrosListPage() {
                         {STATUS_LABEL[book.status]}
                       </StatusBadge>
                     </td>
-                    <td className={styles.dateCell}>{relativeDaysEs(book.updatedAtISO, ADMIN_NOW)}</td>
+                    <td className={styles.dateCell}>{relativeDaysEs(book.updatedAt, new Date())}</td>
                     <td className={styles.actions}>
-                      <Link to={`/admin/libros/${book.slug}/editar`} className={styles.editLink}>
-                        Editar
-                      </Link>
-                      {book.status === 'PUBLISHED' ? (
-                        <Link to="/admin/paginas" className={styles.secondaryLink}>
-                          Editar página
-                        </Link>
-                      ) : (
-                        <button type="button" className={styles.secondaryLink} onClick={() => handleArchive(book)}>
-                          Archivar
+                      <Link to={`/admin/libros/${book.slug}/editar`} className={styles.editLink}>Editar</Link>
+                      {book.status === 'PUBLISHED' && (
+                        <Link to="/admin/paginas" className={styles.secondaryLink}>Editar página</Link>
+                      )}
+                      {book.status !== 'ARCHIVED' && (
+                        <button
+                          type="button"
+                          className={styles.secondaryLink}
+                          disabled={archivingId === book.id}
+                          onClick={() => handleArchive(book)}
+                        >
+                          {archivingId === book.id ? 'Archivando…' : 'Archivar'}
                         </button>
                       )}
                     </td>

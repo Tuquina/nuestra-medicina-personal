@@ -116,6 +116,12 @@
   cursor: pointer;
   font-family: var(--font-sans);
   padding: 0;
+  margin-left: 12px;
+}
+
+.secondaryLink:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .emptyState {
@@ -123,4 +129,16 @@
   text-align: center;
   color: var(--color-admin-text-muted);
   font-size: 14px;
+}
+
+.emptyState p {
+  margin: 0 0 16px;
+}
+
+.actionError {
+  margin: 0;
+  padding: 10px 20px;
+  background: var(--color-status-danger-bg);
+  color: var(--color-status-danger-icon);
+  font-size: 13px;
 }

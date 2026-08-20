@@ -28,6 +28,32 @@
   margin: 0 0 4px;
 }
 
+.coverControls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.fileInput {
+  display: none;
+}
+
+.captionLabel {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-admin-text-muted);
+}
+
+.captionInput {
+  width: min(360px, 100%);
+  padding: 8px 10px;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 5px;
+  font-family: var(--font-sans);
+}
+
 .fileCard {
   display: flex;
   align-items: center;
@@ -61,4 +87,25 @@
   cursor: pointer;
   font-family: var(--font-sans);
   padding: 0;
+}
+
+.linkButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.fileHint,
+.pendingSave,
+.error {
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+.fileHint,
+.pendingSave {
+  color: var(--color-admin-text-muted);
+}
+
+.error {
+  color: var(--color-status-danger-icon);
 }
