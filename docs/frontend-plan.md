@@ -300,9 +300,12 @@ and the sidebar are the two places to extend.
 - Checkout now creates the order, stores its UUID for the external handoff and
   verifies the authoritative order after Mercado Pago returns. URL status
   parameters never unlock an approved result by themselves.
-- **Next real milestone for these screens**: integrate administrative books,
-  eBook files and multimedia, then replace the remaining reporting, settings
-  and CMS local adapters with authenticated API calls.
+- Administrative books now load and persist complete `BookInput` contracts;
+  archive uses `DELETE`, and cover/media/eBook uploads use their dedicated
+  multipart endpoints without exposing private file paths.
+- **Next real milestone for these screens**: connect dashboard, sales,
+  customers and settings, then replace the remaining CMS local adapters with
+  authenticated API calls.
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing
