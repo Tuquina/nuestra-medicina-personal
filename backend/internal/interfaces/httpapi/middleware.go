@@ -18,10 +18,15 @@ import (
 type contextKey string
 
 const (
-	requestIDKey   contextKey = "request_id"
-	userIDKey      contextKey = "user_id"
-	currentUserKey contextKey = "current_user"
+	requestIDKey       contextKey = "request_id"
+	userIDKey          contextKey = "user_id"
+	currentUserKey     contextKey = "current_user"
+	requestLogStateKey contextKey = "request_log_state"
 )
+
+type requestLogState struct {
+	userID string
+}
 
 type AdminAuthorizer interface {
 	AuthorizeAdmin(context.Context, string) (string, error)
@@ -71,15 +76,22 @@ func withRecovery(logger *slog.Logger, next http.Handler) http.Handler {
 func withLogging(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
+		state := &requestLogState{}
+		r = r.WithContext(context.WithValue(r.Context(), requestLogStateKey, state))
 		wrapped := &responseRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(wrapped, r)
+		endpoint := r.Pattern
+		if endpoint == "" {
+			endpoint = "unmatched"
+		}
 		logger.Info("http request",
 			"request_id", requestID(r.Context()),
 			"method", r.Method,
-			"endpoint", r.URL.Path,
+			"endpoint", endpoint,
 			"status_code", wrapped.status,
 			"duration_ms", time.Since(started).Milliseconds(),
-			"user_id", userID(r.Context()),
+			"response_bytes", wrapped.bytes,
+			"user_id", state.userID,
 		)
 	})
 }
@@ -167,6 +179,7 @@ func requireAdmin(logger *slog.Logger, authorizer AdminAuthorizer, cookieName st
 			writeError(w, http.StatusInternalServerError, "AUTHORIZATION_FAILED", "Authorization could not be verified", nil)
 			return
 		}
+		setRequestUserID(r.Context(), userID)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userIDKey, userID)))
 	})
 }
@@ -188,6 +201,7 @@ func requireUser(logger *slog.Logger, authentication AuthenticationService, cook
 			writeError(w, http.StatusInternalServerError, "AUTHENTICATION_FAILED", "Authentication could not be verified", nil)
 			return
 		}
+		setRequestUserID(r.Context(), user.ID)
 		ctx := context.WithValue(r.Context(), userIDKey, user.ID)
 		ctx = context.WithValue(ctx, currentUserKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -196,12 +210,33 @@ func requireUser(logger *slog.Logger, authentication AuthenticationService, cook
 
 type responseRecorder struct {
 	http.ResponseWriter
-	status int
+	status      int
+	bytes       int
+	wroteHeader bool
 }
 
 func (w *responseRecorder) WriteHeader(status int) {
+	if w.wroteHeader {
+		return
+	}
+	w.wroteHeader = true
 	w.status = status
 	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *responseRecorder) Write(value []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	written, err := w.ResponseWriter.Write(value)
+	w.bytes += written
+	return written, err
+}
+
+func setRequestUserID(ctx context.Context, value string) {
+	if state, ok := ctx.Value(requestLogStateKey).(*requestLogState); ok {
+		state.userID = value
+	}
 }
 
 func requestID(ctx context.Context) string {

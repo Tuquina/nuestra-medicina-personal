@@ -101,8 +101,8 @@ func NewRouter(dependencies Dependencies) http.Handler {
 
 	var handler http.Handler = limitRequestTarget(dependencies.MaxRequestURIBytes, root)
 	handler = requireJSON(handler)
-	handler = withLogging(dependencies.Logger, handler)
 	handler = withRecovery(dependencies.Logger, handler)
+	handler = withLogging(dependencies.Logger, handler)
 	handler = withRequestID(handler)
 	handler = withSecurityHeaders(dependencies.SecureCookies, handler)
 	return handler

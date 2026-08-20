@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -119,5 +121,57 @@ func TestRouterSanitizesRequestIDAndAddsProductionHeaders(t *testing.T) {
 	}
 	if recorder.Header().Get("Strict-Transport-Security") == "" || recorder.Header().Get("Content-Security-Policy") == "" {
 		t.Fatalf("missing production security headers: %#v", recorder.Header())
+	}
+}
+
+func TestRouterLogsAuthenticatedUserAndStableEndpoint(t *testing.T) {
+	var output bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	router := NewRouter(Dependencies{
+		Logger: logger, Books: bookServiceStub{}, Authentication: &authServiceStub{},
+		Library: libraryServiceStub{}, Database: healthStub{}, AdminAuthorizer: authorizerStub{},
+		BaseURL: "http://localhost:5173", SessionCookie: "nmp_session", EbookInternalPrefix: "/_protected/ebooks",
+	})
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-123/download", nil)
+	request.Header.Set("X-Request-ID", "request-123")
+	request.AddCookie(&http.Cookie{Name: "nmp_session", Value: "opaque-token"})
+	router.ServeHTTP(recorder, request)
+
+	var entry map[string]any
+	if err := json.Unmarshal(output.Bytes(), &entry); err != nil {
+		t.Fatalf("decode request log: %v: %s", err, output.String())
+	}
+	if entry["request_id"] != "request-123" || entry["user_id"] != "user-1" {
+		t.Fatalf("request correlation was lost: %#v", entry)
+	}
+	if entry["endpoint"] != "GET /api/v1/books/{id}/download" || entry["status_code"] != float64(http.StatusOK) {
+		t.Fatalf("unstable endpoint or status: %#v", entry)
+	}
+	if _, ok := entry["response_bytes"]; !ok {
+		t.Fatalf("response size is missing: %#v", entry)
+	}
+}
+
+func TestLoggingCapturesRecoveredPanicAsServerError(t *testing.T) {
+	var output bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	panicking := http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("boom") })
+	handler := withRequestID(withLogging(logger, withRecovery(logger, panicking)))
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/panic", nil))
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected recovered 500, got %d", recorder.Code)
+	}
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected panic and request logs, got %d: %s", len(lines), output.String())
+	}
+	var entry map[string]any
+	if err := json.Unmarshal([]byte(lines[1]), &entry); err != nil {
+		t.Fatal(err)
+	}
+	if entry["status_code"] != float64(http.StatusInternalServerError) {
+		t.Fatalf("recovered status was not logged: %#v", entry)
 	}
 }
