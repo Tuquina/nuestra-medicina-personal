@@ -1,8 +1,8 @@
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
-import { Button } from '../../../shared/components/Button/Button';
 import { FormField } from '../../../shared/components/FormField/FormField';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { useEditablePage } from '../../../shared/cms/useEditablePage';
+import { CmsEditorActions, CmsEditorLoadState } from '../../components/CmsEditorTools/CmsEditorTools';
 import { buildHomeSeedContent, type AboutProps } from '../../../shared/cms/homeContent';
 import { HOME_SLUG } from '../../../shared/cms/types';
 import f from '../../../shared/components/FormField/FormField.module.css';
@@ -21,11 +21,13 @@ const DEFAULT_ABOUT: AboutProps = { eyebrow: 'Sobre el proyecto', title: '', bio
 export function SobreElProyectoPage() {
   useDocumentTitle('Sobre el proyecto · Admin · Nuestra Medicina Personal');
 
-  const { content, setContent, saveDraftNow, publish, dirtySincePublish } = useEditablePage(
-    'HOME',
-    HOME_SLUG,
-    buildHomeSeedContent,
-  );
+  const editor = useEditablePage({
+    type: 'HOME',
+    slug: HOME_SLUG,
+    title: 'Inicio',
+    seed: buildHomeSeedContent,
+  });
+  const { content, setContent } = editor;
 
   const aboutSection = content.sections.find((section) => section.type === 'about');
   const about = (aboutSection?.props as AboutProps | undefined) ?? DEFAULT_ABOUT;
@@ -40,30 +42,13 @@ export function SobreElProyectoPage() {
     });
   };
 
+  if (editor.loadStatus !== 'ready') {
+    return <AdminLayout title="Sobre el proyecto"><CmsEditorLoadState editor={editor} /></AdminLayout>;
+  }
+
   return (
     <AdminLayout title="Sobre el proyecto">
-      <div className={styles.toolbar}>
-        <span className={[styles.statusBadge, dirtySincePublish ? styles.statusUnsaved : styles.statusPublished].join(' ')}>
-          {dirtySincePublish ? 'Cambios sin publicar' : 'Publicado'}
-        </span>
-        <div className={styles.toolbarActions}>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              saveDraftNow(content);
-              window.open('/?preview=1#sobre-el-proyecto', '_blank', 'noopener');
-            }}
-          >
-            Vista previa
-          </Button>
-          <Button variant="secondary" onClick={() => saveDraftNow(content)}>
-            Guardar borrador
-          </Button>
-          <Button variant="primary" onClick={publish}>
-            Publicar
-          </Button>
-        </div>
-      </div>
+      <CmsEditorActions editor={editor} content={content} publicPath="/?preview=1#sobre-el-proyecto" />
 
       {!aboutSection ? (
         <div className={styles.section}>

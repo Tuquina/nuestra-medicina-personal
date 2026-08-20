@@ -6,7 +6,7 @@
  * would plausibly return) — swapping in real `fetch` calls later only
  * touches this file, not `CuponesPage.tsx`.
  *
- * Unlike `shared/cms/contentStore.ts` this has no draft/published split
+ * Unlike the CMS pages API this has no draft/published split
  * — a coupon isn't "page content" with a public/preview distinction, it's
  * a plain admin-managed resource, so writes apply immediately.
  */

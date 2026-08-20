@@ -1,0 +1,95 @@
+.loadState {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--color-admin-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: var(--radius-sm);
+}
+
+.loadState p {
+  margin: 0 0 16px;
+}
+
+.wrapper {
+  margin-bottom: 20px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status {
+  border-radius: 14px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.unsaved {
+  color: var(--color-status-pending-icon);
+  background: var(--color-status-pending-bg);
+}
+
+.published {
+  color: var(--color-status-success-icon);
+  background: var(--color-status-success-bg);
+}
+
+.historyButton {
+  padding: 9px 14px;
+  border: 1px solid var(--color-admin-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.historyButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.message {
+  margin: 10px 0 0;
+  color: var(--color-admin-text-muted);
+  font-size: 13px;
+}
+
+.versionList {
+  display: grid;
+  gap: 12px;
+}
+
+.versionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-admin-border);
+}
+
+.versionRow div {
+  display: grid;
+  gap: 3px;
+}
+
+.versionRow span {
+  color: var(--color-admin-text-muted);
+  font-size: 12px;
+}

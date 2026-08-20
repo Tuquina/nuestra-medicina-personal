@@ -275,7 +275,7 @@ function LibroFormContent({ initialBook }: { initialBook: AdminBook | null }) {
           />
         )}
         {activeTab === 'manuscript' && <ManuscritoTab bookTitle={form.title || 'Nuevo libro'} />}
-        {activeTab === 'page' && <PaginaVentaTab slug={form.slug} bookTitle={form.title || 'Nuevo libro'} />}
+        {activeTab === 'page' && <PaginaVentaTab bookId={savedBook?.id ?? null} slug={form.slug} bookTitle={form.title || 'Nuevo libro'} />}
         {activeTab === 'seo' && <SeoTab form={form} onChange={updateField} />}
       </div>
     </AdminLayout>
