@@ -316,6 +316,13 @@ type link struct {
 func validateBlock(block Block) error {
 	switch block.Type {
 	case "hero":
+		var shape map[string]json.RawMessage
+		if err := json.Unmarshal(block.Props, &shape); err != nil {
+			return err
+		}
+		if _, isHomeHero := shape["headingLine1"]; isHomeHero {
+			return validateHomeHero(block.Props)
+		}
 		var props heroProps
 		if err := strictDecode(block.Props, &props); err != nil {
 			return err
@@ -432,6 +439,26 @@ func validateBlock(block Block) error {
 			return err
 		}
 		return validateLegalDocument(props)
+	case "gallery":
+		return validateGallery(block.Props)
+	case "manifesto":
+		return validateManifesto(block.Props)
+	case "featured-books":
+		return validateFeaturedBooks(block.Props)
+	case "collection-teaser":
+		return validateCollectionTeaser(block.Props)
+	case "about":
+		return validateAbout(block.Props)
+	case "newsletter":
+		return validateNewsletter(block.Props)
+	case "title", "text", "image", "quote":
+		return validateSimpleHomeBlock(block.Type, block.Props)
+	case "divider":
+		return validateDivider(block.Props)
+	case "spacer":
+		return validateSpacer(block.Props)
+	case "book-landing":
+		return validateBookLanding(block.Props)
 	case "cta":
 		var props ctaProps
 		if err := strictDecode(block.Props, &props); err != nil {
