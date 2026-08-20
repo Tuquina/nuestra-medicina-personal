@@ -35,3 +35,22 @@
 .contentWide {
   max-width: none;
 }
+
+.resourceState {
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--color-admin-text-muted);
+}
+
+.resourceState p {
+  margin: 0 0 16px;
+}
+
+.saveError {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--color-status-danger-bg);
+  color: var(--color-status-danger-icon);
+  font-size: 13px;
+}

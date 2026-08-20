@@ -1,71 +1,119 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
 import { Button } from '../../../shared/components/Button/Button';
 import { Dialog } from '../../../shared/components/Dialog/Dialog';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { stripedPlaceholder } from '../../../shared/utils/placeholderPattern';
-import { MEDIA_ITEMS, THUMB_ACCENTS, type MediaItem } from '../../data/media';
+import { apiRequest, ApiError } from '../../../shared/api/client';
+import { ADMIN_MEDIA_URL, adminMediaUrl } from '../../../shared/config/api';
+import type { MediaAsset, MediaListResponse } from '../../media/types';
 import styles from './MultimediaPage.module.css';
 
-const FILTERS = ['Todos', 'Imágenes', 'Portadas'] as const;
-type Filter = (typeof FILTERS)[number];
+type MediaState =
+  | { status: 'loading' }
+  | { status: 'ready'; items: MediaAsset[] }
+  | { status: 'error' };
 
 function fileSizeLabel(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** `/admin/multimedia` — the media library grid + metadata drawer, built from Admin Multimedia.dc.html. */
+function dateLabel(value: string): string {
+  return new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
+/** `/admin/multimedia` — real media metadata and image files from the backend. */
 export function MultimediaPage() {
   useDocumentTitle('Multimedia · Admin · Nuestra Medicina Personal');
 
-  const [items, setItems] = useState<MediaItem[]>(MEDIA_ITEMS);
-  const [filter, setFilter] = useState<Filter>('Todos');
+  const [state, setState] = useState<MediaState>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [altTextById, setAltTextById] = useState<Record<number, string>>({});
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
+  const [uploading, setUploading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = items.filter((item) => {
-    const matchesFilter = filter === 'Todos' || item.category === filter;
-    const matchesQuery = !query.trim() || item.name.toLowerCase().includes(query.trim().toLowerCase());
-    return matchesFilter && matchesQuery;
-  });
+  const retry = useCallback(() => {
+    setState({ status: 'loading' });
+    setAttempt((value) => value + 1);
+  }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    apiRequest<MediaListResponse>(ADMIN_MEDIA_URL, { signal: controller.signal })
+      .then((response) => setState({ status: 'ready', items: response.items }))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setState({ status: 'error' });
+      });
+    return () => controller.abort();
+  }, [attempt]);
+
+  const items = state.status === 'ready' ? state.items : [];
+  const filtered = items.filter((item) =>
+    item.originalFilename.toLowerCase().includes(query.trim().toLowerCase()),
+  );
   const selected = items.find((item) => item.id === selectedId);
 
-  const handleUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const nextId = Math.max(0, ...items.map((item) => item.id)) + 1;
-    const newItems: MediaItem[] = Array.from(files).map((file, index) => ({
-      id: nextId + index,
-      name: file.name,
-      type: 'Imagen',
-      category: 'Imágenes',
-      dims: '—',
-      sizeLabel: fileSizeLabel(file.size),
-      dateLabel: 'Hoy',
-      usedIn: '—',
-      accent: THUMB_ACCENTS[(nextId + index) % THUMB_ACCENTS.length],
-    }));
-    // No object storage backend yet (architecture.md §16-17) — the files
-    // themselves go nowhere, but the library reflects that an upload
-    // happened rather than silently doing nothing.
-    setItems((prev) => [...prev, ...newItems]);
+  const handleUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+    setUploading(true);
+    setActionError(null);
+    try {
+      const uploaded = await Promise.all(
+        files.map((file) => {
+          const body = new FormData();
+          body.append('file', file);
+          return apiRequest<MediaAsset>(ADMIN_MEDIA_URL, { method: 'POST', body });
+        }),
+      );
+      setState((current) =>
+        current.status === 'ready'
+          ? { status: 'ready', items: [...uploaded, ...current.items] }
+          : { status: 'ready', items: uploaded },
+      );
+      setSelectedId(uploaded[0]?.id ?? null);
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 413) {
+        setActionError('La imagen supera el límite permitido.');
+      } else if (error instanceof ApiError && error.status === 422) {
+        setActionError('Sólo se aceptan imágenes JPEG o PNG válidas.');
+      } else if (error instanceof ApiError && error.status === 429) {
+        setActionError('Alcanzaste el límite de cargas. Esperá un minuto y reintentá.');
+      } else {
+        setActionError('No pudimos subir los archivos. Intentá nuevamente.');
+      }
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDelete = async () => {
     if (!selected) return;
     setConfirmDelete(false);
-    setItems((prev) => prev.filter((item) => item.id !== selected.id));
-    setSelectedId(null);
+    setActionError(null);
     try {
-      await fetch(`/api/v1/admin/media/${selected.id}`, { method: 'DELETE' });
-    } catch {
-      // Mock reconciliation and API error states are part of the final
-      // transport integration.
+      await apiRequest<void>(adminMediaUrl(selected.id), { method: 'DELETE' });
+      setState((current) =>
+        current.status === 'ready'
+          ? { status: 'ready', items: current.items.filter((item) => item.id !== selected.id) }
+          : current,
+      );
+      setSelectedId(null);
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.code === 'MEDIA_IN_USE') {
+        setActionError('Este archivo está siendo utilizado y no se puede eliminar.');
+      } else if (error instanceof ApiError && error.status === 429) {
+        setActionError('Alcanzaste el límite de operaciones. Esperá un minuto y reintentá.');
+      } else {
+        setActionError('No pudimos eliminar el archivo. Intentá nuevamente.');
+      }
     }
   };
 
@@ -77,17 +125,21 @@ export function MultimediaPage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png"
             multiple
-            onChange={(e) => handleUpload(e.target.files)}
-            style={{ display: 'none' }}
+            className={styles.fileInput}
+            onChange={(event) => {
+              void handleUpload(Array.from(event.currentTarget.files ?? []));
+              event.currentTarget.value = '';
+            }}
           />
-          <Button variant="primary" onClick={() => fileInputRef.current?.click()}>
-            Subir archivos
+          <Button variant="primary" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+            {uploading ? 'Subiendo…' : 'Subir archivos'}
           </Button>
         </>
       }
     >
+      {actionError && <p className={styles.actionError} role="alert">{actionError}</p>}
       <div className={styles.body}>
         <main className={styles.main}>
           <div className={styles.toolbar}>
@@ -95,26 +147,23 @@ export function MultimediaPage() {
               type="text"
               placeholder="Buscar archivos..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(event) => setQuery(event.target.value)}
               className={styles.search}
               aria-label="Buscar archivos"
             />
-            <div className={styles.filterRow}>
-              {FILTERS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setFilter(option)}
-                  className={[styles.filterButton, filter === option ? styles.filterButtonActive : ''].join(' ')}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {filtered.length === 0 && query ? (
-            <p className={styles.emptyState}>Ningún archivo coincide con "{query}".</p>
+          {state.status === 'loading' ? (
+            <p className={styles.emptyState} role="status">Cargando archivos…</p>
+          ) : state.status === 'error' ? (
+            <div className={styles.emptyState} role="alert">
+              <p>No pudimos cargar la biblioteca multimedia.</p>
+              <Button variant="secondary" onClick={retry}>Reintentar</Button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className={styles.emptyState}>
+              {query ? `Ningún archivo coincide con “${query}”.` : 'Todavía no hay archivos multimedia.'}
+            </p>
           ) : (
             <div className={styles.grid}>
               {filtered.map((item) => (
@@ -124,17 +173,12 @@ export function MultimediaPage() {
                   onClick={() => setSelectedId(item.id)}
                   className={[styles.tile, item.id === selectedId ? styles.tileSelected : ''].join(' ')}
                 >
-                  <div
-                    className={styles.tileThumb}
-                    style={{ background: stripedPlaceholder(item.accent) }}
-                  />
-                  <span className={styles.tileName}>{item.name}</span>
+                  <img className={styles.tileThumb} src={item.url} alt="" loading="lazy" />
+                  <span className={styles.tileName}>{item.originalFilename}</span>
                 </button>
               ))}
               <button type="button" className={styles.addTile} onClick={() => fileInputRef.current?.click()}>
-                <span className={styles.addTilePlus} aria-hidden="true">
-                  +
-                </span>
+                <span className={styles.addTilePlus} aria-hidden="true">+</span>
                 <span className="sr-only">Subir archivo</span>
               </button>
             </div>
@@ -144,49 +188,27 @@ export function MultimediaPage() {
         <aside className={styles.drawer}>
           {selected ? (
             <>
-              <div className={styles.drawerThumb} style={{ background: stripedPlaceholder(selected.accent) }} />
-              <h2 className={styles.drawerTitle}>{selected.name}</h2>
+              <img className={styles.drawerThumb} src={selected.url} alt="" />
+              <h2 className={styles.drawerTitle}>{selected.originalFilename}</h2>
               <div className={styles.drawerFields}>
                 <div>
                   <p className={styles.drawerFieldLabel}>Tipo</p>
-                  <p className={styles.drawerFieldValue}>{selected.type}</p>
+                  <p className={styles.drawerFieldValue}>{selected.mimeType}</p>
                 </div>
                 <div>
                   <p className={styles.drawerFieldLabel}>Dimensiones</p>
-                  <p className={styles.drawerFieldValue}>{selected.dims}</p>
+                  <p className={styles.drawerFieldValue}>{selected.width} × {selected.height} px</p>
                 </div>
                 <div>
                   <p className={styles.drawerFieldLabel}>Peso</p>
-                  <p className={styles.drawerFieldValue}>{selected.sizeLabel}</p>
+                  <p className={styles.drawerFieldValue}>{fileSizeLabel(selected.sizeBytes)}</p>
                 </div>
                 <div>
                   <p className={styles.drawerFieldLabel}>Fecha</p>
-                  <p className={styles.drawerFieldValue}>{selected.dateLabel}</p>
-                </div>
-                <div>
-                  <p className={styles.drawerFieldLabel}>Usado en</p>
-                  <p className={styles.drawerFieldValue}>{selected.usedIn}</p>
-                </div>
-                <div>
-                  <label htmlFor="altText" className={styles.altLabel}>
-                    Texto alternativo
-                  </label>
-                  <textarea
-                    id="altText"
-                    rows={3}
-                    placeholder="Describí brevemente la imagen para personas que utilizan lectores de pantalla."
-                    className={styles.altTextarea}
-                    value={altTextById[selected.id] ?? ''}
-                    onChange={(e) => setAltTextById((prev) => ({ ...prev, [selected.id]: e.target.value }))}
-                  />
+                  <p className={styles.drawerFieldValue}>{dateLabel(selected.createdAt)}</p>
                 </div>
               </div>
-              <Button
-                variant="danger"
-                fullWidth
-                className={styles.deleteButton}
-                onClick={() => setConfirmDelete(true)}
-              >
+              <Button variant="danger" fullWidth className={styles.deleteButton} onClick={() => setConfirmDelete(true)}>
                 Eliminar archivo
               </Button>
             </>
@@ -202,18 +224,12 @@ export function MultimediaPage() {
         title="¿Eliminar este archivo?"
         actions={
           <>
-            <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
-              Cancelar
-            </Button>
-            <Button variant="danger" onClick={handleDelete}>
-              Eliminar
-            </Button>
+            <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancelar</Button>
+            <Button variant="danger" onClick={handleDelete}>Eliminar</Button>
           </>
         }
       >
-        {selected?.usedIn && selected.usedIn !== '—'
-          ? `Este archivo está en uso (${selected.usedIn}). Eliminarlo puede afectar esa página.`
-          : 'Esta acción no se puede deshacer.'}
+        El servidor rechazará la operación si una portada o página todavía utiliza esta imagen.
       </Dialog>
     </AdminLayout>
   );

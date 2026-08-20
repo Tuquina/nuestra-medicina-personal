@@ -51,6 +51,29 @@ export function InformacionTab({ form, onChange }: InformacionTabProps) {
         </FormField>
       </div>
 
+      <div className={[f.row, f.row2].join(' ')}>
+        <FormField label="Colección" htmlFor="category">
+          <input
+            id="category"
+            type="text"
+            className={f.control}
+            value={form.category}
+            onChange={(e) => onChange('category', e.target.value)}
+          />
+        </FormField>
+        <FormField label="Estilo visual" htmlFor="variant">
+          <select
+            id="variant"
+            className={f.control}
+            value={form.variant}
+            onChange={(e) => onChange('variant', e.target.value as LibroFormState['variant'])}
+          >
+            <option value="blue">Azul</option>
+            <option value="gold">Dorado</option>
+          </select>
+        </FormField>
+      </div>
+
       <FormField label="Descripción breve" htmlFor="shortDescription">
         <textarea
           id="shortDescription"
@@ -99,7 +122,7 @@ export function InformacionTab({ form, onChange }: InformacionTabProps) {
         </FormField>
       </div>
 
-      <div className={[f.row, f.row3].join(' ')}>
+      <div className={[f.row, f.row2].join(' ')}>
         <FormField label="ISBN" htmlFor="isbn">
           <input
             id="isbn"
@@ -110,15 +133,6 @@ export function InformacionTab({ form, onChange }: InformacionTabProps) {
             onChange={(e) => onChange('isbn', e.target.value)}
           />
         </FormField>
-        <FormField label="Fecha de publicación" htmlFor="pubDate">
-          <input
-            id="pubDate"
-            type="text"
-            className={f.control}
-            value={form.publicationDateLabel}
-            onChange={(e) => onChange('publicationDateLabel', e.target.value)}
-          />
-        </FormField>
         <FormField label="Formato" htmlFor="format">
           <input
             id="format"
@@ -126,6 +140,27 @@ export function InformacionTab({ form, onChange }: InformacionTabProps) {
             className={f.control}
             value={form.format}
             onChange={(e) => onChange('format', e.target.value)}
+          />
+        </FormField>
+      </div>
+
+      <div className={[f.row, f.row2].join(' ')}>
+        <FormField label="Fecha exacta" htmlFor="publicationDate">
+          <input
+            id="publicationDate"
+            type="date"
+            className={f.control}
+            value={form.publicationDate}
+            onChange={(e) => onChange('publicationDate', e.target.value)}
+          />
+        </FormField>
+        <FormField label="Fecha visible" htmlFor="pubDateLabel">
+          <input
+            id="pubDateLabel"
+            type="text"
+            className={f.control}
+            value={form.publicationDateLabel}
+            onChange={(e) => onChange('publicationDateLabel', e.target.value)}
           />
         </FormField>
       </div>
