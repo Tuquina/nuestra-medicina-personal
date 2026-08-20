@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ImagePlaceholder } from '../ImagePlaceholder/ImagePlaceholder';
+import { BookCover } from '../BookCover/BookCover';
 import { formatPrice } from '../../utils/money';
 import type { Book } from '../../../public-store/data/books';
 import styles from './BookCard.module.css';
@@ -24,11 +24,12 @@ interface BookCardProps {
 export function BookCard({ book, compact = false }: BookCardProps) {
   return (
     <article className={[styles.card, compact ? styles.compact : ''].join(' ')}>
-      <ImagePlaceholder
+      <BookCover
         className={styles.cover}
+        mediaId={book.coverMediaId}
+        title={book.title}
         accent={VARIANT_ACCENT[book.variant]}
         caption={book.coverCaption}
-        aspectRatio="2 / 3"
         borderRadius="4px"
       />
       <span className={[styles.badge, VARIANT_BADGE_CLASS[book.variant]].join(' ')}>

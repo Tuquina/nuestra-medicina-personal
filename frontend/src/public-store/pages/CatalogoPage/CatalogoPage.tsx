@@ -5,7 +5,8 @@ import { SiteFooter } from '../../../shared/components/SiteFooter/SiteFooter';
 import { CollectionHero } from '../../../shared/components/CollectionHero/CollectionHero';
 import { BookCard } from '../../../shared/components/BookCard/BookCard';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { PUBLISHED_BOOKS, CATALOG_FILTERS, type CatalogFilter } from '../../data/books';
+import { useCatalog } from '../../catalog/useCatalog';
+import { CATALOG_FILTERS, type CatalogFilter } from '../../data/books';
 import styles from './CatalogoPage.module.css';
 
 /** `/libros` — the full catalog, filterable by collection. */
@@ -13,11 +14,15 @@ export function CatalogoPage() {
   useDocumentTitle('Libros · Nuestra Medicina Personal');
 
   const [filter, setFilter] = useState<CatalogFilter>('Todos');
+  const catalog = useCatalog();
 
-  const visibleBooks =
-    filter === 'Todos' ? PUBLISHED_BOOKS : PUBLISHED_BOOKS.filter((book) => book.category === filter);
+  const visibleBooks = catalog.status === 'ready'
+    ? filter === 'Todos'
+      ? catalog.books
+      : catalog.books.filter((book) => book.category === filter)
+    : [];
   const showComingSoon = filter === 'Todos';
-  const showEmpty = visibleBooks.length === 0 && !showComingSoon;
+  const showEmpty = catalog.status === 'ready' && visibleBooks.length === 0;
 
   return (
     <div className={styles.page}>
@@ -51,18 +56,33 @@ export function CatalogoPage() {
       </section>
 
       <section className={styles.gridSection}>
-        {showEmpty ? (
+        {catalog.status === 'loading' ? (
+          <div className={styles.resourceState} role="status">
+            Cargando libros…
+          </div>
+        ) : catalog.status === 'error' ? (
+          <div className={styles.resourceState} role="alert">
+            <p>No pudimos cargar los libros.</p>
+            <button type="button" className={styles.retryButton} onClick={catalog.retry}>
+              Reintentar
+            </button>
+          </div>
+        ) : showEmpty ? (
           <div className={styles.empty}>
             <p className={styles.emptyText}>
-              Todavía no hay libros publicados en esta categoría.
+              {filter === 'Todos'
+                ? 'Todavía no hay libros publicados.'
+                : 'Todavía no hay libros publicados en esta categoría.'}
             </p>
-            <button
-              type="button"
-              className={styles.emptyLink}
-              onClick={() => setFilter('Todos')}
-            >
-              Ver todos los libros →
-            </button>
+            {filter !== 'Todos' && (
+              <button
+                type="button"
+                className={styles.emptyLink}
+                onClick={() => setFilter('Todos')}
+              >
+                Ver todos los libros →
+              </button>
+            )}
           </div>
         ) : (
           <div className={styles.grid}>
@@ -70,7 +90,7 @@ export function CatalogoPage() {
               <BookCard key={book.slug} book={book} compact />
             ))}
 
-            {showComingSoon && (
+            {showComingSoon && visibleBooks.length > 0 && (
               <article className={styles.comingSoon}>
                 <div className={styles.comingSoonCover}>
                   <span className={styles.comingSoonCaption}>

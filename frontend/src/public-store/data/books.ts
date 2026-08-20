@@ -7,6 +7,7 @@
 export type BookStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface Book {
+  id: string;
   slug: string;
   title: string;
   subtitle: string;
@@ -22,6 +23,7 @@ export interface Book {
   format: string;
   isbn: string;
   publicationDateLabel: string;
+  coverMediaId: string | null;
   coverCaption: string;
   status: BookStatus;
   /** ISO date — admin's "Última actualización" column. */
@@ -37,6 +39,7 @@ export interface Book {
  */
 export const BOOKS: Book[] = [
   {
+    id: '20000000-0000-4000-8000-000000000001',
     slug: 'el-poder-de-tu-historia',
     title: 'El poder de tu historia',
     subtitle: 'Escribir para mirar hacia adentro y reconocer tu propia historia.',
@@ -50,12 +53,14 @@ export const BOOKS: Book[] = [
     format: 'PDF · EPUB',
     isbn: '978-0-00-000000-0 (demo)',
     publicationDateLabel: 'Marzo 2026',
+    coverMediaId: null,
     coverCaption: 'Portada — El poder de tu historia',
     status: 'PUBLISHED',
     updatedAtISO: '2026-08-16',
     hasCover: true,
   },
   {
+    id: '20000000-0000-4000-8000-000000000002',
     slug: 'la-escritura-terapeutica-entra-a-la-escuela',
     title: 'La escritura terapéutica entra a la escuela',
     subtitle: 'Una guía para llevar la escritura reflexiva al aula.',
@@ -69,12 +74,14 @@ export const BOOKS: Book[] = [
     format: 'PDF · EPUB',
     isbn: '978-0-00-000001-0 (demo)',
     publicationDateLabel: 'Mayo 2026',
+    coverMediaId: null,
     coverCaption: 'Portada — La escritura terapéutica entra a la escuela',
     status: 'PUBLISHED',
     updatedAtISO: '2026-08-12',
     hasCover: true,
   },
   {
+    id: '20000000-0000-4000-8000-000000000003',
     slug: 'meditaciones-vol-1',
     title: 'Meditaciones — vol. 1',
     subtitle: 'Prácticas breves para volver a habitar el cuerpo y la respiración.',
@@ -87,6 +94,7 @@ export const BOOKS: Book[] = [
     format: 'PDF',
     isbn: '',
     publicationDateLabel: '',
+    coverMediaId: null,
     coverCaption: 'Portada — Meditaciones vol. 1',
     status: 'DRAFT',
     updatedAtISO: '2026-08-17',

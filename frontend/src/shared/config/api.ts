@@ -28,10 +28,20 @@ export const LOGOUT_URL = `${API_PREFIX}/auth/logout`;
  */
 export const ME_URL = `${API_PREFIX}/me`;
 
+/** Published catalog. The backend excludes drafts and archived books. */
+export const BOOKS_URL = `${API_PREFIX}/books`;
+
+/** Books purchased by the current authenticated user. */
+export const LIBRARY_URL = `${API_PREFIX}/me/books`;
+
+/** Public immutable image response for a media UUID. */
+export function mediaUrl(mediaId: string): string {
+  return `${API_PREFIX}/media/${mediaId}`;
+}
+
 /**
  * Protected eBook download (architecture.md §28) — never a direct file
- * URL. `bookId` is the book's slug here since the mock data has no
- * numeric id; the real endpoint takes whatever id the backend assigns.
+ * URL. The endpoint requires the book UUID returned by the API.
  */
 export function downloadUrl(bookId: string): string {
   return `${API_PREFIX}/books/${bookId}/download`;

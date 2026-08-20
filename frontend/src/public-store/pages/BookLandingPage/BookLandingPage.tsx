@@ -13,7 +13,8 @@ import { FaqAccordion } from '../../../shared/components/FaqAccordion/FaqAccordi
 import { RelatedBooks } from '../../../shared/components/RelatedBooks/RelatedBooks';
 import { FinalCta } from '../../../shared/components/FinalCta/FinalCta';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { PUBLISHED_BOOKS as BOOKS } from '../../data/books';
+import type { Book } from '../../data/books';
+import { useCatalog } from '../../catalog/useCatalog';
 import { formatPrice } from '../../../shared/utils/money';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
 import { buildBookLandingSeedContent, readBookLandingProps } from '../../../shared/cms/bookLandingContent';
@@ -32,7 +33,30 @@ import styles from './BookLandingPage.module.css';
  */
 export function BookLandingPage() {
   const { slug } = useParams<{ slug: string }>();
-  const book = BOOKS.find((entry) => entry.slug === slug);
+  const catalog = useCatalog();
+  const book = catalog.status === 'ready' ? catalog.books.find((entry) => entry.slug === slug) : undefined;
+
+  useDocumentTitle(
+    book ? `${book.title} · Nuestra Medicina Personal` : 'Libro · Nuestra Medicina Personal',
+  );
+
+  if (catalog.status !== 'ready') {
+    return (
+      <div className={styles.page}>
+        <GradientTopBar />
+        <SiteHeader />
+        <main className={styles.resourceState} role={catalog.status === 'error' ? 'alert' : 'status'}>
+          <p>{catalog.status === 'loading' ? 'Cargando libro…' : 'No pudimos cargar el libro.'}</p>
+          {catalog.status === 'error' && (
+            <button type="button" className={styles.retryButton} onClick={catalog.retry}>
+              Reintentar
+            </button>
+          )}
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
 
   if (!book || !slug) {
     return <NotFoundPage />;
@@ -41,14 +65,16 @@ export function BookLandingPage() {
   return <BookLandingContent book={book} slug={slug} />;
 }
 
-function BookLandingContent({ book, slug }: { book: (typeof BOOKS)[number]; slug: string }) {
-  useDocumentTitle(`${book.title} · Nuestra Medicina Personal`);
+function BookLandingContent({ book, slug }: { book: Book; slug: string }) {
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
   const content = usePublishedContent('BOOK', slug, () => buildBookLandingSeedContent(slug), preview);
   const landing = readBookLandingProps(content);
 
-  const relatedBook = BOOKS.find((entry) => entry.slug === landing.relatedSlug);
+  const catalog = useCatalog();
+  const relatedBook = catalog.status === 'ready'
+    ? catalog.books.find((entry) => entry.slug === landing.relatedSlug)
+    : undefined;
 
   return (
     <div className={styles.page}>

@@ -13,3 +13,23 @@
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 40px;
 }
+
+.resourceState {
+  color: var(--color-ink-muted);
+  text-align: center;
+}
+
+.resourceState p {
+  margin: 0 0 18px;
+}
+
+.retryButton {
+  border: 0;
+  border-radius: 4px;
+  padding: 11px 22px;
+  background: var(--color-deep-blue);
+  color: var(--color-surface);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+}

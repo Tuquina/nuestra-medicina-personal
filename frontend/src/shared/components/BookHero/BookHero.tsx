@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { ImagePlaceholder } from '../ImagePlaceholder/ImagePlaceholder';
+import { BookCover } from '../BookCover/BookCover';
 import { formatPrice } from '../../utils/money';
 import type { Book } from '../../../public-store/data/books';
 import styles from './BookHero.module.css';
@@ -32,11 +32,12 @@ export function BookHero({ book, tagline, taglineColor, authorName, description,
 
       <div className={styles.row}>
         <div className={styles.coverCol}>
-          <ImagePlaceholder
+          <BookCover
             className={styles.cover}
+            mediaId={book.coverMediaId}
+            title={book.title}
             accent={VARIANT_ACCENT[book.variant]}
             caption={book.coverCaption}
-            aspectRatio="2 / 3"
             borderRadius="6px"
           />
         </div>

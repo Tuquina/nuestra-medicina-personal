@@ -4,7 +4,7 @@ import { PublicFooter } from '../../../shared/components/PublicFooter/PublicFoot
 import { GradientTopBar } from '../../../shared/components/GradientTopBar/GradientTopBar';
 import { BrandMark } from '../../../shared/components/BrandMark/BrandMark';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
-import { PUBLISHED_BOOKS as BOOKS } from '../../data/books';
+import { useCatalog } from '../../catalog/useCatalog';
 import { formatPrice } from '../../../shared/utils/money';
 import { ORDERS_URL } from '../../../shared/config/api';
 import { hardNavigate } from '../../../shared/utils/navigation';
@@ -48,11 +48,39 @@ function isCheckoutStatus(value: string | null): value is CheckoutStatus {
 export function CheckoutPage() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const book = BOOKS.find((entry) => entry.slug === slug);
+  const catalog = useCatalog();
+  const book = catalog.status === 'ready' ? catalog.books.find((entry) => entry.slug === slug) : undefined;
 
   useDocumentTitle(
     book ? `Checkout · ${book.title} · Nuestra Medicina Personal` : 'Checkout · Nuestra Medicina Personal',
   );
+
+  if (catalog.status !== 'ready') {
+    return (
+      <div className={styles.page}>
+        <GradientTopBar />
+        <header className={styles.header}>
+          <Link to="/" className={styles.logo}>
+            <BrandMark />
+            Nuestra Medicina Personal
+          </Link>
+        </header>
+        <main className={styles.main}>
+          <div className={styles.card} role={catalog.status === 'error' ? 'alert' : 'status'}>
+            <p className={styles.body}>
+              {catalog.status === 'loading' ? 'Cargando libro…' : 'No pudimos cargar el libro.'}
+            </p>
+            {catalog.status === 'error' && (
+              <button type="button" className={styles.primaryAction} onClick={catalog.retry}>
+                Reintentar
+              </button>
+            )}
+          </div>
+        </main>
+        <PublicFooter />
+      </div>
+    );
+  }
 
   if (!book) return <NotFoundPage />;
 
@@ -71,6 +99,7 @@ export function CheckoutPage() {
     try {
       const response = await fetch(ORDERS_URL, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bookSlug: book.slug }),
       });
