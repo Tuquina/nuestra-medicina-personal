@@ -105,7 +105,7 @@ func (h *PageHandler) ListVersions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PageHandler) Restore(w http.ResponseWriter, r *http.Request) {
-	value, err := h.service.Restore(r.Context(), r.PathValue("identifier"), r.PathValue("versionID"))
+	value, err := h.service.Restore(r.Context(), r.PathValue("identifier"), r.PathValue("versionId"))
 	if err != nil {
 		h.handleError(w, r, err)
 		return

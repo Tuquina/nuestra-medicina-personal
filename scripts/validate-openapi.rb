@@ -4,6 +4,7 @@ require "psych"
 require "yaml"
 
 path = ARGV.fetch(0, "docs/openapi.yaml")
+router_path = ARGV.fetch(1, "backend/internal/interfaces/httpapi/router.go")
 
 def validate_unique_mapping_keys(node, location = [])
   case node
@@ -67,4 +68,23 @@ end
 duplicate_operations = operation_ids.tally.select { |_operation, count| count > 1 }.keys
 abort "duplicate operationIds: #{duplicate_operations.join(", ")}" unless duplicate_operations.empty?
 
-puts "OpenAPI OK: #{operation_ids.length} operations, #{references.length} references"
+documented_routes = document.fetch("paths", {}).flat_map do |route, path_item|
+  path_item.keys.filter_map do |method|
+    "#{method.upcase} #{route}" if http_methods.include?(method)
+  end
+end.sort
+
+implemented_routes = File.read(router_path).scan(
+  /\.Handle(?:Func)?\("([A-Z]+) ([^"]+)"/,
+).map { |method, route| "#{method} #{route}" }.sort
+
+missing_documentation = implemented_routes - documented_routes
+missing_implementation = documented_routes - implemented_routes
+unless missing_documentation.empty? && missing_implementation.empty?
+  messages = []
+  messages << "not documented: #{missing_documentation.join(", ")}" unless missing_documentation.empty?
+  messages << "not implemented: #{missing_implementation.join(", ")}" unless missing_implementation.empty?
+  abort "HTTP contract drift: #{messages.join("; ")}"
+end
+
+puts "OpenAPI OK: #{operation_ids.length} operations, #{references.length} references, #{documented_routes.length} routes"
