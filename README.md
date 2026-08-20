@@ -51,7 +51,8 @@ El contrato disponible y las decisiones de seguridad de esta fase están en
 - biblioteca multimedia local con validación JPEG/PNG y borrado seguro;
 - dashboard, ventas y clientes administrativos con importes históricos y paginación;
 - configuración editorial persistente con estado de integraciones de sólo lectura;
-- validación de origen, cuerpos JSON limitados, request IDs y logs JSON;
+- validación de origen, límites HTTP configurables, rate limiting y encabezados de seguridad;
+- request IDs validados, cuerpos JSON limitados y logs JSON;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 
 Para habilitar login, definir juntas `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`

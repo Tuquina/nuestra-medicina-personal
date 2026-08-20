@@ -68,6 +68,30 @@ MERCADOPAGO_PUBLIC_BASE_URL=https://tienda.example.com
 El origen público debe ser HTTPS y no puede ser `localhost` porque se usa para
 `back_urls` y `notification_url`.
 
+## Límites HTTP y rate limiting
+
+La API limita por ventanas de un minuto el inicio de sesión de Google por IP
+(10 solicitudes), la creación de órdenes por usuario (5), las descargas por
+usuario (30) y las escrituras administrativas por administrador (60). Una
+respuesta limitada usa el código `RATE_LIMIT_EXCEEDED`, estado `429` y los
+encabezados `Retry-After`, `X-RateLimit-Limit` y `X-RateLimit-Remaining`.
+
+El limitador vive en memoria y tiene un número acotado de identidades, suficiente
+para la única instancia prevista en la VPS. Los valores y la ventana se pueden
+ajustar con las variables `RATE_LIMIT_*`. El webhook de Mercado Pago no consume
+una cuota de aplicación: debe poder recibir reintentos legítimos y ya cuenta con
+firma HMAC, reconsulta al proveedor e idempotencia.
+
+La API sólo usa `X-Real-IP` cuando `TRUST_PROXY_HEADERS=true`. En producción es
+seguro porque la API no publica un puerto y el Nginx incluido reemplaza ese
+encabezado; al exponer la API directamente debe permanecer en `false`.
+
+Además, se rechazan URIs mayores a 8 KiB con `414 REQUEST_URI_TOO_LONG`, los
+encabezados se limitan a 32 KiB, los JSON a 1 MiB y los uploads conservan sus
+límites específicos. Nginx aplica tiempos máximos de lectura, escritura y
+conexión. Una variable inválida impide iniciar la API en vez de debilitar estos
+límites silenciosamente.
+
 ## Errores
 
 Todos los errores de API usan este sobre y nunca incluyen errores internos de

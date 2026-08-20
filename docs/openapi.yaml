@@ -2,7 +2,10 @@ openapi: 3.1.0
 info:
   title: Nuestra Medicina Personal API
   version: 0.1.0
-  description: API REST del monolito para la tienda personal de eBooks.
+  description: |
+    API REST del monolito para la tienda personal de eBooks.
+    Cualquier endpoint puede responder 414 con `REQUEST_URI_TOO_LONG` cuando
+    la URI supera el límite configurado antes de alcanzar el router.
 servers:
   - url: http://localhost:8080
     description: Desarrollo local
@@ -49,6 +52,7 @@ paths:
       description: Inicia Authorization Code con PKCE, state y nonce.
       responses:
         '302': {description: Redirección al endpoint de autorización de Google.}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '503':
           description: Las credenciales Google no están configuradas.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
@@ -181,6 +185,7 @@ paths:
         '404':
           description: El usuario no compró el libro o el archivo no está disponible.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
   /api/v1/orders:
     post:
       tags: [Orders]
@@ -206,6 +211,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Order'}
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422':
           description: El libro no está publicado o no tiene precio válido.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
@@ -325,6 +331,7 @@ paths:
         '200': {description: Configuración actualizada., content: {application/json: {schema: {$ref: '#/components/schemas/SiteSettings'}}}}
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422': {$ref: '#/components/responses/SettingsValidationFailed'}
   /api/v1/admin/books:
     get:
@@ -359,6 +366,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '409': {$ref: '#/components/responses/BookSlugConflict'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422': {$ref: '#/components/responses/BookValidationFailed'}
   /api/v1/admin/books/{identifier}:
     parameters:
@@ -397,7 +405,21 @@ paths:
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {$ref: '#/components/responses/BookNotFound'}
         '409': {$ref: '#/components/responses/BookSlugConflict'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422': {$ref: '#/components/responses/BookValidationFailed'}
+    delete:
+      tags: [Admin books]
+      operationId: archiveBook
+      description: Cambia el estado a ARCHIVED; no elimina registros físicamente.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': {description: Libro archivado.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
   /api/v1/admin/pages:
     post:
       tags: [Admin pages]
@@ -415,6 +437,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '409': {description: El slug o destino de la página ya existe., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422': {$ref: '#/components/responses/PageValidationFailed'}
   /api/v1/admin/pages/{identifier}:
     get:
@@ -451,6 +474,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {$ref: '#/components/responses/PageNotFound'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422': {$ref: '#/components/responses/PageValidationFailed'}
   /api/v1/admin/pages/{identifier}/publish:
     post:
@@ -465,6 +489,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {$ref: '#/components/responses/PageNotFound'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
   /api/v1/admin/pages/{identifier}/versions:
     get:
       tags: [Admin pages]
@@ -492,6 +517,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {description: Página o versión inexistente., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
   /api/v1/admin/media:
     get:
       tags: [Admin media]
@@ -522,6 +548,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '403': {$ref: '#/components/responses/AdminRequired'}
         '413': {description: La imagen supera el límite configurado., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422': {description: El archivo no es una imagen JPEG/PNG válida., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
   /api/v1/admin/media/{id}:
     delete:
@@ -538,18 +565,7 @@ paths:
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {$ref: '#/components/responses/MediaNotFound'}
         '409': {description: La imagen todavía está referenciada., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
-    delete:
-      tags: [Admin books]
-      operationId: archiveBook
-      description: Cambia el estado a ARCHIVED; no elimina registros físicamente.
-      security: [{sessionCookie: []}]
-      parameters:
-        - $ref: '#/components/parameters/Origin'
-      responses:
-        '204': {description: Libro archivado.}
-        '401': {$ref: '#/components/responses/AuthenticationRequired'}
-        '403': {$ref: '#/components/responses/AdminRequired'}
-        '404': {$ref: '#/components/responses/BookNotFound'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
   /api/v1/admin/books/{identifier}/ebook:
     parameters:
       - $ref: '#/components/parameters/BookIdentifier'
@@ -581,6 +597,7 @@ paths:
         '413':
           description: El archivo supera el límite configurado.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422':
           description: El archivo no es un PDF o EPUB válido.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
@@ -1406,6 +1423,19 @@ components:
             message: {type: string}
             details: {}
   responses:
+    RateLimitExceeded:
+      description: La identidad superó la cuota de esta operación durante la ventana vigente.
+      headers:
+        Retry-After:
+          description: Segundos hasta que la operación puede volver a intentarse.
+          schema: {type: integer, minimum: 1}
+        X-RateLimit-Limit:
+          description: Solicitudes permitidas por ventana.
+          schema: {type: integer, minimum: 1}
+        X-RateLimit-Remaining:
+          description: Solicitudes restantes en la ventana actual.
+          schema: {type: integer, minimum: 0}
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
     DatabaseUnavailable:
       description: PostgreSQL no está disponible.
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
