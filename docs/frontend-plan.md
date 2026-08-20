@@ -2,9 +2,9 @@
 
 **Status: all 17 mockups implemented.** Every public-store and admin page
 in the handoff bundle has a working route, verified against its mockup
-in the browser. The backend contracts are implemented; transport integration
-is still pending — see "Notes for whoever picks
-this up next" below for what that means and what's next.
+in the browser. Backend transport integration is in progress: session,
+published catalog and the authenticated library now use the real API. See
+"Notes for whoever picks this up next" below for the remaining modules.
 
 Maps every mockup in the Claude Design handoff bundle
 (`Web page UI mockup-handoff.zip` → `project/*.dc.html`) to a route and
@@ -294,13 +294,12 @@ and the sidebar are the two places to extend.
   variants. The remaining CMS work is transport integration: replace the
   localStorage adapter with the draft/publish/version endpoints.
 
-- The Go backend now implements the core resources and CMS contracts, but most
-  screens still render mock or localStorage data. Search for `No backend yet`,
-  mock stores and the alignment notes in `docs/backend-frontend-alignment.md`
-  when the final transport-integration phase begins.
-- **Next real milestone for these screens**: replace their local adapters with
-  authenticated API calls and handle loading, empty and error states without
-  changing the established visual components.
+- Session, public catalog, book detail, checkout book lookup and library now
+  consume the backend contracts. They include loading, empty and retryable
+  error states; protected downloads use the book UUID returned by the library.
+- **Next real milestone for these screens**: make checkout create and verify an
+  order without trusting Mercado Pago redirect parameters. After that, replace
+  the remaining admin and CMS local adapters with authenticated API calls.
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing
