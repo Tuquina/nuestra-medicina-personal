@@ -107,10 +107,17 @@ func run(logger *slog.Logger) error {
 		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie, SecureCookies: cfg.SecureCookies(),
 		EbookInternalPrefix: cfg.EbookInternalPrefix, EbookMaxUploadBytes: cfg.EbookMaxUploadBytes,
 		MediaMaxUploadBytes: cfg.MediaMaxUploadBytes,
+		RateLimits: httpapi.RateLimitConfig{
+			Window: cfg.RateLimitWindow, AuthRequests: cfg.RateLimitAuthRequests,
+			OrderRequests: cfg.RateLimitOrderRequests, DownloadRequests: cfg.RateLimitDownloadRequests,
+			AdminWriteRequests: cfg.RateLimitAdminWrites, TrustProxyHeaders: cfg.TrustProxyHeaders,
+		},
+		MaxRequestURIBytes: cfg.MaxRequestURIBytes,
 	})
 	server := &http.Server{
 		Addr: cfg.HTTPAddress, Handler: router, ReadTimeout: cfg.ReadTimeout,
 		ReadHeaderTimeout: cfg.ReadTimeout, WriteTimeout: cfg.WriteTimeout, IdleTimeout: cfg.IdleTimeout,
+		MaxHeaderBytes: cfg.MaxHeaderBytes,
 	}
 
 	serverErrors := make(chan error, 1)

@@ -31,6 +31,8 @@ type Dependencies struct {
 	EbookInternalPrefix string
 	EbookMaxUploadBytes int64
 	MediaMaxUploadBytes int64
+	RateLimits          RateLimitConfig
+	MaxRequestURIBytes  int
 }
 
 func NewRouter(dependencies Dependencies) http.Handler {
@@ -42,6 +44,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	mediaHandler := NewMediaHandler(dependencies.Media, dependencies.Logger, dependencies.MediaMaxUploadBytes)
 	backofficeHandler := NewBackofficeHandler(dependencies.Backoffice, dependencies.Logger)
 	settingsHandler := NewSettingsHandler(dependencies.Settings, dependencies.Logger, dependencies.IntegrationStatus)
+	rateLimiter := NewRateLimiter(dependencies.RateLimits)
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -59,15 +62,16 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.HandleFunc("GET /api/v1/books/{slug}", booksHandler.GetPublished)
 	root.HandleFunc("GET /api/v1/pages/{slug}", pageHandler.GetPublished)
 	root.HandleFunc("GET /api/v1/media/{id}", mediaHandler.Get)
-	root.HandleFunc("GET /api/v1/auth/google", authHandler.Start)
+	root.Handle("GET /api/v1/auth/google", rateLimiter.Auth(http.HandlerFunc(authHandler.Start)))
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
 	root.HandleFunc("GET /api/v1/me", authHandler.Me)
 	root.Handle("POST /api/v1/auth/logout", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(authHandler.Logout)))
-	userOrderCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Create))
+	userOrderCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, rateLimiter.Orders(http.HandlerFunc(orderHandler.Create)))
 	root.Handle("POST /api/v1/orders", requireSameOrigin(dependencies.BaseURL, userOrderCreation))
 	root.Handle("GET /api/v1/orders/{id}", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Get)))
 	root.Handle("GET /api/v1/me/books", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(libraryHandler.List)))
-	root.Handle("GET /api/v1/books/{id}/download", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(libraryHandler.Download)))
+	protectedDownload := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, rateLimiter.Downloads(http.HandlerFunc(libraryHandler.Download)))
+	root.Handle("GET /api/v1/books/{id}/download", protectedDownload)
 	root.HandleFunc("POST /api/v1/webhooks/mercadopago", orderHandler.MercadoPagoWebhook)
 
 	admin := http.NewServeMux()
@@ -92,14 +96,14 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("GET /api/v1/admin/settings", settingsHandler.Get)
 	admin.HandleFunc("PUT /api/v1/admin/settings", settingsHandler.Update)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
-		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, admin))
+		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, rateLimiter.AdminWrites(admin)))
 	root.Handle("/api/v1/admin/", adminHandler)
 
-	var handler http.Handler = root
+	var handler http.Handler = limitRequestTarget(dependencies.MaxRequestURIBytes, root)
 	handler = requireJSON(handler)
 	handler = withLogging(dependencies.Logger, handler)
 	handler = withRecovery(dependencies.Logger, handler)
 	handler = withRequestID(handler)
-	handler = withSecurityHeaders(handler)
+	handler = withSecurityHeaders(dependencies.SecureCookies, handler)
 	return handler
 }

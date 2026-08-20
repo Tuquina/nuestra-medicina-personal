@@ -30,7 +30,7 @@ type AdminAuthorizer interface {
 func withRequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Header.Get("X-Request-ID")
-		if requestID == "" || len(requestID) > 128 {
+		if !validRequestID(requestID) {
 			var value [16]byte
 			if _, err := rand.Read(value[:]); err == nil {
 				requestID = hex.EncodeToString(value[:])
@@ -41,6 +41,19 @@ func withRequestID(next http.Handler) http.Handler {
 		w.Header().Set("X-Request-ID", requestID)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestIDKey, requestID)))
 	})
+}
+
+func validRequestID(value string) bool {
+	if value == "" || len(value) > 64 {
+		return false
+	}
+	for _, character := range value {
+		if (character < 'a' || character > 'z') && (character < 'A' || character > 'Z') &&
+			(character < '0' || character > '9') && character != '-' && character != '_' && character != '.' {
+			return false
+		}
+	}
+	return true
 }
 
 func withRecovery(logger *slog.Logger, next http.Handler) http.Handler {
@@ -71,12 +84,32 @@ func withLogging(logger *slog.Logger, next http.Handler) http.Handler {
 	})
 }
 
-func withSecurityHeaders(next http.Handler) http.Handler {
+func withSecurityHeaders(secure bool, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
+		w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
+		if secure {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func limitRequestTarget(maximum int, next http.Handler) http.Handler {
+	if maximum < 1 {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if len(r.RequestURI) > maximum {
+			writeError(w, http.StatusRequestURITooLong, "REQUEST_URI_TOO_LONG", "Request URI is too long", nil)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }
