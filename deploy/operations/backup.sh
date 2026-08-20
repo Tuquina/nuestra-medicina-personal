@@ -31,9 +31,12 @@ esac
 
 mkdir -p "$backup_root"
 created_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-backup_name="nmp-backup-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+backup_timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 staging_dir="$(mktemp -d "$backup_root/.nmp-backup.XXXXXX")"
-partial_archive="$backup_root/.$backup_name.partial"
+partial_archive="$(mktemp "$backup_root/.nmp-backup-$backup_timestamp.partial.XXXXXX")"
+partial_name="$(basename "$partial_archive")"
+backup_nonce="${partial_name##*.partial.}"
+backup_name="nmp-backup-$backup_timestamp-$backup_nonce"
 final_archive="$backup_root/$backup_name.tar.gz"
 
 cleanup() {
@@ -41,7 +44,7 @@ cleanup() {
         "$backup_root"/.nmp-backup.*) rm -rf -- "$staging_dir" ;;
     esac
     case "$partial_archive" in
-        "$backup_root"/.nmp-backup-*.partial) rm -f -- "$partial_archive" ;;
+        "$backup_root"/.nmp-backup-*.partial.*) rm -f -- "$partial_archive" ;;
     esac
 }
 trap cleanup EXIT HUP INT TERM
@@ -74,7 +77,8 @@ printf '%s\n' \
 )
 
 tar -czf "$partial_archive" -C "$staging_dir" .
-mv "$partial_archive" "$final_archive"
+ln "$partial_archive" "$final_archive" || fail "backup archive already exists: $final_archive"
+rm -f -- "$partial_archive"
 rm -rf -- "$staging_dir"
 trap - EXIT HUP INT TERM
 
