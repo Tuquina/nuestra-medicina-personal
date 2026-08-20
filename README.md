@@ -55,6 +55,7 @@ La estrategia de ramas y los controles automáticos están documentados en
 - configuración editorial persistente con estado de integraciones de sólo lectura;
 - validación de origen, límites HTTP configurables, rate limiting y encabezados de seguridad;
 - request IDs validados, cuerpos JSON limitados y logs JSON correlacionados con rotación;
+- backup verificable de PostgreSQL, eBooks y media con restauración fail-closed;
 - pruebas unitarias de dominio, aplicación y límites HTTP.
 
 Para habilitar login, definir juntas `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`

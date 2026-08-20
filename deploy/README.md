@@ -53,9 +53,51 @@ Buscar el mismo `request_id` en ambos servicios permite seguir una solicitud a
 través del proxy. Los health checks permanecen disponibles en `/health/live` y
 `/health/ready`.
 
-Los volúmenes `postgres_data` y `ebooks_data` requieren backups externos al
-Netcup VPS y pruebas periódicas de restauración. Los snapshots del proveedor
-son una capa adicional, no reemplazan esos backups.
+Los volúmenes `postgres_data`, `ebooks_data` y `media_data` requieren backups
+externos al Netcup VPS y pruebas periódicas de restauración. Los snapshots del
+proveedor son una capa adicional, no reemplazan esos backups.
+
+## Backup y restauración
+
+Crear primero en el host el directorio absoluto configurado como `BACKUP_PATH`.
+El profile `operations` no se inicia con el stack normal. Para generar un
+paquete manual, pausar brevemente API y Nginx para que PostgreSQL y los archivos
+pertenezcan al mismo estado:
+
+```bash
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml stop api nginx
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml \
+  --profile operations run --rm backup
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml start api nginx
+```
+
+El último comando debe ejecutarse también si el backup falla, para terminar la
+ventana de mantenimiento.
+
+El resultado `nmp-backup-*.tar.gz` contiene un dump PostgreSQL en formato custom,
+los volúmenes de eBooks y media, metadata y checksums SHA-256. Se escribe primero
+como archivo parcial y sólo se renombra al completar todas las piezas. El
+directorio local es temporal: después debe copiarse fuera de la VPS.
+
+`BACKUP_RETENTION_DAYS=0` no elimina archivos. Un valor mayor elimina únicamente
+paquetes `nmp-backup-*.tar.gz` más antiguos dentro de `BACKUP_PATH`; activarlo
+sólo después de tener una copia externa verificada.
+
+La restauración está diseñada para recuperación ante desastre y se niega a
+trabajar sobre una base con tablas o directorios con archivos. Con un stack
+nuevo y vacío:
+
+```bash
+export RESTORE_ARCHIVE=nmp-backup-YYYYMMDDTHHMMSSZ-PID.tar.gz
+export RESTORE_CONFIRM=restore-into-empty-targets
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml \
+  --profile operations run --rm restore
+```
+
+El proceso valida el nombre, contenido y checksums antes de restaurar. Si falla
+después de comenzar `pg_restore`, el destino puede quedar parcial: debe
+descartarse el volumen vacío usado para la prueba y repetirse desde cero. Nunca
+apuntar este comando a una instalación activa.
 
 ## Google Workspace y Gmail API
 

@@ -22,7 +22,8 @@ segunda VPS.
 
 El CI ejecuta en paralelo:
 
-1. tests unitarios, `go vet`, migraciones y tests de integración PostgreSQL;
+1. tests unitarios, `go vet`, migraciones, integración PostgreSQL y un ciclo
+   completo de backup/restauración;
 2. instalación reproducible, lint y build del frontend;
 3. validación de OpenAPI y de ambos archivos Compose;
 4. build de las imágenes backend y web sin publicarlas.
