@@ -39,6 +39,33 @@ develop         -> pull request a main    -> CI
 main            -> CD de producción futuro
 ```
 
+`develop` y `main` están protegidas contra pushes directos, force-pushes y
+eliminaciones. Ambas exigen que el PR esté actualizado y que finalicen
+correctamente estos checks:
+
+- `Backend`;
+- `Frontend`;
+- `Contracts and Compose`;
+- `Docker image · backend`;
+- `Docker image · web`.
+
+También deben resolverse todas las conversaciones abiertas. Por ahora no se
+exige una aprobación ajena: el repositorio tiene una sola persona mantenedora
+y GitHub no permite aprobar el PR propio. Cuando haya otro revisor habitual,
+conviene elevar el mínimo a una aprobación.
+
+El flujo diario queda así:
+
+1. crear una rama corta desde `develop` (`feat/...`, `fix/...`, `docs/...`);
+2. abrir un PR hacia `develop` y esperar todos los checks;
+3. integrar el PR sin commits de merge, manteniendo historia lineal;
+4. agrupar cambios listos en un PR de `develop` hacia `main`;
+5. integrar en `main` sólo cuando el conjunto sea candidato a producción.
+
+La plantilla [`.github/pull_request_template.md`](../.github/pull_request_template.md)
+recuerda las verificaciones de contrato, migraciones y secretos. Los PR de
+release pueden permanecer en borrador hasta que se decida publicar el conjunto.
+
 Mientras varios agentes compartan el mismo directorio local, no deben cambiar
 la rama activa sin coordinarse. Se puede crear o actualizar la referencia remota
 de `develop` sin sacar el worktree compartido de `main`; para trabajar realmente
