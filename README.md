@@ -27,6 +27,8 @@ docker compose build api migrate
 
 El contrato disponible y las decisiones de seguridad de esta fase están en
 [`docs/api.md`](docs/api.md) y [`docs/openapi.yaml`](docs/openapi.yaml).
+La estrategia de ramas y los controles automáticos están documentados en
+[`docs/ci.md`](docs/ci.md).
 
 ## Backend implementado
 
