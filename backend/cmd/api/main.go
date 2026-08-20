@@ -40,6 +40,12 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	logger.Info("api starting",
+		"environment", cfg.Environment, "http_address", cfg.HTTPAddress,
+		"google_configured", cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
+		"mercado_pago_configured", cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",
+		"email_configured", cfg.GoogleMailCredentials != "" && cfg.GoogleMailSender != "",
+	)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -122,17 +128,19 @@ func run(logger *slog.Logger) error {
 
 	serverErrors := make(chan error, 1)
 	go func() {
-		logger.Info("api listening", "configuration", cfg.String())
+		logger.Info("api listening", "http_address", cfg.HTTPAddress)
 		serverErrors <- server.ListenAndServe()
 	}()
 
 	select {
 	case <-ctx.Done():
+		logger.Info("api shutdown requested")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			return err
 		}
+		logger.Info("api shutdown complete")
 		return nil
 	case err := <-serverErrors:
 		if errors.Is(err, http.ErrServerClosed) {

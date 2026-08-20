@@ -1,6 +1,7 @@
 package email
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -55,11 +56,19 @@ func TestWorkerMarksRenderedEmailAsSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	worker := NewWorker(repository, senderStub{}, renderer, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, time.Minute, 5, 5)
+	var output bytes.Buffer
+	worker := NewWorker(repository, senderStub{}, renderer, slog.New(slog.NewJSONHandler(&output, nil)), time.Second, time.Minute, 5, 5)
 	worker.now = func() time.Time { return time.Date(2026, 8, 19, 20, 0, 0, 0, time.UTC) }
 	worker.process(context.Background())
 	if repository.sentID != "job-1" || repository.failedID != "" {
 		t.Fatalf("unexpected result: sent=%q failed=%q", repository.sentID, repository.failedID)
+	}
+	var entry map[string]any
+	if err := json.Unmarshal(output.Bytes(), &entry); err != nil {
+		t.Fatalf("decode email log: %v: %s", err, output.String())
+	}
+	if entry["email_job_id"] != "job-1" || entry["order_id"] != "order-1" || entry["provider_message_id"] != "gmail-id" {
+		t.Fatalf("email log correlation is incomplete: %#v", entry)
 	}
 }
 

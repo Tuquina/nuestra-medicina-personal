@@ -46,6 +46,7 @@ func NewWorker(repository Repository, sender Sender, renderer *Renderer, logger 
 }
 
 func (w *Worker) Run(ctx context.Context) {
+	defer w.logger.Info("transactional email worker stopped")
 	w.process(ctx)
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
@@ -69,13 +70,16 @@ func (w *Worker) process(ctx context.Context) {
 		return
 	}
 	for _, job := range jobs {
+		attributes := emailLogAttributes(job)
 		message, err := w.renderer.Render(job)
 		if err == nil {
 			var providerID string
 			providerID, err = w.sender.Send(ctx, message)
 			if err == nil {
 				if markErr := w.repository.MarkSent(ctx, job.ID, providerID, w.now().UTC()); markErr != nil {
-					w.logger.Error("mark transactional email sent", "email_job_id", job.ID, "error", markErr)
+					w.logger.Error("mark transactional email sent", append(attributes, "provider_message_id", providerID, "error", markErr)...)
+				} else {
+					w.logger.Info("transactional email sent", append(attributes, "provider_message_id", providerID)...)
 				}
 				continue
 			}
@@ -83,10 +87,19 @@ func (w *Worker) process(ctx context.Context) {
 		failedAt := w.now().UTC()
 		nextAttempt := failedAt.Add(retryDelay(job.Attempts))
 		if markErr := w.repository.MarkFailed(ctx, job.ID, err.Error(), nextAttempt, failedAt); markErr != nil {
-			w.logger.Error("mark transactional email failed", "email_job_id", job.ID, "error", markErr)
+			w.logger.Error("mark transactional email failed", append(attributes, "error", markErr)...)
 		}
-		w.logger.Warn("transactional email failed", "email_job_id", job.ID, "attempt", job.Attempts, "error", err)
+		w.logger.Warn("transactional email failed", append(attributes, "next_attempt_at", nextAttempt, "error", err)...)
 	}
+}
+
+func emailLogAttributes(job emaildomain.Job) []any {
+	attributes := []any{"email_job_id", job.ID, "email_type", job.Type, "attempt", job.Attempts}
+	var payload emaildomain.PaymentPayload
+	if json.Unmarshal(job.Payload, &payload) == nil && payload.OrderID != "" {
+		attributes = append(attributes, "order_id", payload.OrderID)
+	}
+	return attributes
 }
 
 func retryDelay(attempt int) time.Duration {

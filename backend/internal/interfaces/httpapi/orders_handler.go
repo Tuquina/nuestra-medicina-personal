@@ -44,6 +44,10 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, r, "create order", err)
 		return
 	}
+	h.logger.Info("order created",
+		"request_id", requestID(r.Context()), "user_id", user.ID,
+		"order_id", created.ID, "book_slug", input.BookSlug,
+	)
 	w.Header().Set("Location", "/api/v1/orders/"+created.ID)
 	writeJSON(w, http.StatusCreated, mapOrder(created))
 }
@@ -72,19 +76,27 @@ func (h *OrderHandler) MercadoPagoWebhook(w http.ResponseWriter, r *http.Request
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
 	defer cancel()
-	if _, err := h.service.ProcessPayment(ctx, dataID); err != nil {
+	processed, err := h.service.ProcessPayment(ctx, dataID)
+	if err != nil {
 		if errors.Is(err, order.ErrNotFound) || errors.Is(err, order.ErrPaymentMismatch) {
 			h.logger.Warn("verified payment does not match a local order", "request_id", requestID(r.Context()), "payment_id", dataID, "error", err)
 			writeJSON(w, http.StatusNoContent, nil)
 			return
 		}
-		h.handleError(w, r, "process mercado pago webhook", err)
+		h.handleError(w, r, "process mercado pago webhook", err, "payment_id", dataID)
 		return
 	}
+	h.logger.Info("mercado pago webhook processed",
+		"request_id", requestID(r.Context()), "payment_id", dataID,
+		"order_id", processed.ID, "order_status", processed.Status,
+	)
 	writeJSON(w, http.StatusNoContent, nil)
 }
 
-func (h *OrderHandler) handleError(w http.ResponseWriter, r *http.Request, operation string, err error) {
+func (h *OrderHandler) handleError(w http.ResponseWriter, r *http.Request, operation string, err error, attributes ...any) {
+	logAttributes := []any{"request_id", requestID(r.Context()), "user_id", userID(r.Context())}
+	logAttributes = append(logAttributes, attributes...)
+	logAttributes = append(logAttributes, "error", err)
 	switch {
 	case errors.Is(err, order.ErrNotFound):
 		writeError(w, http.StatusNotFound, "ORDER_NOT_FOUND", "Order not found", nil)
@@ -93,10 +105,10 @@ func (h *OrderHandler) handleError(w http.ResponseWriter, r *http.Request, opera
 	case errors.Is(err, order.ErrPaymentNotReady):
 		writeError(w, http.StatusServiceUnavailable, "PAYMENTS_NOT_CONFIGURED", "Payments are not configured", nil)
 	case errors.Is(err, order.ErrPaymentProvider):
-		h.logger.Error(operation, "request_id", requestID(r.Context()), "error", err)
+		h.logger.Error(operation, logAttributes...)
 		writeError(w, http.StatusBadGateway, "PAYMENT_PROVIDER_ERROR", "Payment provider could not be reached", nil)
 	default:
-		h.logger.Error(operation, "request_id", requestID(r.Context()), "error", err)
+		h.logger.Error(operation, logAttributes...)
 		writeError(w, http.StatusInternalServerError, "PAYMENT_PROCESSING_ERROR", "Payment operation could not be completed", nil)
 	}
 }
