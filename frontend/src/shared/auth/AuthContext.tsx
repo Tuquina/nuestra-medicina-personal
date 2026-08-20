@@ -3,7 +3,7 @@ import { ME_URL } from '../config/api';
 import type { AuthState } from './types';
 import { AuthContext } from './useAuth';
 
-/** Fetches `GET /api/v1/auth/me` once per app load and makes the result
+/** Fetches `GET /api/v1/me` once per app load and makes the result
  * available to `useAuth()` (see `authContext.ts` for what this state is
  * and — importantly — isn't). */
 export function AuthProvider({ children }: { children: ReactNode }) {

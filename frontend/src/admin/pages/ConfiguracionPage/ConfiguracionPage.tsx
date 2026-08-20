@@ -67,7 +67,8 @@ export function ConfiguracionPage() {
         body: JSON.stringify(settings),
       });
     } catch {
-      // No backend yet.
+      // Loading persisted settings and surfacing API errors are part of
+      // the final transport integration.
     }
   };
 

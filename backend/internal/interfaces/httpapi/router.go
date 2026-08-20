@@ -86,7 +86,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("PUT /api/v1/admin/pages/{identifier}/draft", pageHandler.SaveDraft)
 	admin.HandleFunc("POST /api/v1/admin/pages/{identifier}/publish", pageHandler.Publish)
 	admin.HandleFunc("GET /api/v1/admin/pages/{identifier}/versions", pageHandler.ListVersions)
-	admin.HandleFunc("POST /api/v1/admin/pages/{identifier}/versions/{versionID}/restore", pageHandler.Restore)
+	admin.HandleFunc("POST /api/v1/admin/pages/{identifier}/versions/{versionId}/restore", pageHandler.Restore)
 	admin.HandleFunc("GET /api/v1/admin/media", mediaHandler.List)
 	admin.HandleFunc("POST /api/v1/admin/media", mediaHandler.Upload)
 	admin.HandleFunc("DELETE /api/v1/admin/media/{id}", mediaHandler.Delete)

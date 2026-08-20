@@ -67,6 +67,30 @@ jobs:
           docker cp ../deploy/operations/backup.sh "$POSTGRES_CONTAINER:/tmp/backup.sh"
           docker cp ../deploy/operations/restore.sh "$POSTGRES_CONTAINER:/tmp/restore.sh"
           docker exec "$POSTGRES_CONTAINER" sh -c "mkdir -p /data/ebooks /data/media /backups /restore/ebooks /restore/media && printf ebook-fixture > /data/ebooks/book.epub && printf media-fixture > /data/media/cover.png"
+          mkdir -p "$RUNNER_TEMP/concurrent-backups" "$RUNNER_TEMP/concurrent-ebooks" "$RUNNER_TEMP/concurrent-media"
+          printf ebook-fixture > "$RUNNER_TEMP/concurrent-ebooks/book.epub"
+          printf media-fixture > "$RUNNER_TEMP/concurrent-media/cover.png"
+          run_isolated_backup() {
+            docker run --rm \
+              --network "container:$POSTGRES_CONTAINER" \
+              --entrypoint sh \
+              -e POSTGRES_HOST=127.0.0.1 \
+              -e POSTGRES_DB=nmp_test \
+              -e POSTGRES_USER=nmp \
+              -e POSTGRES_PASSWORD=nmp_ci_only \
+              -v "$GITHUB_WORKSPACE/deploy/operations/backup.sh:/tmp/backup.sh:ro" \
+              -v "$RUNNER_TEMP/concurrent-backups:/backups" \
+              -v "$RUNNER_TEMP/concurrent-ebooks:/data/ebooks:ro" \
+              -v "$RUNNER_TEMP/concurrent-media:/data/media:ro" \
+              postgres:17-alpine /tmp/backup.sh
+          }
+          run_isolated_backup > "$RUNNER_TEMP/backup-1.txt" &
+          BACKUP_PID_1=$!
+          run_isolated_backup > "$RUNNER_TEMP/backup-2.txt" &
+          BACKUP_PID_2=$!
+          wait "$BACKUP_PID_1" "$BACKUP_PID_2"
+          test "$(sort -u "$RUNNER_TEMP/backup-1.txt" "$RUNNER_TEMP/backup-2.txt" | wc -l)" -eq 2
+          test "$(find "$RUNNER_TEMP/concurrent-backups" -maxdepth 1 -type f -name 'nmp-backup-*.tar.gz' | wc -l)" -eq 2
           docker exec \
             -e POSTGRES_HOST=127.0.0.1 \
             -e POSTGRES_DB=nmp_test \

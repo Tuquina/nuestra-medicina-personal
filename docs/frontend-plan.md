@@ -2,7 +2,8 @@
 
 **Status: all 17 mockups implemented.** Every public-store and admin page
 in the handoff bundle has a working route, verified against its mockup
-in the browser. There is still no backend — see "Notes for whoever picks
+in the browser. The backend contracts are implemented; transport integration
+is still pending — see "Notes for whoever picks
 this up next" below for what that means and what's next.
 
 Maps every mockup in the Claude Design handoff bundle
@@ -40,7 +41,7 @@ duplicating the whole page.
 ## Admin backoffice
 
 All admin routes live under `/admin` and require server-side
-authorization once the backend exists (architecture.md §21) — the
+authorization in the backend (architecture.md §21) — the
 frontend routes themselves are not a security boundary.
 
 Route slugs generally follow the mockups' own Spanish nav labels
@@ -96,8 +97,8 @@ admin form, reading/writing through `contentStore.ts`.
   "Sobre el proyecto" links (`AdminLayout.tsx`).
 
 **B. Build out the 3 "Próximamente" admin sections** (Cupones, Reseñas,
-Analítica — listed as future extensions in architecture.md §6). None of
-these have a backend yet, same as everything else here — each gets a
+Analítica — listed as future extensions in architecture.md §6). Cupones y
+Reseñas no forman parte del contrato backend MVP; cada una mantiene una
 localStorage-backed mock data layer shaped like the eventual REST
 resource, so swapping in real `fetch` calls later is a small, isolated
 change (same principle as `admin/data/sales.ts` / `customers.ts` today,

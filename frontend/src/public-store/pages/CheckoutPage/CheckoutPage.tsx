@@ -77,8 +77,8 @@ export function CheckoutPage() {
       const data: { checkoutUrl?: string } = await response.json();
       if (data.checkoutUrl) hardNavigate(data.checkoutUrl);
     } catch {
-      // No backend yet — nothing to redirect to. Left as a no-op rather
-      // than faking a Mercado Pago handoff.
+      // Transport error handling is deferred to the final integration.
+      // Never fake a Mercado Pago handoff or an approved order.
     }
   };
 

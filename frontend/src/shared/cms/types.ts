@@ -15,13 +15,8 @@
  */
 
 /**
- * Everything past 'HOME' | 'BOOK' is wider than the real backend's
- * `pages.type` CHECK constraint today (`migrations/001_initial_schema.up.sql`
- * only allows those two) — whoever wires the real `pages` API needs a
- * migration adding these values (or a generic `'PAGE'` type + slug-based
- * lookup) before `contentStore.ts` can point at a real endpoint for
- * them. See docs/frontend-plan.md "Post-launch content & admin
- * extensions".
+ * Mirrors the backend and the expanded database constraint in migration 006.
+ * Only `BOOK` carries `bookId`; the remaining values are singleton pages.
  */
 export type PageType =
   | 'HOME'

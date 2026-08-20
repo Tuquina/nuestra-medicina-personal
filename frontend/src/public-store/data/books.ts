@@ -1,7 +1,6 @@
 /**
- * Mock catalog data. There's no backend yet (architecture.md §34 defines
- * `GET /api/v1/books` for this, §8.1 defines the `Book` entity) — this
- * stands in until it exists. Keep the shape close to what that endpoint
+ * Mock catalog data pending transport integration (`GET /api/v1/books`,
+ * architecture.md §8.1/§34). Keep the shape close to what that endpoint
  * will actually return so swapping a `fetch` in later doesn't change
  * consuming components.
  */

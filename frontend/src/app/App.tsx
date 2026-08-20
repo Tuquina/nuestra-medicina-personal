@@ -44,7 +44,7 @@ import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
  * `/cuenta`, `/biblioteca` and every `/admin/*` route are nested under
  * `RequireAuth`/`RequireAdmin` (see `shared/auth`), which redirect to
  * `/login` (or show a plain "no autorizado" message) when
- * `GET /api/v1/auth/me` says there's no session / not an admin. That's a
+ * `GET /api/v1/me` says there's no session / not an admin. That's a
  * UX nicety only — the real security boundary is the backend's
  * `requireAdmin`/`requireUser` middleware validating the session cookie
  * on every request (architecture.md §21).
