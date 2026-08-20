@@ -105,3 +105,9 @@ docker run --rm -v "$(pwd)/frontend":/app -w /app node:20-alpine \
 ## Commits
 
 Plain, descriptive commit messages. No AI co-author trailers.
+
+## Branches
+
+Use purpose-based conventional prefixes such as `feature/`, `fix/`, `docs/`,
+`chore/` or `ci/`. Never use agent-specific prefixes or attribution in branch
+names.
