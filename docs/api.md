@@ -220,3 +220,18 @@ exponer secretos.
 requiere sesión administrativa y `Origin` válido. El estado de las integraciones
 es de sólo lectura: las credenciales continúan fuera de PostgreSQL y del
 repositorio.
+
+## Cupones y reseñas
+
+`GET/POST /api/v1/admin/coupons` y `PUT/DELETE
+/api/v1/admin/coupons/{id}` administran cupones persistidos. El código se
+normaliza a mayúsculas, los montos fijos usan unidades menores y moneda
+explícita, y la API calcula `ACTIVE`, `SCHEDULED`, `EXPIRED` o `INACTIVE` con
+la fecha del servidor y el límite de usos. Un cupón puede aplicarse a todos los
+libros o a UUIDs de libros concretos.
+
+`GET /api/v1/books/{slug}/reviews` publica sólo reseñas aprobadas. Para enviar
+una reseña, `POST` sobre la misma ruta requiere sesión, `Origin` válido y una
+orden `PAID` del usuario para ese libro. La reseña nace `PENDING` y sólo admite
+una entrada por usuario y libro. El administrador lista, aprueba, rechaza o
+elimina mediante `/api/v1/admin/reviews`; no existen reseñas ficticias semilla.
