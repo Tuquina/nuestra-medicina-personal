@@ -124,7 +124,7 @@ func run(logger *slog.Logger) error {
 		WebhookValidator: webhookValidator, Database: pool, AdminAuthorizer: authorizer,
 		BaseURL: cfg.BaseURL, SessionCookie: cfg.SessionCookie, SecureCookies: cfg.SecureCookies(),
 		EbookInternalPrefix: cfg.EbookInternalPrefix, EbookMaxUploadBytes: cfg.EbookMaxUploadBytes,
-		MediaMaxUploadBytes: cfg.MediaMaxUploadBytes,
+		MediaMaxUploadBytes: cfg.MediaMaxUploadBytes, ManuscriptMaxUploadBytes: cfg.ManuscriptMaxUploadBytes,
 		RateLimits: httpapi.RateLimitConfig{
 			Window: cfg.RateLimitWindow, AuthRequests: cfg.RateLimitAuthRequests,
 			OrderRequests: cfg.RateLimitOrderRequests, DownloadRequests: cfg.RateLimitDownloadRequests,

@@ -10,7 +10,11 @@ const (
 	MaxChapterBytes = 2 << 20 // 2 MiB of HTML per chapter
 )
 
-var ErrNotFound = errors.New("manuscript not found")
+var (
+	ErrNotFound          = errors.New("manuscript not found")
+	ErrUnsupportedFormat = errors.New("unsupported manuscript file format")
+	ErrConversionFailed  = errors.New("manuscript file could not be converted")
+)
 
 type Chapter struct {
 	ID    int    `json:"id"`

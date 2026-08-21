@@ -23,20 +23,23 @@ Toda la conversión/generación se hace **en el propio proceso Go, con librería
 
 | Uso | Librería | Licencia | Motivo |
 |---|---|---|---|
-| Leer DOCX | `github.com/gomutex/godocx` | MIT | Lee y escribe DOCX en Go puro; `OpenDocument()` parsea un archivo existente. Se descarta `fumiama/go-docx` (más popular) por ser **AGPL-3.0** — inaceptable para un backend de red propietario que lo usaría directamente en el mismo proceso. |
+| Leer DOCX | *(ninguna — biblioteca estándar)* | — | Un `.docx` es un zip con XML adentro; `word/document.xml` se lee directo con `archive/zip` + `encoding/xml` (`manuscripts/importer.go`). Se evaluaron dos librerías: `fumiama/go-docx` es **AGPL-3.0** (inaceptable para un backend de red propietario) y `gomutex/godocx` (MIT) es de escritura, no expone lectura de texto/formato de runs por su API pública. Escribir el parser propio — acotado a lo que ya produce el editor (párrafos, encabezados, negrita/itálica) — evita ambos problemas y no agrega ninguna dependencia nueva. |
 | Extraer texto de PDF | `github.com/ledongthuc/pdf` | BSD-3-Clause | La opción estándar en el ecosistema Go para esto; `GetPlainText()` es suficiente porque un PDF no tiene estructura de párrafo real — cualquier herramienta a este costo da un resultado aproximado. |
 | Generar EPUB | `github.com/go-shiori/go-epub` | MIT | Fork activamente mantenido y recomendado de `bmaupin/go-epub`, que está archivado. `AddSection()` acepta HTML de capítulo directamente, sin transformación intermedia. |
-| Generar PDF | `github.com/gpdf-dev/gpdf` | MIT | Cero dependencias, mantenido con releases frecuentes. Su sistema de grillas (`AutoRow`/`Text`) hace word-wrap y pagina automáticamente — necesario para texto fluido de un libro, a diferencia de las alternativas de bajo nivel (`gofpdf`/`go-pdf/fpdf`, ambas archivadas en 2021 y 2025 respectivamente). |
+| Generar PDF | `github.com/gpdf-dev/gpdf` | MIT | Cero dependencias, mantenido con releases frecuentes. Su sistema de grillas (`AutoRow`/`Text`) hace word-wrap y pagina automáticamente — necesario para texto fluido de un libro, a diferencia de las alternativas de bajo nivel (`gofpdf`/`go-pdf/fpdf`, ambas archivadas en 2021 y 2025 respectivamente). Para interpretar el HTML de cada capítulo se reutiliza `golang.org/x/net/html` (ya una dependencia transitiva de `go-epub`) en vez de sumar un parser propio. |
 
 Alcance de esta iteración:
 
 - **Importación** (`.txt`/`.docx`/`.pdf`): reconstruye párrafos, encabezados (H1-H3) y
-  negrita/itálica cuando el formato de origen los tiene (DOCX). Un PDF importado se
-  reconstruye como párrafos de texto plano, sin formato — es una limitación del formato
-  fuente, no de la implementación. Cada archivo importado produce **un solo capítulo**,
-  igual que hoy con `.txt`; dividir el resultado en varios capítulos sigue siendo una acción
-  manual del editor ("Agregar capítulo"). No hay detección automática de capítulos
-  (saltos de página, estilos de título) en esta iteración.
+  negrita/itálica cuando el formato de origen los tiene (DOCX). La detección de
+  encabezados es una heurística sobre el ID de estilo del párrafo (`Heading1`/`Heading2`/
+  `Heading3`, los nombres que Word y LibreOffice usan por defecto) — un documento con
+  estilos de título renombrados no se detecta como encabezado, sólo como párrafo normal.
+  Un PDF importado se reconstruye como párrafos de texto plano, sin formato — es una
+  limitación del formato fuente, no de la implementación. Cada archivo importado produce
+  **un solo capítulo**, igual que hoy con `.txt`; dividir el resultado en varios capítulos
+  sigue siendo una acción manual del editor ("Agregar capítulo"). No hay detección
+  automática de capítulos (saltos de página, estilos de título) en esta iteración.
 - **Exportación** (EPUB/PDF): el archivo generado se **descarga en el navegador**, nunca se
   adjunta automáticamente como el ebook vendible del libro. El administrador lo revisa y,
   si le sirve, lo sube él mismo por la pestaña "Archivo y portada" (flujo ya existente,

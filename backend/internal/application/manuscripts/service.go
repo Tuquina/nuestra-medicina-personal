@@ -61,3 +61,55 @@ func (s *Service) Save(ctx context.Context, identifier string, chapters []manusc
 	}
 	return s.repository.Save(ctx, candidate)
 }
+
+// Import converts an uploaded file into chapters (see Import in
+// importer.go) and persists them immediately — same effect as opening the
+// editor and clicking save, not just a preview held in the browser.
+func (s *Service) Import(ctx context.Context, identifier, filename string, content []byte) (manuscript.Manuscript, error) {
+	selectedBook, err := s.books.Get(ctx, identifier)
+	if err != nil {
+		return manuscript.Manuscript{}, err
+	}
+	chapters, err := Import(filename, content)
+	if err != nil {
+		return manuscript.Manuscript{}, err
+	}
+	candidate := manuscript.Manuscript{BookID: selectedBook.ID, Chapters: chapters, UpdatedAt: s.now().UTC()}
+	if err := candidate.Validate(); err != nil {
+		return manuscript.Manuscript{}, err
+	}
+	return s.repository.Save(ctx, candidate)
+}
+
+// Export renders the currently-saved chapters as a downloadable file.
+// Nothing is written to storage here — the caller streams the bytes back
+// to the browser; per ADR 0004 a generated file never auto-replaces the
+// book's purchasable ebook.
+func (s *Service) Export(ctx context.Context, identifier, format string) ([]byte, string, error) {
+	selectedBook, err := s.books.Get(ctx, identifier)
+	if err != nil {
+		return nil, "", err
+	}
+	saved, err := s.repository.Get(ctx, selectedBook.ID)
+	if errors.Is(err, manuscript.ErrNotFound) {
+		saved = manuscript.Manuscript{Chapters: []manuscript.Chapter{}}
+	} else if err != nil {
+		return nil, "", fmt.Errorf("get manuscript for export: %w", err)
+	}
+	switch format {
+	case "epub":
+		data, err := ExportEPUB(selectedBook.Title, selectedBook.AuthorName, saved.Chapters)
+		if err != nil {
+			return nil, "", err
+		}
+		return data, selectedBook.Slug + ".epub", nil
+	case "pdf":
+		data, err := ExportPDF(selectedBook.Title, selectedBook.AuthorName, saved.Chapters)
+		if err != nil {
+			return nil, "", err
+		}
+		return data, selectedBook.Slug + ".pdf", nil
+	default:
+		return nil, "", manuscript.ErrUnsupportedFormat
+	}
+}

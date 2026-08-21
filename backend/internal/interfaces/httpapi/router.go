@@ -33,8 +33,9 @@ type Dependencies struct {
 	SessionCookie       string
 	SecureCookies       bool
 	EbookInternalPrefix string
-	EbookMaxUploadBytes int64
-	MediaMaxUploadBytes int64
+	EbookMaxUploadBytes      int64
+	MediaMaxUploadBytes      int64
+	ManuscriptMaxUploadBytes int64
 	RateLimits          RateLimitConfig
 	MaxRequestURIBytes  int
 }
@@ -49,7 +50,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
 	pageHandler := NewPageHandler(dependencies.Pages, dependencies.Logger)
 	mediaHandler := NewMediaHandler(dependencies.Media, dependencies.Logger, dependencies.MediaMaxUploadBytes)
-	manuscriptHandler := NewManuscriptHandler(dependencies.Manuscripts, dependencies.Logger)
+	manuscriptHandler := NewManuscriptHandler(dependencies.Manuscripts, dependencies.Logger, dependencies.ManuscriptMaxUploadBytes)
 	backofficeHandler := NewBackofficeHandler(dependencies.Backoffice, dependencies.Logger)
 	settingsHandler := NewSettingsHandler(dependencies.Settings, dependencies.Logger, dependencies.IntegrationStatus)
 	rateLimiter := NewRateLimiter(dependencies.RateLimits)
@@ -100,6 +101,8 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/ebook", libraryHandler.Upload)
 	admin.HandleFunc("GET /api/v1/admin/books/{identifier}/manuscript", manuscriptHandler.Get)
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/manuscript", manuscriptHandler.Save)
+	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/manuscript/import", manuscriptHandler.Import)
+	admin.HandleFunc("GET /api/v1/admin/books/{identifier}/manuscript/export", manuscriptHandler.Export)
 	admin.HandleFunc("POST /api/v1/admin/pages", pageHandler.Create)
 	admin.HandleFunc("GET /api/v1/admin/pages/{identifier}", pageHandler.GetAdmin)
 	admin.HandleFunc("PUT /api/v1/admin/pages/{identifier}/draft", pageHandler.SaveDraft)
