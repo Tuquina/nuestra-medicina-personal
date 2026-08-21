@@ -106,7 +106,14 @@ const server = http.createServer((req, res) => {
         return;
       }
       send(res, 200, {
-        id: paymentID,
+        // Real Mercado Pago payment ids are numeric — the real client
+        // (client.go) decodes this field as json.Number, which (unlike a
+        // plain string field) only accepts a bare JSON number literal, not
+        // a quoted string. Emit it unquoted whenever the registered id is
+        // numeric (every id fixtures/mercadopago.ts hands out is) so this
+        // faithfully matches the real contract; fall back to a quoted
+        // string only for a hand-crafted non-numeric id in a test.
+        id: /^\d+$/.test(paymentID) ? Number(paymentID) : paymentID,
         status: payment.status,
         external_reference: payment.externalReference,
         transaction_amount: Number(minorUnitsToDecimalString(payment.amountMinorUnits)),
