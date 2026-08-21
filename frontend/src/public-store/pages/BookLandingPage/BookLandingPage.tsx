@@ -10,6 +10,7 @@ import { FeatureGrid } from '../../../shared/components/FeatureGrid/FeatureGrid'
 import { QuoteBanner } from '../../../shared/components/QuoteBanner/QuoteBanner';
 import { BookDetailsGrid } from '../../../shared/components/BookDetailsGrid/BookDetailsGrid';
 import { FaqAccordion } from '../../../shared/components/FaqAccordion/FaqAccordion';
+import { BookReviews } from '../../../shared/components/BookReviews/BookReviews';
 import { RelatedBooks } from '../../../shared/components/RelatedBooks/RelatedBooks';
 import { FinalCta } from '../../../shared/components/FinalCta/FinalCta';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
@@ -123,6 +124,8 @@ function BookLandingContent({ book, slug }: { book: Book; slug: string }) {
       />
 
       {landing.faqs && landing.faqs.length > 0 && <FaqAccordion faqs={landing.faqs} />}
+
+      <BookReviews bookSlug={slug} />
 
       <RelatedBooks books={relatedBook ? [relatedBook] : []} />
 
