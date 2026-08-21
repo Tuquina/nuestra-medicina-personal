@@ -22,6 +22,11 @@ type Config struct {
 	MercadoPagoToken          string
 	MercadoPagoWebhookSecret  string
 	MercadoPagoPublicBaseURL  string
+	// MercadoPagoAPIBaseURL overrides which host the client talks to for
+	// preference creation/payment verification. Empty in production (the
+	// client defaults to the real Mercado Pago API) — only E2E tests set
+	// this, to point at a fake server instead.
+	MercadoPagoAPIBaseURL string
 	EbookStoragePath          string
 	EbookInternalPrefix       string
 	EbookMaxUploadBytes       int64
@@ -74,6 +79,7 @@ func Load() (Config, error) {
 		MercadoPagoToken:          os.Getenv("MERCADOPAGO_ACCESS_TOKEN"),
 		MercadoPagoWebhookSecret:  os.Getenv("MERCADOPAGO_WEBHOOK_SECRET"),
 		MercadoPagoPublicBaseURL:  os.Getenv("MERCADOPAGO_PUBLIC_BASE_URL"),
+		MercadoPagoAPIBaseURL:     os.Getenv("MERCADOPAGO_API_BASE_URL"),
 		EbookStoragePath:          envOrDefault("EBOOK_STORAGE_PATH", "/data/ebooks"),
 		EbookInternalPrefix:       envOrDefault("EBOOK_INTERNAL_PREFIX", "/_protected/ebooks"),
 		EbookMaxUploadBytes:       int64OrDefault("EBOOK_MAX_UPLOAD_BYTES", 50<<20),
