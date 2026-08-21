@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../shared/components/Button/Button';
-import { apiRequest } from '../../../shared/api/client';
-import { adminBookManuscriptUrl } from '../../../shared/config/api';
+import { apiRequest, ApiError } from '../../../shared/api/client';
+import { adminBookManuscriptUrl, adminBookManuscriptImportUrl, adminBookManuscriptExportUrl } from '../../../shared/config/api';
 import { PageBreakOverlay } from './PageBreakOverlay';
 import { DEFAULT_PAGE_SIZE_ID, PAGE_MARGIN_MM, PAGE_SIZES, findPageSize, pageContentHeightPx } from './pageSizes';
 import styles from './ManuscritoTab.module.css';
@@ -19,7 +19,6 @@ interface ManuscriptResponse {
 }
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
-const CONVERTIBLE_EXTENSION = '.txt';
 
 function wordCountOf(html: string): number {
   return html
@@ -41,15 +40,16 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
  * only synced from it when switching chapters, not on every keystroke.
  *
  * Chapters persist for real via `GET/PUT /api/v1/admin/books/{id}/manuscript`
- * (autosaved, debounced). Real conversion is only implemented for plain
- * text uploads (`file.text()`); other formats and "Generar EPUB/PDF" are
- * honestly marked as not available yet rather than faking success —
- * architecture.md doesn't define a real conversion/generation pipeline,
- * and building one is a bigger, separate decision (new dependencies, an
- * ADR) than this pass covers. Once a backend renders manuscript content
- * *publicly*, that surface must sanitize per architecture.md §40 — this
- * admin preview modal, which only ever reflects the author's own
- * just-typed HTML from this session, is a different surface.
+ * (autosaved, debounced). Uploading a file converts it server-side
+ * (`PUT .../manuscript/import` — real DOCX/PDF/TXT parsing, ADR 0004) and
+ * saves the result immediately. "Generar EPUB/PDF" downloads a real,
+ * freshly generated file from `GET .../manuscript/export`; per ADR 0004 it
+ * never auto-replaces the book's purchasable ebook — the admin reviews the
+ * download and re-uploads it themselves via "Archivo y portada" if it's
+ * good. Once a backend renders manuscript content *publicly*, that surface
+ * must sanitize per architecture.md §40 — this admin preview modal, which
+ * only ever reflects the author's own just-typed HTML from this session,
+ * is a different surface.
  */
 interface ManuscritoTabProps {
   bookId: string | null;
@@ -73,9 +73,11 @@ export function ManuscritoTab({ bookId, bookTitle }: ManuscritoTabProps) {
 function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: string }) {
   const [loading, setLoading] = useState(true);
   const [manuscriptStarted, setManuscriptStarted] = useState(false);
+  const [converting, setConverting] = useState(false);
   const [uploadNotice, setUploadNotice] = useState('');
   const [chapters, setChapters] = useState<Chapter[]>([{ id: 1, title: 'Capítulo 1', html: '' }]);
   const [activeChapter, setActiveChapter] = useState(0);
+  const [exporting, setExporting] = useState<'EPUB' | 'PDF' | null>(null);
   const [exportMessage, setExportMessage] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [pageSizeId, setPageSizeId] = useState(DEFAULT_PAGE_SIZE_ID);
@@ -158,22 +160,34 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   }, [manuscriptStarted, activeChapter, pageSizeId]);
 
   const handleFileUpload = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(CONVERTIBLE_EXTENSION)) {
-      setUploadNotice(
-        'La conversión automática de DOCX/PDF todavía no está disponible. Subí un archivo .txt o empezá a escribir directamente.',
-      );
-      return;
-    }
+    setConverting(true);
     setUploadNotice('');
-    const text = await file.text();
-    const html = text
-      .split(/\n{2,}/)
-      .map((paragraph) => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
-      .join('');
-    skipNextAutosaveRef.current = false;
-    setChapters([{ id: 1, title: 'Capítulo 1', html }]);
-    setActiveChapter(0);
-    setManuscriptStarted(true);
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const response = await apiRequest<ManuscriptResponse>(adminBookManuscriptImportUrl(bookId), {
+        method: 'PUT',
+        body,
+      });
+      // The backend already persisted this import — hydrate local state
+      // without re-triggering the autosave effect for a no-op re-save.
+      skipNextAutosaveRef.current = true;
+      setChapters(response.chapters);
+      setActiveChapter(0);
+      setManuscriptStarted(true);
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.code === 'MANUSCRIPT_UNSUPPORTED_FORMAT') {
+        setUploadNotice('Formato no soportado. Subí un archivo .txt, .docx o .pdf.');
+      } else if (error instanceof ApiError && error.code === 'MANUSCRIPT_CONVERSION_FAILED') {
+        setUploadNotice('No pudimos convertir ese archivo — puede estar dañado o vacío.');
+      } else if (error instanceof ApiError && error.code === 'MANUSCRIPT_TOO_LARGE') {
+        setUploadNotice('El archivo supera el límite de tamaño permitido.');
+      } else {
+        setUploadNotice('No pudimos convertir el archivo. Intentá nuevamente.');
+      }
+    } finally {
+      setConverting(false);
+    }
   };
 
   const startBlank = () => {
@@ -199,8 +213,46 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     document.execCommand(command, false, value);
   };
 
-  const generate = (kind: 'EPUB' | 'PDF') => {
-    setExportMessage(`La generación de ${kind} todavía no está disponible.`);
+  const generate = async (kind: 'EPUB' | 'PDF') => {
+    setExporting(kind);
+    setExportMessage(`Generando ${kind}…`);
+    try {
+      const response = await fetch(adminBookManuscriptExportUrl(bookId, kind === 'EPUB' ? 'epub' : 'pdf'), {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        let code = 'HTTP_ERROR';
+        try {
+          const body = (await response.json()) as { error?: { code?: string } };
+          code = body.error?.code ?? code;
+        } catch {
+          // non-JSON error body — fall through to the generic message
+        }
+        setExportMessage(
+          code === 'MANUSCRIPT_CONVERSION_FAILED'
+            ? `No pudimos generar el ${kind}. Revisá el contenido de los capítulos.`
+            : `No pudimos generar el ${kind}. Intentá nuevamente.`,
+        );
+        return;
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition') ?? '';
+      const filenameMatch = /filename="?([^";]+)"?/.exec(disposition);
+      const filename = filenameMatch?.[1] ?? (kind === 'EPUB' ? 'manuscrito.epub' : 'manuscrito.pdf');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setExportMessage(`${filename} generado y descargado.`);
+    } catch {
+      setExportMessage(`No pudimos generar el ${kind}. Intentá nuevamente.`);
+    } finally {
+      setExporting(null);
+    }
   };
 
   const saveStatusText: Record<SaveState, string> = {
@@ -215,18 +267,21 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   }
 
   if (!manuscriptStarted) {
-    return (
+    return converting ? (
+      <div className={styles.converting}>Convirtiendo el archivo…</div>
+    ) : (
       <div className={styles.startGrid}>
         <div className={styles.startCardDashed}>
           <p className={styles.startCardTitle}>Subir un archivo existente</p>
-          <p className={styles.startCardHint}>Por ahora convertimos automáticamente sólo archivos TXT.</p>
+          <p className={styles.startCardHint}>Aceptamos DOCX, PDF o TXT.</p>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".doc,.docx,.pdf,.txt"
+            accept=".docx,.pdf,.txt"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void handleFileUpload(file);
+              e.target.value = '';
             }}
             style={{ display: 'none' }}
           />
@@ -402,15 +457,22 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
         {/* EXPORT PANEL */}
         <div className={styles.exportPanel}>
           <p className={styles.exportTitle}>Convertir y guardar</p>
-          <Button variant="secondary" fullWidth style={{ marginBottom: 8 }} onClick={() => generate('EPUB')}>
-            Generar EPUB
+          <Button
+            variant="secondary"
+            fullWidth
+            style={{ marginBottom: 8 }}
+            onClick={() => generate('EPUB')}
+            disabled={exporting !== null}
+          >
+            {exporting === 'EPUB' ? 'Generando…' : 'Generar EPUB'}
           </Button>
-          <Button variant="secondary" fullWidth onClick={() => generate('PDF')}>
-            Generar PDF
+          <Button variant="secondary" fullWidth onClick={() => generate('PDF')} disabled={exporting !== null}>
+            {exporting === 'PDF' ? 'Generando…' : 'Generar PDF'}
           </Button>
           {exportMessage && <p className={styles.exportMessage}>{exportMessage}</p>}
           <p className={styles.exportHint}>
-            Los capítulos ya se guardan automáticamente. La generación de EPUB/PDF es una función futura.
+            Los capítulos ya se guardan automáticamente. El EPUB/PDF generado se descarga para que lo revises antes
+            de subirlo como archivo vendible en "Archivo y portada".
           </p>
         </div>
       </div>

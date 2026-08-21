@@ -220,9 +220,24 @@ un libro sin manuscrito guardado responde `200` con `chapters: []`, no `404`
 — "todavía no empezado" no es un error. `PUT` reemplaza el arreglo completo
 (lo que envía el autosave del editor); un máximo de 200 capítulos y 2MB de
 HTML por capítulo evitan que un bucle de autosave descontrolado haga crecer
-la fila sin límite. No existe todavía conversión automática de DOCX/PDF ni
-generación real de EPUB/PDF — el editor lo indica explícitamente en vez de
-simular una operación que no ocurre.
+la fila sin límite.
+
+`PUT /api/v1/admin/books/{identifier}/manuscript/import` (`multipart/form-data`,
+campo `file`) convierte un `.txt`/`.docx`/`.pdf` subido en un solo capítulo y lo
+persiste de inmediato — mismo efecto que guardar desde el editor. La extensión
+y la firma de bytes se validan antes de intentar convertir (`PK\x03\x04` para
+DOCX, `%PDF-` para PDF); un archivo con extensión válida pero contenido
+corrupto responde `422 MANUSCRIPT_CONVERSION_FAILED`, una extensión no
+soportada responde `415 MANUSCRIPT_UNSUPPORTED_FORMAT`. Ver ADR 0004 para el
+alcance exacto de fidelidad (párrafos, encabezados H1-H3 y negrita/itálica
+para DOCX; sólo párrafos de texto plano para PDF).
+
+`GET /api/v1/admin/books/{identifier}/manuscript/export?format=epub|pdf`
+genera el archivo en el momento a partir de los capítulos guardados y lo
+devuelve como descarga (`Content-Disposition: attachment`) — no se persiste
+en ningún storage ni reemplaza el ebook vendible del libro; el administrador
+lo revisa y, si le sirve, lo sube manualmente por `PUT
+/api/v1/admin/books/{identifier}/ebook` (ADR 0004).
 
 ## Backoffice de datos
 
