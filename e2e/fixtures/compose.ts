@@ -14,7 +14,10 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
-export const REPO_ROOT = path.resolve(__dirname, '..');
+// This file lives in e2e/fixtures/, so the repo root is two levels up
+// (not one — that was the bug that broke CI: __dirname here is
+// <repo>/e2e/fixtures, and resolving only '..' lands on <repo>/e2e).
+export const REPO_ROOT = path.resolve(__dirname, '..', '..');
 export const COMPOSE_PROJECT_NAME = 'nmp-e2e';
 export const COMPOSE_ARGS = [
   'compose',
