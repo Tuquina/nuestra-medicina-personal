@@ -1685,6 +1685,10 @@ Toda orden debe almacenar el precio histórico del item.
 
 No depender del precio actual del libro después de crear una orden.
 
+Lo mismo aplica a cualquier descuento aplicado: `orders.coupon_code` y
+`orders.discount_minor_units` son un snapshot histórico, sin FK a `coupons`,
+para que editar o borrar un cupón nunca altere una orden ya creada.
+
 ---
 
 # 39. Seguridad

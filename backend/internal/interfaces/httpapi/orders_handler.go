@@ -11,7 +11,7 @@ import (
 )
 
 type OrderService interface {
-	Create(context.Context, string, string, string) (order.Order, error)
+	Create(context.Context, string, string, string, string) (order.Order, error)
 	Get(context.Context, string, string) (order.Order, error)
 	ProcessPayment(context.Context, string) (order.Order, error)
 }
@@ -32,14 +32,15 @@ func NewOrderHandler(service OrderService, validator MercadoPagoWebhookValidator
 
 func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		BookSlug string `json:"bookSlug"`
+		BookSlug   string `json:"bookSlug"`
+		CouponCode string `json:"couponCode"`
 	}
 	if err := decodeJSON(r, &input); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Request body is not valid JSON", nil)
 		return
 	}
 	user := currentUser(r.Context())
-	created, err := h.service.Create(r.Context(), user.ID, user.Email, input.BookSlug)
+	created, err := h.service.Create(r.Context(), user.ID, user.Email, input.BookSlug, input.CouponCode)
 	if err != nil {
 		h.handleError(w, r, "create order", err)
 		return
@@ -104,6 +105,8 @@ func (h *OrderHandler) handleError(w http.ResponseWriter, r *http.Request, opera
 		writeError(w, http.StatusUnprocessableEntity, "BOOK_UNAVAILABLE", "Book is not available for purchase", nil)
 	case errors.Is(err, order.ErrPaymentNotReady):
 		writeError(w, http.StatusServiceUnavailable, "PAYMENTS_NOT_CONFIGURED", "Payments are not configured", nil)
+	case errors.Is(err, order.ErrCouponInvalid):
+		writeError(w, http.StatusUnprocessableEntity, "COUPON_INVALID", "Coupon code is not valid for this order", nil)
 	case errors.Is(err, order.ErrPaymentProvider):
 		h.logger.Error(operation, logAttributes...)
 		writeError(w, http.StatusBadGateway, "PAYMENT_PROVIDER_ERROR", "Payment provider could not be reached", nil)
@@ -114,15 +117,17 @@ func (h *OrderHandler) handleError(w http.ResponseWriter, r *http.Request, opera
 }
 
 type orderResponse struct {
-	ID              string              `json:"id"`
-	Status          order.Status        `json:"status"`
-	TotalMinorUnits int64               `json:"totalMinorUnits"`
-	Currency        string              `json:"currency"`
-	CheckoutURL     string              `json:"checkoutUrl,omitempty"`
-	Items           []orderItemResponse `json:"items"`
-	CreatedAt       time.Time           `json:"createdAt"`
-	UpdatedAt       time.Time           `json:"updatedAt"`
-	PaidAt          *time.Time          `json:"paidAt"`
+	ID                 string              `json:"id"`
+	Status             order.Status        `json:"status"`
+	TotalMinorUnits    int64               `json:"totalMinorUnits"`
+	Currency           string              `json:"currency"`
+	CheckoutURL        string              `json:"checkoutUrl,omitempty"`
+	CouponCode         string              `json:"couponCode,omitempty"`
+	DiscountMinorUnits int64               `json:"discountMinorUnits"`
+	Items              []orderItemResponse `json:"items"`
+	CreatedAt          time.Time           `json:"createdAt"`
+	UpdatedAt          time.Time           `json:"updatedAt"`
+	PaidAt             *time.Time          `json:"paidAt"`
 }
 
 type orderItemResponse struct {
@@ -144,7 +149,8 @@ func mapOrder(value order.Order) orderResponse {
 	}
 	return orderResponse{
 		ID: value.ID, Status: value.Status, TotalMinorUnits: value.TotalMinorUnits,
-		Currency: value.Currency, CheckoutURL: value.CheckoutURL, Items: items,
+		Currency: value.Currency, CheckoutURL: value.CheckoutURL,
+		CouponCode: value.CouponCode, DiscountMinorUnits: value.DiscountMinorUnits, Items: items,
 		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, PaidAt: value.PaidAt,
 	}
 }

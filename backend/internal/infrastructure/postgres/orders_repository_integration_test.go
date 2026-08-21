@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -111,5 +112,99 @@ func TestOrderPaymentIsIdempotentAgainstPostgres(t *testing.T) {
 	mismatch.AmountMinorUnits++
 	if _, err := repository.ApplyPayment(ctx, "MERCADO_PAGO", mismatch, now); !errors.Is(err, order.ErrPaymentMismatch) {
 		t.Fatalf("expected amount mismatch, got %v", err)
+	}
+}
+
+// TestOrderCreationReservesLimitedCouponUsageAtomically guards the exact
+// race the checkout coupon feature exists to prevent: two customers
+// checking out at the same instant against a coupon with usage_limit=1
+// must never both succeed.
+func TestOrderCreationReservesLimitedCouponUsageAtomically(t *testing.T) {
+	ctx := context.Background()
+	pool, err := Open(ctx, os.Getenv("DATABASE_URL"), 4, 5*time.Second)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer pool.Close()
+
+	const (
+		userAID  = "10000000-0000-4000-8000-000000000010"
+		userBID  = "10000000-0000-4000-8000-000000000011"
+		bookID   = "20000000-0000-4000-8000-000000000010"
+		couponID = "50000000-0000-4000-8000-000000000001"
+		orderAID = "30000000-0000-4000-8000-000000000010"
+		orderBID = "30000000-0000-4000-8000-000000000011"
+	)
+	cleanup := func() {
+		for _, id := range []string{orderAID, orderBID} {
+			_, _ = pool.Exec(ctx, `DELETE FROM order_items WHERE order_id = $1::uuid`, id)
+			_, _ = pool.Exec(ctx, `DELETE FROM orders WHERE id = $1::uuid`, id)
+		}
+		_, _ = pool.Exec(ctx, `DELETE FROM coupons WHERE id = $1::uuid`, couponID)
+		_, _ = pool.Exec(ctx, `DELETE FROM books WHERE id = $1::uuid`, bookID)
+		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE id = ANY($1::uuid[])`, []string{userAID, userBID})
+	}
+	cleanup()
+	t.Cleanup(cleanup)
+
+	if _, err := pool.Exec(ctx, `INSERT INTO users (id, google_subject, email) VALUES
+		($1::uuid, 'integration-coupon-user-a', 'buyer-a@example.com'),
+		($2::uuid, 'integration-coupon-user-b', 'buyer-b@example.com')`, userAID, userBID); err != nil {
+		t.Fatalf("seed users: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO books (id, slug, title, price_minor_units, currency, status)
+		VALUES ($1::uuid, 'integration-coupon-book', 'Integration coupon book', 10000, 'ARS', 'PUBLISHED')`, bookID); err != nil {
+		t.Fatalf("seed book: %v", err)
+	}
+	now := time.Date(2026, 8, 19, 16, 0, 0, 0, time.UTC)
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO coupons (id, code, kind, value, currency, starts_at, ends_at, usage_limit, usage_count, applies_to_all, active, created_at, updated_at)
+		VALUES ($1::uuid, 'RACEONE', 'FIXED', 1000, 'ARS', $2::date - 1, $2::date + 1, 1, 0, TRUE, TRUE, $2, $2)`,
+		couponID, now); err != nil {
+		t.Fatalf("seed coupon: %v", err)
+	}
+
+	repository := NewOrderRepository(pool)
+	attempt := func(orderID, userID string) error {
+		_, err := repository.Create(ctx, order.Order{
+			ID: orderID, UserID: userID, Status: order.StatusPending,
+			TotalMinorUnits: 9000, Currency: "ARS", CouponID: couponID, CouponCode: "RACEONE", DiscountMinorUnits: 1000,
+			CreatedAt: now, UpdatedAt: now,
+			Items: []order.Item{{
+				ID: orderID, BookID: bookID, BookSlug: "integration-coupon-book", BookTitle: "Integration coupon book",
+				UnitPriceMinorUnits: 10000, Quantity: 1, Currency: "ARS",
+			}},
+		})
+		return err
+	}
+
+	var wg sync.WaitGroup
+	results := make([]error, 2)
+	wg.Add(2)
+	go func() { defer wg.Done(); results[0] = attempt(orderAID, userAID) }()
+	go func() { defer wg.Done(); results[1] = attempt(orderBID, userBID) }()
+	wg.Wait()
+
+	successes := 0
+	for _, result := range results {
+		switch {
+		case result == nil:
+			successes++
+		case errors.Is(result, order.ErrCouponInvalid):
+			// expected for the loser of the race
+		default:
+			t.Fatalf("unexpected error reserving coupon usage: %v", result)
+		}
+	}
+	if successes != 1 {
+		t.Fatalf("expected exactly one order to reserve the coupon, got %d successes: %#v", successes, results)
+	}
+	var usageCount int
+	if err := pool.QueryRow(ctx, `SELECT usage_count FROM coupons WHERE id = $1::uuid`, couponID).Scan(&usageCount); err != nil {
+		t.Fatalf("read usage count: %v", err)
+	}
+	if usageCount != 1 {
+		t.Fatalf("expected usage_count to end at 1, got %d", usageCount)
 	}
 }

@@ -69,7 +69,7 @@ func run(logger *slog.Logger) error {
 	authorizer := postgres.NewSessionAuthorizer(pool, cfg.AdminGoogleSub)
 	orderRepository := postgres.NewOrderRepository(pool)
 	mercadoPagoClient := mercadopago.NewClient(cfg.MercadoPagoToken, cfg.MercadoPagoPublicBaseURL)
-	orderService := orders.NewService(bookService, orderRepository, mercadoPagoClient)
+	orderService := orders.NewService(bookService, couponRepository, orderRepository, mercadoPagoClient)
 	ebookStorage, err := storage.NewLocalEbookStorage(cfg.EbookStoragePath)
 	if err != nil {
 		return err

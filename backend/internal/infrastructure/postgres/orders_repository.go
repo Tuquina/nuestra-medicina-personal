@@ -27,10 +27,33 @@ func (r *OrderRepository) Create(ctx context.Context, value order.Order) (order.
 		return order.Order{}, fmt.Errorf("begin order transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if value.CouponID != "" {
+		// Atomically re-validates and reserves one use of the coupon in the
+		// same transaction as the order insert, so concurrent checkouts
+		// against a usage-limited coupon can never oversell it.
+		command, err := tx.Exec(ctx, `
+			UPDATE coupons SET usage_count = usage_count + 1, updated_at = $2
+			WHERE id = $1::uuid AND active
+			  AND starts_at <= $2::date AND ends_at >= $2::date
+			  AND (usage_limit IS NULL OR usage_count < usage_limit)`,
+			value.CouponID, value.CreatedAt,
+		)
+		if err != nil {
+			return order.Order{}, fmt.Errorf("reserve coupon usage: %w", err)
+		}
+		if command.RowsAffected() == 0 {
+			return order.Order{}, order.ErrCouponInvalid
+		}
+	}
+	var couponCode *string
+	if value.CouponCode != "" {
+		couponCode = &value.CouponCode
+	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO orders (id, user_id, status, total_minor_units, currency, created_at, updated_at)
-		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $6)`,
-		value.ID, value.UserID, value.Status, value.TotalMinorUnits, value.Currency, value.CreatedAt,
+		INSERT INTO orders (id, user_id, status, total_minor_units, currency, coupon_code, discount_minor_units, created_at, updated_at)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $8)`,
+		value.ID, value.UserID, value.Status, value.TotalMinorUnits, value.Currency,
+		couponCode, value.DiscountMinorUnits, value.CreatedAt,
 	); err != nil {
 		return order.Order{}, fmt.Errorf("insert order: %w", err)
 	}
@@ -200,12 +223,14 @@ func (r *OrderRepository) get(ctx context.Context, identifier, userID string) (o
 	err := r.pool.QueryRow(ctx, `
 		SELECT id::text, user_id::text, status, total_minor_units, currency,
 		       COALESCE(provider_preference_id, ''), COALESCE(checkout_url, ''),
+		       COALESCE(coupon_code, ''), discount_minor_units,
 		       created_at, updated_at, paid_at
 		FROM orders
 		WHERE id::text = $1 AND ($2 = '' OR user_id::text = $2)`, identifier, userID,
 	).Scan(
 		&value.ID, &value.UserID, &value.Status, &value.TotalMinorUnits, &value.Currency,
-		&value.ProviderPreferenceID, &value.CheckoutURL, &value.CreatedAt, &value.UpdatedAt, &value.PaidAt,
+		&value.ProviderPreferenceID, &value.CheckoutURL, &value.CouponCode, &value.DiscountMinorUnits,
+		&value.CreatedAt, &value.UpdatedAt, &value.PaidAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return order.Order{}, order.ErrNotFound

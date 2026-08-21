@@ -40,10 +40,21 @@ cerradas.
 
 ## Órdenes y pagos
 
-`POST /api/v1/orders` requiere sesión y recibe un único `bookSlug`. La orden y
-su item se insertan en una transacción antes de crear la preferencia de Checkout
-Pro. El item conserva título, precio y moneda históricos; cambios posteriores
-en el libro no alteran la venta.
+`POST /api/v1/orders` requiere sesión y recibe un `bookSlug` y, opcionalmente,
+un `couponCode`. La orden y su item se insertan en una transacción antes de
+crear la preferencia de Checkout Pro. El item conserva título, precio y
+moneda históricos; cambios posteriores en el libro no alteran la venta.
+
+Si se envía `couponCode`, el servidor lo busca, valida vigencia/fecha/uso
+(`Coupon.EffectiveStatus`, la misma regla que usa la pantalla admin) y alcance
+por libro, y calcula el descuento — nunca se confía en un monto calculado por
+el cliente. El código, el monto descontado y el total ya descontado quedan
+grabados en la orden como snapshot histórico (`couponCode`,
+`discountMinorUnits`): si el cupón se edita o se borra después, la orden no
+cambia. El incremento de `usage_count` del cupón ocurre en la misma
+transacción que el insert de la orden (`UPDATE ... WHERE usage_count <
+usage_limit`), así que dos checkouts simultáneos contra un cupón con límite de
+uso nunca pueden sobreusarlo — el segundo recibe `422 COUPON_INVALID`.
 
 La redirección de Checkout Pro sólo informa estado visual. Una orden pasa a
 `PAID` exclusivamente cuando `/api/v1/webhooks/mercadopago` valida la firma

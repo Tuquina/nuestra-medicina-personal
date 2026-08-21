@@ -234,6 +234,9 @@ paths:
               required: [bookSlug]
               properties:
                 bookSlug: {type: string}
+                couponCode:
+                  type: string
+                  description: Código opcional. Se valida y descuenta server-side; nunca se confía en un precio calculado por el cliente.
       responses:
         '201':
           description: Orden pendiente con URL de Checkout Pro.
@@ -243,7 +246,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422':
-          description: El libro no está publicado o no tiene precio válido.
+          description: El libro no está publicado o no tiene precio válido, o el cupón no es válido (código `COUPON_INVALID`).
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
         '503':
           description: Mercado Pago no está configurado.
@@ -804,6 +807,10 @@ components:
         totalMinorUnits: {type: integer, format: int64, minimum: 0}
         currency: {type: string, minLength: 3, maxLength: 3}
         checkoutUrl: {type: string, format: uri}
+        couponCode:
+          type: string
+          description: Código del cupón aplicado, como snapshot histórico — no cambia si el cupón se edita o borra después.
+        discountMinorUnits: {type: integer, format: int64, minimum: 0}
         items:
           type: array
           items: {$ref: '#/components/schemas/OrderItem'}

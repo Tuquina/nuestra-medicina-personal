@@ -102,6 +102,15 @@ func (r *CouponRepository) get(ctx context.Context, id string) (coupon.Coupon, e
 		LEFT JOIN coupon_books cb ON cb.coupon_id=c.id WHERE c.id=$1::uuid GROUP BY c.id`, id))
 }
 
+// GetByCode is used by checkout to look up a coupon a customer typed in.
+// Effective status (active/dates/usage) and book scope are re-checked in
+// Go against coupon.Coupon.EffectiveStatus()/BookIDs rather than in SQL,
+// so that logic stays in one place with the admin screen.
+func (r *CouponRepository) GetByCode(ctx context.Context, code string) (coupon.Coupon, error) {
+	return scanCoupon(r.pool.QueryRow(ctx, `SELECT `+couponColumns+` FROM coupons c
+		LEFT JOIN coupon_books cb ON cb.coupon_id=c.id WHERE c.code=$1 GROUP BY c.id`, code))
+}
+
 func scanCoupon(row rowScanner) (coupon.Coupon, error) {
 	var value coupon.Coupon
 	err := row.Scan(&value.ID, &value.Code, &value.Kind, &value.Value, &value.Currency, &value.StartsAt,
