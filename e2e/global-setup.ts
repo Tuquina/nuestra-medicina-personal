@@ -2,11 +2,8 @@
 // overrides (e2e/docker-compose.e2e.yml — fake Mercado Pago server,
 // deterministic ADMIN_GOOGLE_SUB, raised rate limits) before any test file
 // runs. See README.md for the full rationale.
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
+import { compose } from './fixtures/compose';
 
-const REPO_ROOT = path.resolve(__dirname, '..');
-const COMPOSE_ARGS = ['compose', '-f', 'docker-compose.yml', '-f', 'e2e/docker-compose.e2e.yml'];
 // Overridable so the suite can also run from a container joined to the
 // compose network (service DNS names instead of published host ports) —
 // used to verify this harness itself without host ports free. Local runs
@@ -16,10 +13,6 @@ const FRONTEND_URL = process.env.E2E_FRONTEND_URL ?? 'http://localhost:5173';
 const MP_FAKE_URL = process.env.E2E_MP_FAKE_URL ?? 'http://localhost:9999';
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 180_000;
-
-function compose(...args: string[]): void {
-  execFileSync('docker', [...COMPOSE_ARGS, ...args], { cwd: REPO_ROOT, stdio: 'inherit' });
-}
 
 async function waitUntilReady(url: string, label: string, init?: RequestInit): Promise<void> {
   const deadline = Date.now() + POLL_TIMEOUT_MS;

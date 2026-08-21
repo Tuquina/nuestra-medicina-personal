@@ -14,22 +14,33 @@ npx playwright install --with-deps chromium   # once, downloads the browser
 npm test
 ```
 
-`global-setup.ts` brings up `docker compose -f docker-compose.yml -f
-e2e/docker-compose.e2e.yml`, waits for the API health check, the frontend
-dev server, and the fake Mercado Pago server, then hands off to the tests.
-`global-teardown.ts` tears the stack down afterwards (`docker compose down
--v`) — set `E2E_KEEP_STACK=1` to skip that and leave everything running for
-manual inspection after a run. Set `E2E_SKIP_COMPOSE=1` to skip *both*
-bringing the stack up and tearing it down — useful when iterating on tests
-against a stack you're already running yourself (`docker compose -f
-docker-compose.yml -f e2e/docker-compose.e2e.yml up -d --build`).
+`global-setup.ts` brings up `docker compose -p nmp-e2e -f docker-compose.yml
+-f e2e/docker-compose.e2e.yml` (see `fixtures/compose.ts`), waits for the
+API health check, the frontend dev server, and the fake Mercado Pago
+server, then hands off to the tests. `global-teardown.ts` tears the stack
+down afterwards (`docker compose down -v`) — set `E2E_KEEP_STACK=1` to skip
+that and leave everything running for manual inspection after a run. Set
+`E2E_SKIP_COMPOSE=1` to skip *both* bringing the stack up and tearing it
+down — useful when iterating on tests against a stack you're already
+running yourself (`docker compose -p nmp-e2e -f docker-compose.yml -f
+e2e/docker-compose.e2e.yml up -d --build`).
 
-Requires Docker and Node 20+. No real Google or Mercado Pago credentials
-are ever used — see below. Uses the same host ports as the regular dev
-workflow (5173, 8080) plus 5432 (Postgres, not published by the base
-`docker-compose.yml`) and 9999 (the fake Mercado Pago server) — stop any
-other stack (this repo's own `docker compose up`, a local Postgres, etc.)
-occupying those first.
+The explicit `-p nmp-e2e` project name matters: without it, Compose derives
+the project name from the current directory, which is exactly what your
+own plain `docker compose up` (the regular dev workflow, run from this same
+repo root) also gets by default — the E2E stack would then reuse the dev
+stack's containers *and named volumes*, and `global-teardown.ts`'s
+`down -v` would delete your real Postgres data and uploaded files the next
+time you ran this suite after using the regular dev workflow. `-p nmp-e2e`
+keeps it in its own project namespace, entirely separate from your dev
+stack, no matter what directory either runs from.
+
+That only isolates the *data* — the two stacks still publish the same host
+ports (5173, 8080, plus 5432 for Postgres and 9999 for the fake Mercado
+Pago server, neither published by the base `docker-compose.yml` on its
+own), so stop your own `docker compose up` (or any local Postgres on 5432)
+before running this suite. Requires Docker and Node 20+. No real Google or
+Mercado Pago credentials are ever used — see below.
 
 ## What's real and what's faked
 
@@ -75,6 +86,9 @@ a fake provider. Session/authorization enforcement (`requireUser`/
   cookie from a seeded session.
 - `mercadopago-fake-server.js` — the fake payment provider described
   above.
+- `compose.ts` — the one place `docker compose` gets invoked from
+  (`global-setup.ts`/`global-teardown.ts` both import it), so the project
+  name (`-p nmp-e2e`, see above) can never drift between the two.
 
 Every test that seeds fixtures is responsible for cleaning them up
 (`try { ... } finally { await cleanup(...) }`) — tests run against one
