@@ -8,21 +8,15 @@ log_format nmp_json escape=json
 access_log /dev/stdout nmp_json;
 error_log /dev/stderr warn;
 
+# Plain HTTP only — Caddy (deploy/proxy/) is the public edge, terminates TLS
+# for every environment on the VPS, and reverse-proxies here over the
+# `edge` Docker network. Caddy always forwards X-Real-IP (the real client
+# address) and only ever sends traffic it received as HTTPS, so both
+# headers below are safe to trust/hardcode.
 server {
     listen 80;
     server_name ${SERVER_NAME};
     server_tokens off;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    http2 on;
-    server_name ${SERVER_NAME};
-    server_tokens off;
-
-    ssl_certificate /etc/nginx/tls/fullchain.pem;
-    ssl_certificate_key /etc/nginx/tls/privkey.pem;
 
     client_max_body_size ${EBOOK_CLIENT_MAX_BODY_SIZE};
     client_header_timeout 10s;
@@ -36,7 +30,7 @@ server {
         proxy_read_timeout 30s;
         proxy_send_timeout 30s;
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Real-IP $http_x_real_ip;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Request-ID $request_id;

@@ -95,7 +95,13 @@ services:
       - ebooks_data:/data/ebooks
       - media_data:/data/media
     secrets:
-      - gmail_service_account
+      # Compose's short form mounts a secret at /run/secrets/<secret-name>
+      # (i.e. /run/secrets/gmail_service_account) — this app hardcodes
+      # GOOGLE_MAIL_CREDENTIALS_PATH to /run/secrets/gmail-service-account.json
+      # above, so the target must be set explicitly to match, or the API
+      # crash-loops the instant real Gmail credentials are configured.
+      - source: gmail_service_account
+        target: gmail-service-account.json
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -112,13 +118,18 @@ services:
     environment:
       SERVER_NAME: ${APP_DOMAIN}
       EBOOK_CLIENT_MAX_BODY_SIZE: ${EBOOK_CLIENT_MAX_BODY_SIZE:-51m}
-    ports:
-      - '80:80'
-      - '443:443'
     volumes:
       - ebooks_data:/data/ebooks:ro
-      - ${TLS_CERTIFICATE_PATH}:/etc/nginx/tls/fullchain.pem:ro
-      - ${TLS_PRIVATE_KEY_PATH}:/etc/nginx/tls/privkey.pem:ro
+    networks:
+      default:
+      edge:
+        # deploy/proxy/'s Caddy reaches this stack's nginx by this alias —
+        # STACK_NAME (e.g. "prod"/"dev") is what keeps two instances of
+        # this same compose file addressable on the shared edge network.
+        # Nothing else in this stack joins `edge`; api/postgres stay
+        # reachable only from within this project's own default network.
+        aliases:
+          - nginx-${STACK_NAME}
     depends_on:
       api:
         condition: service_healthy
@@ -145,6 +156,14 @@ volumes:
   postgres_data:
   ebooks_data:
   media_data:
+
+networks:
+  # Created once on the host with `docker network create edge` (see
+  # deploy/README.md) — shared by every environment's nginx and by
+  # deploy/proxy/'s Caddy, so Caddy can reach each stack's nginx without
+  # any of them publishing ports directly.
+  edge:
+    external: true
 
 secrets:
   gmail_service_account:
