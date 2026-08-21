@@ -56,7 +56,87 @@ Publicar ambas imágenes desde CI; no compilarlas normalmente en el VPS.
    tráfico real para ese dominio (o al reiniciar), y falla el desafío ACME si
    el dominio todavía no resuelve.
 
-## Configuración de cada stack (producción y desarrollo)
+## Despliegue automático (CI/CD)
+
+Desde que existen `.github/workflows/deploy-dev.yml` y `deploy-prod.yml`, **no
+hace falta entrar por SSH ni hacer `git pull` a mano**: cada push a `develop`
+(en la práctica, cada PR mergeado — ver `docs/ci.md`) construye las imágenes,
+las publica en GitHub Container Registry y despliega `nmp-dev` solo. Un push a
+`main` hace lo mismo para `nmp-prod`, pero el job queda pausado esperando
+aprobación manual en el Environment `production` de GitHub (así se decidió
+desde el principio — ver `docs/ci.md`).
+
+Nada sensible queda hardcodeado en el repo ni en el VPS como archivo
+persistente: cada corrida arma `deploy/.env.$STACK_NAME` desde cero, a partir
+de los secrets/variables del Environment de GitHub correspondiente
+(`development`/`production`), lo sube por SCP y recién ahí levanta el stack —
+ver `.github/workflows/deploy.yml` y `deploy/operations/deploy.sh`.
+
+### Configuración única en GitHub (por repo)
+
+**Secrets** (Settings → Secrets and variables → Actions → Secrets, pestaña
+"Repository secrets"):
+
+- `DEPLOY_SSH_KEY` — clave privada del usuario `deploy` dedicado en el VPS
+  (no reutilizar tu clave personal — ver más abajo cómo generarla).
+
+**Variables** (misma pantalla, pestaña "Repository variables"):
+
+- `DEPLOY_HOST` — IP pública del VPS.
+- `DEPLOY_USER` — nombre del usuario `deploy` dedicado.
+
+### Configuración por ambiente (Environments)
+
+Crear dos Environments (Settings → Environments → New environment):
+`development` y `production`. En `production`, agregar un "Required reviewer"
+(vos mismo alcanza) para que el deploy quede pausado hasta que lo apruebes.
+
+En **cada** Environment, cargar:
+
+**Secrets:**
+
+| Nombre | Qué va |
+|---|---|
+| `POSTGRES_PASSWORD` | Generar con `openssl rand -hex 24` (nunca `-base64`, puede tener `/` que rompe la URL de conexión) |
+| `GOOGLE_CLIENT_SECRET` | El Client Secret de Google Cloud (mismo Client ID para ambos ambientes) |
+| `MERCADOPAGO_ACCESS_TOKEN` | Test para `development`, real para `production` |
+| `MERCADOPAGO_WEBHOOK_SECRET` | Ídem |
+| `GOOGLE_MAIL_CREDENTIALS_JSON` | El JSON completo de la service account de Gmail (dejar vacío mientras Gmail no esté configurado) |
+
+**Variables:**
+
+| Nombre | Qué va |
+|---|---|
+| `APP_DOMAIN` | `dev.tudominio.com` / `tudominio.com` |
+| `ADMIN_GOOGLE_SUBS` | Comma-separated, igual en ambos si son las mismas personas |
+| `GOOGLE_CLIENT_ID` | Mismo valor en ambos (un solo Client ID, dos redirect URIs) |
+| `GOOGLE_MAIL_SENDER` | Vacío mientras Gmail no esté configurado |
+| `SUPPORT_EMAIL` | — |
+| `MERCADOPAGO_PUBLIC_BASE_URL` | Vacío hasta configurar Mercado Pago; después, `https://` + el mismo valor que `APP_DOMAIN` |
+| `BACKUP_PATH` | Ruta absoluta en el VPS, distinta por ambiente (ej. `/home/deploy/backups-dev`) |
+
+### Usuario `deploy` dedicado en el VPS (una sola vez)
+
+Un usuario aparte de tu cuenta personal, para que una clave de CI filtrada no
+dé el mismo acceso que tu propia sesión:
+
+```bash
+sudo adduser --disabled-password --gecos "" deploy
+sudo usermod -aG docker deploy
+sudo -u deploy git clone https://github.com/Tuquina/nuestra-medicina-personal.git /home/deploy/nuestra-medicina-personal
+sudo -u deploy mkdir -p /home/deploy/.ssh /home/deploy/secrets
+sudo -u deploy ssh-keygen -t ed25519 -f /home/deploy/.ssh/deploy_key -N ""
+sudo -u deploy sh -c 'cat /home/deploy/.ssh/deploy_key.pub >> /home/deploy/.ssh/authorized_keys'
+sudo -u deploy chmod 700 /home/deploy/.ssh
+sudo -u deploy chmod 600 /home/deploy/.ssh/authorized_keys
+sudo cat /home/deploy/.ssh/deploy_key
+```
+
+Ese último `cat` es la única vez que la clave privada se muestra — copiarla
+completa (incluyendo las líneas `-----BEGIN`/`-----END`) directo a
+`DEPLOY_SSH_KEY` en GitHub, nunca guardarla en otro lado.
+
+### Despliegue manual (bootstrap inicial o fallback)
 
 Copiar `deploy/.env.example` a `deploy/.env.prod` (y otra copia a
 `deploy/.env.dev`) fuera del repositorio y completar dominio, credenciales e

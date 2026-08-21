@@ -1,0 +1,17 @@
+name: Deploy · development
+
+# Runs automatically whenever develop moves (a merged PR, in practice --
+# see docs/ci.md's branch flow). No manual approval: this is a dev
+# environment, not customer-facing.
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: development
+      stack_name: dev
+    secrets: inherit

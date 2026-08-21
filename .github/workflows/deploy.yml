@@ -1,0 +1,167 @@
+name: Deploy
+
+# Reusable deploy workflow, called by deploy-dev.yml (push to develop) and
+# deploy-prod.yml (push to main) — see those two files and deploy/README.md
+# for the full picture. One place for the actual build+deploy logic so the
+# two environments never drift apart.
+#
+# Nothing sensitive lives in this repo or on the VPS as a plain file that
+# outlives a deploy: every environment-specific value (domain, credentials,
+# admin list) comes from this GitHub Environment's own secrets/variables,
+# and gets written fresh to deploy/.env.<stack_name> on the VPS on every
+# run. The VPS only ever needs three durable, non-secret things: the git
+# clone itself, the `edge` Docker network, and deploy/proxy/'s Caddy stack
+# (brought up once, manually — see deploy/README.md).
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment to deploy (its secrets/variables become this run's config)
+        required: true
+        type: string
+      stack_name:
+        description: Compose project suffix and env-file suffix (dev/prod) — must match STACK_NAME in deploy/docker-compose.yml
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-${{ inputs.stack_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy (${{ inputs.stack_name }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Compute lowercase image base name
+        id: image
+        # ghcr.io requires an all-lowercase path; github.repository preserves
+        # the owner's actual casing (Tuquina/... here), so it can't be used
+        # directly as an image name.
+        run: echo "base=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image.outputs.base }}-backend:${{ inputs.stack_name }}
+            ${{ steps.image.outputs.base }}-backend:${{ inputs.stack_name }}-${{ github.sha }}
+          cache-from: type=gha,scope=backend-${{ inputs.stack_name }}
+          cache-to: type=gha,mode=max,scope=backend-${{ inputs.stack_name }}
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/nginx/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image.outputs.base }}-web:${{ inputs.stack_name }}
+            ${{ steps.image.outputs.base }}-web:${{ inputs.stack_name }}-${{ github.sha }}
+          cache-from: type=gha,scope=web-${{ inputs.stack_name }}
+          cache-to: type=gha,mode=max,scope=web-${{ inputs.stack_name }}
+
+      # Assembled here (on the ephemeral runner), not on the VPS or in this
+      # repo — nothing but the resulting file transfer ever carries these
+      # values, and the runner itself is destroyed at the end of the job.
+      - name: Assemble deploy/.env.${{ inputs.stack_name }}
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
+          MERCADOPAGO_WEBHOOK_SECRET: ${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
+          GOOGLE_MAIL_CREDENTIALS_JSON: ${{ secrets.GOOGLE_MAIL_CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          # docker compose's --env-file does no shell expansion of its own
+          # values, so this has to be a real absolute path already, not
+          # something like $HOME meant to be expanded later on the VPS.
+          GMAIL_PATH_ON_HOST="/home/${{ vars.DEPLOY_USER }}/secrets/gmail-service-account.${{ inputs.stack_name }}.json"
+          {
+            echo "STACK_NAME=${{ inputs.stack_name }}"
+            echo "APP_DOMAIN=${{ vars.APP_DOMAIN }}"
+            echo "BACKEND_IMAGE=${{ steps.image.outputs.base }}-backend:${{ inputs.stack_name }}"
+            echo "WEB_IMAGE=${{ steps.image.outputs.base }}-web:${{ inputs.stack_name }}"
+            echo "BACKUP_PATH=${{ vars.BACKUP_PATH }}"
+            echo "POSTGRES_DB=nmp"
+            echo "POSTGRES_USER=nmp"
+            echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+            echo "DATABASE_URL=postgres://nmp:${POSTGRES_PASSWORD}@postgres:5432/nmp?sslmode=disable"
+            echo "ADMIN_GOOGLE_SUBS=${{ vars.ADMIN_GOOGLE_SUBS }}"
+            echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}"
+            echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
+            echo "GOOGLE_MAIL_SENDER=${{ vars.GOOGLE_MAIL_SENDER }}"
+            if [ -n "${GOOGLE_MAIL_CREDENTIALS_JSON}" ]; then
+              echo "GOOGLE_MAIL_CREDENTIALS_PATH=/run/secrets/gmail-service-account.json"
+            else
+              echo "GOOGLE_MAIL_CREDENTIALS_PATH="
+            fi
+            echo "GOOGLE_MAIL_CREDENTIALS_FILE=${GMAIL_PATH_ON_HOST}"
+            echo "SUPPORT_EMAIL=${{ vars.SUPPORT_EMAIL }}"
+            echo "MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN}"
+            echo "MERCADOPAGO_WEBHOOK_SECRET=${MERCADOPAGO_WEBHOOK_SECRET}"
+            echo "MERCADOPAGO_PUBLIC_BASE_URL=${{ vars.MERCADOPAGO_PUBLIC_BASE_URL }}"
+          } > deploy.env
+          # Never printed/logged -- written straight to a gitignored local
+          # file, uploaded next step, then the runner itself is destroyed.
+          printf '%s' "${GOOGLE_MAIL_CREDENTIALS_JSON}" > gmail-credentials.json
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ vars.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload environment file and Gmail credentials
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}" \
+            "mkdir -p ~/nuestra-medicina-personal/deploy ~/secrets"
+          scp -i ~/.ssh/deploy_key deploy.env \
+            "${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:nuestra-medicina-personal/deploy/.env.${{ inputs.stack_name }}"
+          scp -i ~/.ssh/deploy_key gmail-credentials.json \
+            "${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:secrets/gmail-service-account.${{ inputs.stack_name }}.json"
+
+      - name: Deploy over SSH
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}" \
+            "GHCR_ACTOR='${{ github.actor }}' GHCR_TOKEN='${GHCR_TOKEN}' GIT_SHA='${{ github.sha }}' STACK_NAME='${{ inputs.stack_name }}' bash -s" \
+            < deploy/operations/deploy.sh
+
+      - name: Wait for the deployed API to report healthy
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsS "https://${{ vars.APP_DOMAIN }}/health/ready" > /dev/null 2>&1; then
+              echo "Healthy."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::${{ vars.APP_DOMAIN }} never reported healthy after deploy" >&2
+          exit 1
