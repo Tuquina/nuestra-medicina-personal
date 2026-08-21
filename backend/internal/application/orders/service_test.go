@@ -34,13 +34,15 @@ func activeCouponWindow() (time.Time, time.Time) {
 }
 
 type repositoryStub struct {
-	created order.Order
-	applied order.ProviderPayment
-	expired string
+	created         order.Order
+	applied         order.ProviderPayment
+	expired         string
+	expiredCouponID string
 }
 
-func (r *repositoryStub) Expire(_ context.Context, id string, _ time.Time) error {
+func (r *repositoryStub) Expire(_ context.Context, id, couponID string, _ time.Time) error {
 	r.expired = id
+	r.expiredCouponID = couponID
 	return nil
 }
 
@@ -235,5 +237,62 @@ func TestCreateRejectsUnknownCouponCode(t *testing.T) {
 	_, err := service.Create(context.Background(), "user-id", "buyer@example.com", "un-libro", "NOEXISTE")
 	if !errors.Is(err, order.ErrCouponInvalid) {
 		t.Fatalf("expected coupon invalid, got %v", err)
+	}
+}
+
+func TestCreateRejectsFixedCouponInADifferentCurrency(t *testing.T) {
+	t.Parallel()
+	starts, ends := activeCouponWindow()
+	service := NewService(bookCatalogStub{value: book.Book{
+		ID: "book-id", Slug: "un-libro", PriceMinorUnits: 10000, Currency: "USD",
+	}}, couponsStub{value: coupon.Coupon{
+		ID: "coupon-id", Code: "FIJOARS", Kind: coupon.KindFixed, Value: 1000, Currency: "ARS",
+		Active: true, AppliesToAll: true, StartsAt: starts, EndsAt: ends,
+	}}, &repositoryStub{}, &providerStub{configured: true})
+	_, err := service.Create(context.Background(), "user-id", "buyer@example.com", "un-libro", "FIJOARS")
+	if !errors.Is(err, order.ErrCouponInvalid) {
+		t.Fatalf("expected coupon invalid for a currency mismatch, got %v", err)
+	}
+}
+
+func TestCreateAllowsPercentageCouponRegardlessOfCurrency(t *testing.T) {
+	t.Parallel()
+	starts, ends := activeCouponWindow()
+	repository := &repositoryStub{}
+	service := NewService(bookCatalogStub{value: book.Book{
+		ID: "book-id", Slug: "un-libro", PriceMinorUnits: 10000, Currency: "USD",
+	}}, couponsStub{value: coupon.Coupon{
+		ID: "coupon-id", Code: "PORC10", Kind: coupon.KindPercentage, Value: 10, Currency: "ARS",
+		Active: true, AppliesToAll: true, StartsAt: starts, EndsAt: ends,
+	}}, repository, &providerStub{configured: true})
+	if _, err := service.Create(context.Background(), "user-id", "buyer@example.com", "un-libro", "PORC10"); err != nil {
+		t.Fatalf("expected a percentage coupon to apply across currencies, got %v", err)
+	}
+	if repository.created.DiscountMinorUnits != 1000 {
+		t.Fatalf("expected a 10%% discount, got %#v", repository.created)
+	}
+}
+
+func TestCreateReleasesCouponReservationWhenPreferenceCreationFails(t *testing.T) {
+	t.Parallel()
+	repository := &repositoryStub{}
+	starts, ends := activeCouponWindow()
+	service := NewService(bookCatalogStub{value: book.Book{
+		ID: "book-id", Slug: "un-libro", PriceMinorUnits: 10000, Currency: "ARS",
+	}}, couponsStub{value: coupon.Coupon{
+		ID: "coupon-id", Code: "PROMO10", Kind: coupon.KindPercentage, Value: 10,
+		Active: true, AppliesToAll: true, StartsAt: starts, EndsAt: ends,
+	}}, repository, &providerStub{configured: true, createErr: errors.New("provider unavailable")})
+	ids := []string{"order-id", "item-id"}
+	service.newID = func() (string, error) {
+		id := ids[0]
+		ids = ids[1:]
+		return id, nil
+	}
+	if _, err := service.Create(context.Background(), "user-id", "buyer@example.com", "un-libro", "promo10"); !errors.Is(err, order.ErrPaymentProvider) {
+		t.Fatalf("expected typed preference failure, got %v", err)
+	}
+	if repository.expired != "order-id" || repository.expiredCouponID != "coupon-id" {
+		t.Fatalf("expected the coupon reservation to be released on expire, got expired=%q couponID=%q", repository.expired, repository.expiredCouponID)
 	}
 }
