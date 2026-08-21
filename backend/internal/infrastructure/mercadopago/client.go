@@ -25,9 +25,15 @@ type Client struct {
 	publicBaseURL string
 }
 
-func NewClient(accessToken, publicBaseURL string) *Client {
+// NewClient talks to the real Mercado Pago API unless apiURL overrides it —
+// used only to point at a fake server in E2E tests (see e2e/README.md);
+// production always passes "" here.
+func NewClient(accessToken, publicBaseURL, apiURL string) *Client {
+	if apiURL == "" {
+		apiURL = defaultAPIURL
+	}
 	return &Client{
-		httpClient: &http.Client{Timeout: 10 * time.Second}, apiURL: defaultAPIURL,
+		httpClient: &http.Client{Timeout: 10 * time.Second}, apiURL: apiURL,
 		accessToken: accessToken, publicBaseURL: strings.TrimRight(publicBaseURL, "/"),
 	}
 }
