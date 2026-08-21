@@ -73,6 +73,8 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
 	root.HandleFunc("GET /api/v1/me", authHandler.Me)
 	root.Handle("POST /api/v1/auth/logout", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(authHandler.Logout)))
+	userAccountDeletion := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(authHandler.DeleteAccount))
+	root.Handle("DELETE /api/v1/me", requireSameOrigin(dependencies.BaseURL, userAccountDeletion))
 	userOrderCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, rateLimiter.Orders(http.HandlerFunc(orderHandler.Create)))
 	root.Handle("POST /api/v1/orders", requireSameOrigin(dependencies.BaseURL, userOrderCreation))
 	root.Handle("GET /api/v1/orders/{id}", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Get)))

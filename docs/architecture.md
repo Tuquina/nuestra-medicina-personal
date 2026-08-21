@@ -1527,9 +1527,16 @@ GET  /api/v1/me
 ## Usuario
 
 ```text
-GET  /api/v1/me/books
-GET  /api/v1/books/{id}/download
+GET    /api/v1/me/books
+GET    /api/v1/books/{id}/download
+DELETE /api/v1/me
+GET    /api/v1/me/newsletter
+PUT    /api/v1/me/newsletter
 ```
+
+`DELETE /api/v1/me` es un soft-delete: anonimiza `users` (email, nombre,
+foto, `google_subject`) y revoca todas las sesiones, sin borrar la fila —
+órdenes, pagos y reseñas conservan su FK para preservar el histórico.
 
 ## Compra
 

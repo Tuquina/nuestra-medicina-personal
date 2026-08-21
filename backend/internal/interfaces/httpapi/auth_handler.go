@@ -23,6 +23,7 @@ type AuthenticationService interface {
 	Complete(context.Context, string, string, string, string, string) (auth.User, auth.Session, error)
 	CurrentUser(context.Context, string) (auth.User, error)
 	Logout(context.Context, string) error
+	DeleteAccount(context.Context, string) error
 	FlowTTL() time.Duration
 }
 
@@ -96,6 +97,22 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.Logout(r.Context(), cookieValue(r, h.sessionCookie)); err != nil {
 		h.handleError(w, r, "revoke session", err, false)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name: h.sessionCookie, Value: "", Path: "/", MaxAge: -1, Expires: time.Unix(1, 0),
+		HttpOnly: true, Secure: h.secureCookies, SameSite: http.SameSiteLaxMode,
+	})
+	writeJSON(w, http.StatusNoContent, nil)
+}
+
+// DeleteAccount soft-deletes the signed-in user (see
+// authentication.Service.DeleteAccount) and clears the session cookie the
+// same way Logout does, so the browser doesn't keep sending a now-revoked
+// session token.
+func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	if err := h.service.DeleteAccount(r.Context(), userID(r.Context())); err != nil {
+		h.handleError(w, r, "delete account", err, false)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{

@@ -32,6 +32,8 @@ type repositoryStub struct {
 	session   auth.Session
 	tokenHash string
 	revoked   string
+	deletedID string
+	deleteErr error
 }
 
 func (r *repositoryStub) CreateSession(_ context.Context, identity auth.Identity, session auth.Session, _ time.Time) (auth.User, error) {
@@ -45,6 +47,10 @@ func (r *repositoryStub) GetUserByTokenHash(_ context.Context, hash, _ string) (
 func (r *repositoryStub) RevokeSession(_ context.Context, hash string, _ time.Time) error {
 	r.revoked = hash
 	return nil
+}
+func (r *repositoryStub) DeleteAccount(_ context.Context, userID string, _ time.Time) error {
+	r.deletedID = userID
+	return r.deleteErr
 }
 
 func TestStartRequiresConfiguredProvider(t *testing.T) {
@@ -127,5 +133,17 @@ func TestCurrentUserAndLogoutNeverSendRawTokenToRepository(t *testing.T) {
 	}
 	if repository.tokenHash != hashToken("raw-token") || repository.revoked != hashToken("raw-token") {
 		t.Fatal("repository received a raw session token")
+	}
+}
+
+func TestDeleteAccountDelegatesToRepository(t *testing.T) {
+	t.Parallel()
+	repository := &repositoryStub{}
+	service := NewService(&providerStub{}, repository, "", time.Hour)
+	if err := service.DeleteAccount(context.Background(), "user-id"); err != nil {
+		t.Fatalf("delete account: %v", err)
+	}
+	if repository.deletedID != "user-id" {
+		t.Fatalf("expected repository to receive user id, got %q", repository.deletedID)
 	}
 }

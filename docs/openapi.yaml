@@ -99,6 +99,19 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/User'}
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
+    delete:
+      tags: [Authentication]
+      operationId: deleteAccount
+      description: >-
+        Soft-delete: anonimiza el usuario (email, nombre, foto, google_subject)
+        y revoca todas sus sesiones. Órdenes, pagos y reseñas conservan su FK
+        para preservar el histórico — no se borra la fila.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': {description: Cuenta anonimizada y sesión cerrada.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
   /api/v1/books:
     get:
       tags: [Books]

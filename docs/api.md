@@ -131,6 +131,16 @@ identificadores de correlación de orden, pago, job y mensaje del proveedor. No
 se registran cookies, tokens, destinatarios, credenciales ni cuerpos completos.
 Nginx usa el mismo `request_id` y Docker rota los logs en producción.
 
+## Cuenta
+
+`DELETE /api/v1/me` requiere sesión y `Origin` válido. Es un soft-delete:
+anonimiza `email`, `display_name`, `picture_url` y `google_subject`, marca
+`deleted_at` y revoca todas las sesiones del usuario en la misma transacción
+— no borra la fila, porque órdenes, pagos y reseñas mantienen su FK para
+conservar el histórico de ventas. Un futuro login con la misma cuenta de
+Google crea un usuario nuevo, ya que `google_subject` queda liberado. La
+respuesta limpia la cookie de sesión, igual que `/api/v1/auth/logout`.
+
 ## Biblioteca y archivos protegidos
 
 `GET /api/v1/me/books` requiere sesión y devuelve una sola entrada por libro

@@ -106,6 +106,12 @@
   margin: 10px 0 0;
 }
 
+.deleteError {
+  font-size: 13px;
+  color: var(--color-status-danger-icon);
+  margin: 14px 0 0;
+}
+
 .logoutButton {
   margin-bottom: 20px;
 }
