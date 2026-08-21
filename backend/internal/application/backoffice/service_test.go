@@ -22,13 +22,13 @@ func (stub *repositoryStub) Sales(_ context.Context, filter backofficedomain.Sal
 	stub.filter = filter
 	return backofficedomain.SalesPage{Limit: filter.Limit, Offset: filter.Offset}, nil
 }
-func (*repositoryStub) Customers(context.Context, backofficedomain.CustomerFilter, string, string) (backofficedomain.CustomerPage, error) {
+func (*repositoryStub) Customers(context.Context, backofficedomain.CustomerFilter, []string, string) (backofficedomain.CustomerPage, error) {
 	return backofficedomain.CustomerPage{}, nil
 }
 
 func TestDashboardBuildsInclusiveSevenDayPeriod(t *testing.T) {
 	repository := &repositoryStub{}
-	service := NewService(repository, "")
+	service := NewService(repository, nil)
 	service.now = func() time.Time { return time.Date(2026, 8, 19, 18, 0, 0, 0, time.UTC) }
 	if _, err := service.Dashboard(context.Background(), "7d", "", "ARS"); err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestDashboardBuildsInclusiveSevenDayPeriod(t *testing.T) {
 
 func TestSalesNormalizesFiltersAndPagination(t *testing.T) {
 	repository := &repositoryStub{}
-	service := NewService(repository, "")
+	service := NewService(repository, nil)
 	if _, err := service.Sales(context.Background(), backofficedomain.SalesFilter{
 		Period: backofficedomain.Period{Range: "all"}, Status: " approved ", Query: " María ",
 	}); err != nil {
@@ -53,7 +53,7 @@ func TestSalesNormalizesFiltersAndPagination(t *testing.T) {
 }
 
 func TestBackofficeRejectsUnknownRangeAndStatus(t *testing.T) {
-	service := NewService(&repositoryStub{}, "")
+	service := NewService(&repositoryStub{}, nil)
 	tests := []error{}
 	_, err := service.Dashboard(context.Background(), "quarter", "", "ARS")
 	tests = append(tests, err)

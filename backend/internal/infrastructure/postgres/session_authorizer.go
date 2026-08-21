@@ -13,16 +13,16 @@ import (
 )
 
 type SessionAuthorizer struct {
-	pool           *pgxpool.Pool
-	adminGoogleSub string
+	pool            *pgxpool.Pool
+	adminGoogleSubs []string
 }
 
-func NewSessionAuthorizer(pool *pgxpool.Pool, adminGoogleSub string) *SessionAuthorizer {
-	return &SessionAuthorizer{pool: pool, adminGoogleSub: adminGoogleSub}
+func NewSessionAuthorizer(pool *pgxpool.Pool, adminGoogleSubs []string) *SessionAuthorizer {
+	return &SessionAuthorizer{pool: pool, adminGoogleSubs: adminGoogleSubs}
 }
 
 func (a *SessionAuthorizer) AuthorizeAdmin(ctx context.Context, rawToken string) (string, error) {
-	if rawToken == "" || a.adminGoogleSub == "" {
+	if rawToken == "" || len(a.adminGoogleSubs) == 0 {
 		return "", auth.ErrUnauthorized
 	}
 	digest := sha256.Sum256([]byte(rawToken))
@@ -34,7 +34,7 @@ func (a *SessionAuthorizer) AuthorizeAdmin(ctx context.Context, rawToken string)
 		WHERE sessions.token_hash = $1
 		  AND sessions.expires_at > now()
 		  AND sessions.revoked_at IS NULL
-		  AND users.google_subject = $2`, hex.EncodeToString(digest[:]), a.adminGoogleSub).Scan(&userID)
+		  AND users.google_subject = ANY($2)`, hex.EncodeToString(digest[:]), a.adminGoogleSubs).Scan(&userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", auth.ErrUnauthorized
 	}

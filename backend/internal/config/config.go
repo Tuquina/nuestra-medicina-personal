@@ -15,7 +15,10 @@ type Config struct {
 	BaseURL                   string
 	HTTPAddress               string
 	DatabaseURL               string
-	AdminGoogleSub            string
+	// AdminGoogleSubs holds every Google account "sub" (subject identifier)
+	// granted admin access -- parsed from ADMIN_GOOGLE_SUBS, comma-separated,
+	// so more than one person can administer the store.
+	AdminGoogleSubs           []string
 	GoogleClientID            string
 	GoogleSecret              string
 	GoogleRedirect            string
@@ -72,7 +75,7 @@ func Load() (Config, error) {
 		BaseURL:                   envOrDefault("APP_BASE_URL", "http://localhost:5173"),
 		HTTPAddress:               envOrDefault("HTTP_ADDRESS", ":8080"),
 		DatabaseURL:               os.Getenv("DATABASE_URL"),
-		AdminGoogleSub:            os.Getenv("ADMIN_GOOGLE_SUB"),
+		AdminGoogleSubs:           splitList(os.Getenv("ADMIN_GOOGLE_SUBS")),
 		GoogleClientID:            os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleSecret:              os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirect:            os.Getenv("GOOGLE_REDIRECT_URL"),
@@ -225,6 +228,18 @@ func envOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// splitList parses a comma-separated env var into a trimmed, non-empty
+// slice ("" -> nil, "a, ,b" -> []string{"a", "b"}).
+func splitList(value string) []string {
+	var items []string
+	for _, part := range strings.Split(value, ",") {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			items = append(items, trimmed)
+		}
+	}
+	return items
 }
 
 func durationOrDefault(key string, fallback time.Duration) time.Duration {

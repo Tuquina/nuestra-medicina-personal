@@ -39,7 +39,7 @@ func (r *repositoryStub) CreateSession(_ context.Context, identity auth.Identity
 	r.identity, r.session = identity, session
 	return auth.User{ID: "user-id", Email: identity.Email}, nil
 }
-func (r *repositoryStub) GetUserByTokenHash(_ context.Context, hash, _ string) (auth.User, error) {
+func (r *repositoryStub) GetUserByTokenHash(_ context.Context, hash string, _ []string) (auth.User, error) {
 	r.tokenHash = hash
 	return auth.User{ID: "user-id"}, nil
 }
@@ -54,7 +54,7 @@ func (r *repositoryStub) DeleteAccount(_ context.Context, userID string, _ time.
 
 func TestStartRequiresConfiguredProvider(t *testing.T) {
 	t.Parallel()
-	service := NewService(&providerStub{}, &repositoryStub{}, "", time.Hour)
+	service := NewService(&providerStub{}, &repositoryStub{}, nil, time.Hour)
 	if _, err := service.Start(); !errors.Is(err, auth.ErrNotConfigured) {
 		t.Fatalf("expected not configured, got %v", err)
 	}
@@ -62,7 +62,7 @@ func TestStartRequiresConfiguredProvider(t *testing.T) {
 
 func TestStartCreatesIndependentFlowSecretsAndPKCE(t *testing.T) {
 	t.Parallel()
-	service := NewService(&providerStub{configured: true}, &repositoryStub{}, "", time.Hour)
+	service := NewService(&providerStub{configured: true}, &repositoryStub{}, nil, time.Hour)
 	flow, err := service.Start()
 	if err != nil {
 		t.Fatalf("start: %v", err)
@@ -85,7 +85,7 @@ func TestStartCreatesIndependentFlowSecretsAndPKCE(t *testing.T) {
 func TestCompleteRejectsInvalidStateBeforeProviderExchange(t *testing.T) {
 	t.Parallel()
 	provider := &providerStub{configured: true}
-	service := NewService(provider, &repositoryStub{}, "", time.Hour)
+	service := NewService(provider, &repositoryStub{}, nil, time.Hour)
 	_, _, err := service.Complete(context.Background(), "code", "received", "expected", "nonce", "verifier")
 	if !errors.Is(err, auth.ErrInvalidFlow) || provider.exchange {
 		t.Fatalf("expected invalid flow before exchange, got %v, exchanged=%v", err, provider.exchange)
@@ -98,7 +98,7 @@ func TestCompleteCreatesOpaqueHashedSession(t *testing.T) {
 		GoogleSubject: "admin-sub", Email: "admin@example.com", EmailVerified: true,
 	}}
 	repository := &repositoryStub{}
-	service := NewService(provider, repository, "admin-sub", 24*time.Hour)
+	service := NewService(provider, repository, []string{"admin-sub"}, 24*time.Hour)
 	now := time.Date(2026, 8, 19, 14, 0, 0, 0, time.UTC)
 	service.now = func() time.Time { return now }
 
@@ -120,7 +120,7 @@ func TestCompleteCreatesOpaqueHashedSession(t *testing.T) {
 func TestCompleteRejectsUnverifiedEmail(t *testing.T) {
 	t.Parallel()
 	provider := &providerStub{configured: true, identity: auth.Identity{GoogleSubject: "sub", Email: "user@example.com"}}
-	service := NewService(provider, &repositoryStub{}, "", time.Hour)
+	service := NewService(provider, &repositoryStub{}, nil, time.Hour)
 	_, _, err := service.Complete(context.Background(), "code", "state", "state", "nonce", "verifier")
 	if !errors.Is(err, auth.ErrUnauthorized) {
 		t.Fatalf("expected unauthorized, got %v", err)
@@ -130,7 +130,7 @@ func TestCompleteRejectsUnverifiedEmail(t *testing.T) {
 func TestCurrentUserAndLogoutNeverSendRawTokenToRepository(t *testing.T) {
 	t.Parallel()
 	repository := &repositoryStub{}
-	service := NewService(&providerStub{}, repository, "", time.Hour)
+	service := NewService(&providerStub{}, repository, nil, time.Hour)
 	if _, err := service.CurrentUser(context.Background(), "raw-token"); err != nil {
 		t.Fatalf("current user: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestCurrentUserAndLogoutNeverSendRawTokenToRepository(t *testing.T) {
 func TestDeleteAccountDelegatesToRepository(t *testing.T) {
 	t.Parallel()
 	repository := &repositoryStub{}
-	service := NewService(&providerStub{}, repository, "", time.Hour)
+	service := NewService(&providerStub{}, repository, nil, time.Hour)
 	if err := service.DeleteAccount(context.Background(), "user-id"); err != nil {
 		t.Fatalf("delete account: %v", err)
 	}
