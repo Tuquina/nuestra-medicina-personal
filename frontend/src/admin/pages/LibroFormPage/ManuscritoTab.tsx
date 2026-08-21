@@ -72,6 +72,8 @@ export function ManuscritoTab({ bookId, bookTitle }: ManuscritoTabProps) {
 
 function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: string }) {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [manuscriptStarted, setManuscriptStarted] = useState(false);
   const [converting, setConverting] = useState(false);
   const [uploadNotice, setUploadNotice] = useState('');
@@ -86,15 +88,35 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
-  const previousChapterRef = useRef(activeChapter);
+  // Sentinel (no real chapter index) so the very first hydration — server
+  // load or "start blank" — always performs one DOM sync, even though
+  // activeChapter starts at 0 like any real chapter would.
+  const previousChapterRef = useRef(-1);
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextAutosaveRef = useRef(true);
+  // Tracks a debounced save that hasn't been sent yet, so an unmount mid-debounce
+  // (switching tabs right after typing) can flush it instead of losing it.
+  const pendingChaptersRef = useRef<Chapter[] | null>(null);
 
   const pageSize = findPageSize(pageSizeId);
+
+  const persistChapters = (value: Chapter[]) => {
+    pendingChaptersRef.current = null;
+    setSaveState('saving');
+    return apiRequest(adminBookManuscriptUrl(bookId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chapters: value }),
+    })
+      .then(() => setSaveState('saved'))
+      .catch(() => setSaveState('error'));
+  };
 
   // Load whatever was already saved for this book (if anything).
   useEffect(() => {
     const controller = new AbortController();
+    setLoading(true);
+    setLoadError(false);
     apiRequest<ManuscriptResponse>(adminBookManuscriptUrl(bookId), { signal: controller.signal })
       .then((response) => {
         if (response.chapters.length > 0) {
@@ -105,11 +127,15 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return;
+        // A failed load must never fall through to the blank-start screen —
+        // that would let autosave later overwrite a manuscript that's
+        // actually still sitting on the server, unseen.
+        setLoadError(true);
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per bookId
-  }, [bookId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per bookId/retry
+  }, [bookId, loadAttempt]);
 
   // Debounced autosave — skips the run right after hydrating from the
   // server so loading a manuscript doesn't immediately re-save it.
@@ -119,16 +145,11 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
       return;
     }
     if (!manuscriptStarted) return;
+    pendingChaptersRef.current = chapters;
     if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
     autosaveTimeoutRef.current = setTimeout(() => {
-      setSaveState('saving');
-      apiRequest(adminBookManuscriptUrl(bookId), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapters }),
-      })
-        .then(() => setSaveState('saved'))
-        .catch(() => setSaveState('error'));
+      autosaveTimeoutRef.current = null;
+      void persistChapters(chapters);
     }, AUTOSAVE_DEBOUNCE_MS);
     return () => {
       if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
@@ -136,13 +157,34 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bookId is stable per mount
   }, [chapters, manuscriptStarted]);
 
+  // Unmount-only: if the debounce above never got to fire (e.g. the admin
+  // switched tabs within AUTOSAVE_DEBOUNCE_MS of typing), flush the last
+  // snapshot instead of silently losing it. Deliberately not in the effect
+  // above — that one's cleanup runs on every keystroke too, and flushing
+  // there would defeat the debounce.
+  useEffect(() => {
+    return () => {
+      if (!pendingChaptersRef.current) return;
+      const chaptersToFlush = pendingChaptersRef.current;
+      pendingChaptersRef.current = null;
+      // Fire-and-forget: the component is unmounting, so this deliberately
+      // never touches saveState/other component state.
+      void apiRequest(adminBookManuscriptUrl(bookId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapters: chaptersToFlush }),
+      }).catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount-only flush; must read the latest ref, not re-subscribe per keystroke
+  }, []);
+
   // Sync the contentEditable DOM only when the active chapter changes —
   // never on every keystroke, or the caret would jump on each input.
   useEffect(() => {
     if (previousChapterRef.current !== activeChapter && editorRef.current) {
       editorRef.current.innerHTML = chapters[activeChapter]?.html ?? '';
+      previousChapterRef.current = activeChapter;
     }
-    previousChapterRef.current = activeChapter;
   }, [activeChapter, chapters]);
 
   // Tracks the editable region's real height so the page-break overlay
@@ -261,6 +303,17 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     saved: 'Guardado',
     error: 'No pudimos guardar — reintentando en tu próximo cambio',
   };
+
+  if (loadError) {
+    return (
+      <div className={styles.converting}>
+        <p style={{ marginBottom: 12 }}>No pudimos cargar el manuscrito guardado. Podría haber contenido sin mostrar.</p>
+        <Button variant="secondary" onClick={() => setLoadAttempt((n) => n + 1)}>
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className={styles.converting}>Cargando manuscrito…</div>;

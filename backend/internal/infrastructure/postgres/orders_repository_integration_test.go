@@ -208,3 +208,101 @@ func TestOrderCreationReservesLimitedCouponUsageAtomically(t *testing.T) {
 		t.Fatalf("expected usage_count to end at 1, got %d", usageCount)
 	}
 }
+
+// TestExpireReleasesCouponReservation guards the fix for the review finding
+// on PR #7: a transient payment-provider failure (order created, coupon
+// usage reserved, then Mercado Pago preference creation fails) must not
+// permanently burn a limited coupon's use once the order is expired.
+func TestExpireReleasesCouponReservation(t *testing.T) {
+	ctx := context.Background()
+	pool, err := Open(ctx, os.Getenv("DATABASE_URL"), 2, 5*time.Second)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer pool.Close()
+
+	const (
+		userID   = "10000000-0000-4000-8000-000000000021"
+		bookID   = "20000000-0000-4000-8000-000000000021"
+		couponID = "50000000-0000-4000-8000-000000000002"
+		orderID  = "30000000-0000-4000-8000-000000000021"
+	)
+	cleanup := func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM order_items WHERE order_id = $1::uuid`, orderID)
+		_, _ = pool.Exec(ctx, `DELETE FROM orders WHERE id = $1::uuid`, orderID)
+		_, _ = pool.Exec(ctx, `DELETE FROM coupons WHERE id = $1::uuid`, couponID)
+		_, _ = pool.Exec(ctx, `DELETE FROM books WHERE id = $1::uuid`, bookID)
+		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE id = $1::uuid`, userID)
+	}
+	cleanup()
+	t.Cleanup(cleanup)
+
+	if _, err := pool.Exec(ctx, `INSERT INTO users (id, google_subject, email) VALUES ($1::uuid, 'integration-expire-user', 'expire@example.com')`, userID); err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO books (id, slug, title, price_minor_units, currency, status)
+		VALUES ($1::uuid, 'integration-expire-book', 'Integration expire book', 10000, 'ARS', 'PUBLISHED')`, bookID); err != nil {
+		t.Fatalf("seed book: %v", err)
+	}
+	now := time.Date(2026, 8, 21, 10, 0, 0, 0, time.UTC)
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO coupons (id, code, kind, value, currency, starts_at, ends_at, usage_limit, usage_count, applies_to_all, active, created_at, updated_at)
+		VALUES ($1::uuid, 'EXPIRETEST', 'FIXED', 1000, 'ARS', $2::date - 1, $2::date + 1, 1, 0, TRUE, TRUE, $2, $2)`,
+		couponID, now); err != nil {
+		t.Fatalf("seed coupon: %v", err)
+	}
+
+	repository := NewOrderRepository(pool)
+	if _, err := repository.Create(ctx, order.Order{
+		ID: orderID, UserID: userID, Status: order.StatusPending,
+		TotalMinorUnits: 9000, Currency: "ARS", CouponID: couponID, CouponCode: "EXPIRETEST", DiscountMinorUnits: 1000,
+		CreatedAt: now, UpdatedAt: now,
+		Items: []order.Item{{
+			ID: orderID, BookID: bookID, BookSlug: "integration-expire-book", BookTitle: "Integration expire book",
+			UnitPriceMinorUnits: 10000, Quantity: 1, Currency: "ARS",
+		}},
+	}); err != nil {
+		t.Fatalf("create order: %v", err)
+	}
+
+	var usageAfterReserve int
+	if err := pool.QueryRow(ctx, `SELECT usage_count FROM coupons WHERE id = $1::uuid`, couponID).Scan(&usageAfterReserve); err != nil {
+		t.Fatalf("read usage after reserve: %v", err)
+	}
+	if usageAfterReserve != 1 {
+		t.Fatalf("expected the reservation to bring usage_count to 1, got %d", usageAfterReserve)
+	}
+
+	if err := repository.Expire(ctx, orderID, couponID, now.Add(time.Minute)); err != nil {
+		t.Fatalf("expire order: %v", err)
+	}
+
+	var status string
+	var usageAfterExpire int
+	if err := pool.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1::uuid`, orderID).Scan(&status); err != nil {
+		t.Fatalf("read order status: %v", err)
+	}
+	if status != string(order.StatusExpired) {
+		t.Fatalf("expected order to be EXPIRED, got %s", status)
+	}
+	if err := pool.QueryRow(ctx, `SELECT usage_count FROM coupons WHERE id = $1::uuid`, couponID).Scan(&usageAfterExpire); err != nil {
+		t.Fatalf("read usage after expire: %v", err)
+	}
+	if usageAfterExpire != 0 {
+		t.Fatalf("expected the reservation to be released back to 0, got %d", usageAfterExpire)
+	}
+
+	// Expiring an already-expired order again must not release the
+	// reservation a second time.
+	if err := repository.Expire(ctx, orderID, couponID, now.Add(2*time.Minute)); err != nil {
+		t.Fatalf("expire already-expired order: %v", err)
+	}
+	var usageAfterSecondExpire int
+	if err := pool.QueryRow(ctx, `SELECT usage_count FROM coupons WHERE id = $1::uuid`, couponID).Scan(&usageAfterSecondExpire); err != nil {
+		t.Fatalf("read usage after second expire: %v", err)
+	}
+	if usageAfterSecondExpire != 0 {
+		t.Fatalf("expected usage_count to stay at 0 after a repeated expire, got %d", usageAfterSecondExpire)
+	}
+}

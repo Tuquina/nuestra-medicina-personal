@@ -31,7 +31,11 @@ type Coupons interface {
 type Repository interface {
 	Create(context.Context, order.Order) (order.Order, error)
 	AttachPreference(context.Context, string, string, string, time.Time) (order.Order, error)
-	Expire(context.Context, string, time.Time) error
+	// Expire marks a pending order as expired and, when couponID is set,
+	// releases the usage reservation Create made for it in the same
+	// transaction — a transient payment-provider failure must never
+	// permanently burn a limited coupon's use.
+	Expire(ctx context.Context, orderID, couponID string, now time.Time) error
 	GetForUser(context.Context, string, string) (order.Order, error)
 	ApplyPayment(context.Context, string, order.ProviderPayment, time.Time) (order.Order, error)
 }
@@ -73,7 +77,7 @@ func (s *Service) Create(ctx context.Context, userID, userEmail, bookSlug, coupo
 	var appliedCoupon coupon.Coupon
 	var discountMinorUnits int64
 	if couponCode != "" {
-		appliedCoupon, discountMinorUnits, err = s.resolveCoupon(ctx, couponCode, selectedBook.ID, selectedBook.PriceMinorUnits, now)
+		appliedCoupon, discountMinorUnits, err = s.resolveCoupon(ctx, couponCode, selectedBook.ID, selectedBook.PriceMinorUnits, selectedBook.Currency, now)
 		if err != nil {
 			return order.Order{}, err
 		}
@@ -107,12 +111,12 @@ func (s *Service) Create(ctx context.Context, userID, userEmail, bookSlug, coupo
 		AmountMinorUnits: created.TotalMinorUnits, Currency: created.Currency, PayerEmail: userEmail,
 	})
 	if err != nil {
-		expireErr := s.repository.Expire(ctx, created.ID, s.now().UTC())
+		expireErr := s.repository.Expire(ctx, created.ID, created.CouponID, s.now().UTC())
 		return order.Order{}, fmt.Errorf("create mercado pago preference: %w", errors.Join(order.ErrPaymentProvider, err, expireErr))
 	}
 	updated, err := s.repository.AttachPreference(ctx, created.ID, preference.ID, preference.CheckoutURL, s.now().UTC())
 	if err != nil {
-		expireErr := s.repository.Expire(ctx, created.ID, s.now().UTC())
+		expireErr := s.repository.Expire(ctx, created.ID, created.CouponID, s.now().UTC())
 		return order.Order{}, fmt.Errorf("attach payment preference: %w", errors.Join(err, expireErr))
 	}
 	return updated, nil
@@ -141,7 +145,7 @@ func (s *Service) ProcessPayment(ctx context.Context, providerPaymentID string) 
 // shared with the admin screen) and book scope, then computes the discount.
 // It never reserves usage itself; that happens atomically inside
 // Repository.Create alongside the order insert.
-func (s *Service) resolveCoupon(ctx context.Context, code, bookID string, priceMinorUnits int64, now time.Time) (coupon.Coupon, int64, error) {
+func (s *Service) resolveCoupon(ctx context.Context, code, bookID string, priceMinorUnits int64, currency string, now time.Time) (coupon.Coupon, int64, error) {
 	found, err := s.coupons.GetByCode(ctx, strings.ToUpper(strings.TrimSpace(code)))
 	if errors.Is(err, coupon.ErrNotFound) {
 		return coupon.Coupon{}, 0, order.ErrCouponInvalid
@@ -153,6 +157,12 @@ func (s *Service) resolveCoupon(ctx context.Context, code, bookID string, priceM
 		return coupon.Coupon{}, 0, order.ErrCouponInvalid
 	}
 	if !found.AppliesToAll && !slices.Contains(found.BookIDs, bookID) {
+		return coupon.Coupon{}, 0, order.ErrCouponInvalid
+	}
+	// A fixed-amount coupon's Value is minor units of found.Currency — never
+	// apply it against a book priced in a different currency (a percentage
+	// coupon has no such issue, it scales with priceMinorUnits directly).
+	if found.Kind == coupon.KindFixed && !strings.EqualFold(found.Currency, currency) {
 		return coupon.Coupon{}, 0, order.ErrCouponInvalid
 	}
 	var discount int64

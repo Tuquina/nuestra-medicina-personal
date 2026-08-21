@@ -89,11 +89,33 @@ func (r *OrderRepository) GetForUser(ctx context.Context, userID, identifier str
 	return r.get(ctx, identifier, userID)
 }
 
-func (r *OrderRepository) Expire(ctx context.Context, orderID string, now time.Time) error {
-	if _, err := r.pool.Exec(ctx, `
+// Expire marks a pending order EXPIRED and, when couponID is non-empty,
+// releases the usage reservation Create made for it — in the same
+// transaction, so a transient payment-provider failure never permanently
+// burns a limited coupon's use. Gated on the order actually having been
+// PENDING (RowsAffected > 0) so calling Expire twice for the same order
+// can't release the same reservation twice.
+func (r *OrderRepository) Expire(ctx context.Context, orderID, couponID string, now time.Time) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin order expiration: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	command, err := tx.Exec(ctx, `
 		UPDATE orders SET status = 'EXPIRED', updated_at = $2
-		WHERE id = $1::uuid AND status = 'PENDING'`, orderID, now); err != nil {
+		WHERE id = $1::uuid AND status = 'PENDING'`, orderID, now)
+	if err != nil {
 		return fmt.Errorf("expire pending order: %w", err)
+	}
+	if couponID != "" && command.RowsAffected() > 0 {
+		if _, err := tx.Exec(ctx, `
+			UPDATE coupons SET usage_count = usage_count - 1, updated_at = $2
+			WHERE id = $1::uuid AND usage_count > 0`, couponID, now); err != nil {
+			return fmt.Errorf("release coupon reservation: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit order expiration: %w", err)
 	}
 	return nil
 }
