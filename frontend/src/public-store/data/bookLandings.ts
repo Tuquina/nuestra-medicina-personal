@@ -1,6 +1,6 @@
 /**
  * Per-book landing page content — everything the `/libros/{slug}`
- * mockups show beyond the catalog card (BOOKS in `books.ts`).
+ * mockups show beyond the catalog card (the `Book` shape in `books.ts`).
  *
  * The two existing landing mockups genuinely diverge in structure (one
  * has an image+text section and an FAQ accordion, the other has a
@@ -70,7 +70,7 @@ export const BOOK_LANDINGS: Record<string, BookLanding> = {
     quote: '"Escribir no cambia lo que pasó, pero cambia el lugar desde el que lo miramos."',
     quoteGlowSide: 'left',
     publicationDate: 'Marzo 2026',
-    isbn: '978-0-00-000000-0 (demo)',
+    isbn: '',
     fileSize: '2,4 MB',
     faqs: [
       {
@@ -128,7 +128,7 @@ export const BOOK_LANDINGS: Record<string, BookLanding> = {
     quote: '"Un aula que escribe también es un aula que escucha."',
     quoteGlowSide: 'right',
     publicationDate: 'Mayo 2026',
-    isbn: '978-0-00-000001-0 (demo)',
+    isbn: '',
     fileSize: '3,1 MB',
     relatedSlug: 'el-poder-de-tu-historia',
     ctaGlowSide: 'left',
