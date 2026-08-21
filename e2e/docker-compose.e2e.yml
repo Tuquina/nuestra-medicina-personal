@@ -1,0 +1,60 @@
+# Override for the dev stack (docker-compose.yml), used only by the E2E
+# harness (Playwright's global-setup.ts). Always combined with the base
+# file, first: `docker compose -f docker-compose.yml -f e2e/docker-compose.e2e.yml ...`
+# — with multiple -f files, Compose resolves every relative path against
+# the FIRST file listed (repo root), which is why paths below are written
+# from the repo root even though this file lives under e2e/.
+#
+# Never used in production or by the regular dev workflow — see
+# e2e/README.md for what this changes and why.
+services:
+  postgres:
+    ports:
+      - '5432:5432' # Playwright's db.ts fixture seeds/cleans fixtures directly, from the host.
+
+  mp-fake:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./e2e/fixtures:/app:ro
+    environment:
+      # The real, browser-reachable frontend origin — mp-fake substitutes
+      # this for whatever back_urls the app sent it (which point at
+      # MERCADOPAGO_PUBLIC_BASE_URL below, a dummy value that only needs to
+      # satisfy the backend's own HTTPS validation, never to be reachable).
+      PUBLIC_BASE_URL: http://localhost:5173
+    command: ['node', 'mercadopago-fake-server.js']
+    ports:
+      - '9999:9999' # Playwright's control endpoint calls also run from the host.
+
+  api:
+    environment:
+      # Deterministic, test-only values — never real credentials. Google's
+      # values only need to be non-empty for Configured() to be true and
+      # for Start() to build a real authorization URL — Start() itself
+      # never contacts Google, so these don't need to be genuine (see the
+      # smoke test, which checks the redirect but never completes a real
+      # login).
+      ADMIN_GOOGLE_SUB: e2e-admin-fixture
+      GOOGLE_CLIENT_ID: e2e-fake-client-id
+      GOOGLE_CLIENT_SECRET: e2e-fake-client-secret
+      GOOGLE_REDIRECT_URL: http://localhost:8080/api/v1/auth/google/callback
+      MERCADOPAGO_ACCESS_TOKEN: e2e-fake-token
+      MERCADOPAGO_WEBHOOK_SECRET: e2e-fake-webhook-secret
+      # config.go requires this to be a real absolute HTTPS URL; it's only
+      # ever embedded in the back_urls/notification_url sent *to* mp-fake,
+      # which ignores the host and substitutes its own PUBLIC_BASE_URL
+      # above — so this never actually needs to be dereferenced.
+      MERCADOPAGO_PUBLIC_BASE_URL: https://e2e-fixture.invalid
+      MERCADOPAGO_API_BASE_URL: http://mp-fake:9999
+      # Comfortably high but within config.go's validated 1–10000 range —
+      # enough that a full E2E run never trips these in one process lifetime.
+      RATE_LIMIT_AUTH_REQUESTS: '10000'
+      RATE_LIMIT_ORDER_REQUESTS: '10000'
+      RATE_LIMIT_DOWNLOAD_REQUESTS: '10000'
+      RATE_LIMIT_ADMIN_WRITE_REQUESTS: '10000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mp-fake:
+        condition: service_started
