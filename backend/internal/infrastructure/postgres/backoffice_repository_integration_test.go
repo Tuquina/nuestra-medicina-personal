@@ -109,7 +109,7 @@ func TestBackofficeAggregatesHistoricalSalesAndCustomers(t *testing.T) {
 		}
 	}
 
-	customers, err := repository.Customers(ctx, backofficedomain.CustomerFilter{Limit: 50}, []string{"backoffice-admin"}, "ARS")
+	customers, err := repository.Customers(ctx, backofficedomain.CustomerFilter{Limit: 50}, []string{"admin@example.com"}, "ARS")
 	if err != nil {
 		t.Fatalf("customers: %v", err)
 	}

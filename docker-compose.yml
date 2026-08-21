@@ -49,7 +49,7 @@ services:
       RATE_LIMIT_ADMIN_WRITE_REQUESTS: ${RATE_LIMIT_ADMIN_WRITE_REQUESTS:-60}
       DATABASE_URL: postgres://nmp:nmp_dev_only@postgres:5432/nmp?sslmode=disable
       DATABASE_MAX_CONNECTIONS: 5
-      ADMIN_GOOGLE_SUBS: ${ADMIN_GOOGLE_SUBS:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL:-http://localhost:8080/api/v1/auth/google/callback}

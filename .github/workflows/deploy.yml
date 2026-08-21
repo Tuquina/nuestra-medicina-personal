@@ -108,7 +108,7 @@ jobs:
             echo "POSTGRES_USER=nmp"
             echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
             echo "DATABASE_URL=postgres://nmp:${POSTGRES_PASSWORD}@postgres:5432/nmp?sslmode=disable"
-            echo "ADMIN_GOOGLE_SUBS=${{ vars.ADMIN_GOOGLE_SUBS }}"
+            echo "ADMIN_EMAILS=${{ vars.ADMIN_EMAILS }}"
             echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}"
             echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
             echo "GOOGLE_MAIL_SENDER=${{ vars.GOOGLE_MAIL_SENDER }}"

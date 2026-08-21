@@ -210,22 +210,22 @@ func (r *BackofficeRepository) countSales(ctx context.Context, filter backoffice
 func (r *BackofficeRepository) Customers(
 	ctx context.Context,
 	filter backofficedomain.CustomerFilter,
-	adminGoogleSubs []string,
+	adminEmails []string,
 	currency string,
 ) (backofficedomain.CustomerPage, error) {
 	// pgx encodes a nil slice as SQL NULL, and `<> ALL(NULL::text[])` is
 	// NULL (not true) -- normalize to a real empty array first, for which
 	// `<> ALL('{}')` is vacuously true (correctly excludes nobody).
-	if adminGoogleSubs == nil {
-		adminGoogleSubs = []string{}
+	if adminEmails == nil {
+		adminEmails = []string{}
 	}
 	var total int
 	if err := r.pool.QueryRow(ctx, `
 		SELECT count(*)::int
 		FROM users
-		WHERE users.google_subject <> ALL($1::text[])
+		WHERE lower(users.email) <> ALL($1::text[])
 		  AND ($2 = '' OR users.display_name ILIKE '%' || $2 || '%'
-		       OR users.email ILIKE '%' || $2 || '%')`, adminGoogleSubs, filter.Query).Scan(&total); err != nil {
+		       OR users.email ILIKE '%' || $2 || '%')`, adminEmails, filter.Query).Scan(&total); err != nil {
 		return backofficedomain.CustomerPage{}, fmt.Errorf("count backoffice customers: %w", err)
 	}
 	rows, err := r.pool.Query(ctx, `
@@ -267,12 +267,12 @@ func (r *BackofficeRepository) Customers(
 				ORDER BY order_items_inner.book_id, orders_inner.paid_at DESC
 			) purchased
 		) purchases ON true
-		WHERE users.google_subject <> ALL($1::text[])
+		WHERE lower(users.email) <> ALL($1::text[])
 		  AND ($2 = '' OR users.display_name ILIKE '%' || $2 || '%'
 		       OR users.email ILIKE '%' || $2 || '%')
 		ORDER BY stats.last_purchase_at DESC NULLS LAST, users.created_at DESC
 		LIMIT $3 OFFSET $5`,
-		adminGoogleSubs, filter.Query, filter.Limit, currency, filter.Offset,
+		adminEmails, filter.Query, filter.Limit, currency, filter.Offset,
 	)
 	if err != nil {
 		return backofficedomain.CustomerPage{}, fmt.Errorf("query backoffice customers: %w", err)

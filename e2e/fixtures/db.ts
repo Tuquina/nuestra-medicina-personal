@@ -35,18 +35,23 @@ export interface SeededSession {
 /**
  * Seeds a user + a valid session, returning the raw token to hand to
  * withSessionCookie() (fixtures/auth.ts). Pass role: 'admin' to make the
- * user's google_subject match one of the (comma-separated) ADMIN_GOOGLE_SUBS entries (e2e-admin-fixture, set in
- * docker-compose.e2e.yml) — requireAdmin checks that at query time, there's
- * no separate "is admin" column to set.
+ * user's email match one of the (comma-separated) ADMIN_EMAILS entries
+ * (e2e-admin@e2e.example, set in docker-compose.e2e.yml) — requireAdmin
+ * checks that at query time, there's no separate "is admin" column to set.
+ * An explicit `overrides.email` on an 'admin' seed would silently produce a
+ * non-admin user, so it's rejected rather than allowed to fail quietly.
  */
 export async function seedSession(
   role: 'user' | 'admin',
   overrides: { email?: string; displayName?: string } = {},
 ): Promise<SeededSession> {
+  if (role === 'admin' && overrides.email) {
+    throw new Error("seedSession('admin', ...) cannot override email — it must match ADMIN_EMAILS to grant admin access");
+  }
   const userId = randomUUID();
   const rawToken = randomUUID() + randomUUID();
-  const googleSubject = role === 'admin' ? 'e2e-admin-fixture' : `e2e-user-${userId}`;
-  const email = overrides.email ?? `${role}-${userId}@e2e.example`;
+  const googleSubject = `e2e-${role}-${userId}`;
+  const email = role === 'admin' ? 'e2e-admin@e2e.example' : (overrides.email ?? `${role}-${userId}@e2e.example`);
   const displayName = overrides.displayName ?? (role === 'admin' ? 'E2E Admin' : 'E2E User');
 
   const client = await db().connect();

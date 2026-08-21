@@ -15,13 +15,13 @@ type Repository interface {
 }
 
 type Service struct {
-	repository      Repository
-	adminGoogleSubs []string
-	now             func() time.Time
+	repository  Repository
+	adminEmails []string
+	now         func() time.Time
 }
 
-func NewService(repository Repository, adminGoogleSubs []string) *Service {
-	return &Service{repository: repository, adminGoogleSubs: adminGoogleSubs, now: time.Now}
+func NewService(repository Repository, adminEmails []string) *Service {
+	return &Service{repository: repository, adminEmails: adminEmails, now: time.Now}
 }
 
 func (s *Service) Dashboard(ctx context.Context, rangeValue, bookSlug, currency string) (backofficedomain.Dashboard, error) {
@@ -73,7 +73,7 @@ func (s *Service) Customers(ctx context.Context, filter backofficedomain.Custome
 	if len(currency) != 3 {
 		return backofficedomain.CustomerPage{}, &backofficedomain.ValidationError{Fields: map[string]string{"currency": "must contain 3 letters"}}
 	}
-	return s.repository.Customers(ctx, filter, s.adminGoogleSubs, currency)
+	return s.repository.Customers(ctx, filter, s.adminEmails, currency)
 }
 
 func parsePeriod(value string, now time.Time) (backofficedomain.Period, error) {

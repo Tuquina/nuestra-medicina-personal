@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -58,11 +59,10 @@ func (r *AuthRepository) CreateSession(ctx context.Context, identity auth.Identi
 	return user, nil
 }
 
-func (r *AuthRepository) GetUserByTokenHash(ctx context.Context, tokenHash string, adminGoogleSubs []string) (auth.User, error) {
+func (r *AuthRepository) GetUserByTokenHash(ctx context.Context, tokenHash string, adminEmails []string) (auth.User, error) {
 	var user auth.User
-	var googleSubject string
 	err := r.pool.QueryRow(ctx, `
-		SELECT users.id::text, users.google_subject, users.email, users.display_name,
+		SELECT users.id::text, users.email, users.display_name,
 		       COALESCE(users.picture_url, ''), users.created_at, users.last_login_at
 		FROM sessions
 		JOIN users ON users.id = sessions.user_id
@@ -70,14 +70,14 @@ func (r *AuthRepository) GetUserByTokenHash(ctx context.Context, tokenHash strin
 		  AND sessions.expires_at > now()
 		  AND sessions.revoked_at IS NULL
 		  AND users.deleted_at IS NULL`, tokenHash,
-	).Scan(&user.ID, &googleSubject, &user.Email, &user.DisplayName, &user.PictureURL, &user.CreatedAt, &user.LastLoginAt)
+	).Scan(&user.ID, &user.Email, &user.DisplayName, &user.PictureURL, &user.CreatedAt, &user.LastLoginAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.User{}, auth.ErrUnauthorized
 	}
 	if err != nil {
 		return auth.User{}, fmt.Errorf("get session user: %w", err)
 	}
-	user.IsAdmin = slices.Contains(adminGoogleSubs, googleSubject)
+	user.IsAdmin = slices.Contains(adminEmails, strings.ToLower(user.Email))
 	return user, nil
 }
 

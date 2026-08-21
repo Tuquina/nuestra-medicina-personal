@@ -108,7 +108,7 @@ En **cada** Environment, cargar:
 | Nombre | Qué va |
 |---|---|
 | `APP_DOMAIN` | `dev.tudominio.com` / `tudominio.com` |
-| `ADMIN_GOOGLE_SUBS` | Comma-separated, igual en ambos si son las mismas personas |
+| `ADMIN_EMAILS` | Comma-separated (emails de Google), igual en ambos si son las mismas personas |
 | `GOOGLE_CLIENT_ID` | Mismo valor en ambos (un solo Client ID, dos redirect URIs) |
 | `GOOGLE_MAIL_SENDER` | Vacío mientras Gmail no esté configurado |
 | `SUPPORT_EMAIL` | — |
