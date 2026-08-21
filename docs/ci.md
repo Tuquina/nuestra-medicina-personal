@@ -7,11 +7,20 @@ manualmente desde GitHub Actions.
 ## Responsabilidad de cada rama
 
 - `develop` es la rama de integración. Los cambios funcionales deberían llegar
-  aquí primero y superar el CI completo.
-- `main` representa código candidato a producción. Integrar `develop` en `main`
-  vuelve a ejecutar todos los controles, pero todavía no publica ni despliega.
-- El despliegue futuro será otro workflow, limitado a `main` y al environment de
-  GitHub `production`, con aprobación manual y secretos propios de la VPS.
+  aquí primero y superar el CI completo. Cada push a `develop` (en la práctica,
+  cada PR mergeado) además dispara
+  [`deploy-dev.yml`](../.github/workflows/deploy-dev.yml), que construye,
+  publica y despliega automáticamente al ambiente `nmp-dev` del VPS — sin
+  aprobación manual, ya que no es el ambiente que ven los clientes.
+- `main` representa código candidato a producción. Un push a `main` dispara
+  [`deploy-prod.yml`](../.github/workflows/deploy-prod.yml), que hace lo mismo
+  para `nmp-prod`, pero el job queda pausado esperando aprobación manual en el
+  Environment de GitHub `production` (Settings → Environments →
+  `production` → "Required reviewers").
+- Ambos workflows de despliegue son un mismo workflow reutilizable
+  ([`deploy.yml`](../.github/workflows/deploy.yml)) parametrizado por
+  ambiente — ver [deploy/README.md](../deploy/README.md) para el checklist
+  completo de secrets/variables de GitHub y la configuración única del VPS.
 
 Docker Compose sigue siendo el entorno persistente local y cada ejecución de
 Actions crea un entorno Linux efímero con PostgreSQL real para la integración
@@ -39,8 +48,9 @@ Gmail y Mercado Pago permanecen deshabilitados y no requieren secretos reales.
 
 ```text
 rama de trabajo -> pull request a develop -> CI
+develop         -> deploy automático a nmp-dev (sin aprobación)
 develop         -> pull request a main    -> CI
-main            -> CD de producción futuro
+main            -> deploy a nmp-prod (con aprobación manual)
 ```
 
 `develop` y `main` están protegidas contra pushes directos, force-pushes y
