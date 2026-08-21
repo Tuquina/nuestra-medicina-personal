@@ -25,6 +25,7 @@ type Repository interface {
 	CreateSession(context.Context, auth.Identity, auth.Session, time.Time) (auth.User, error)
 	GetUserByTokenHash(context.Context, string, string) (auth.User, error)
 	RevokeSession(context.Context, string, time.Time) error
+	DeleteAccount(context.Context, string, time.Time) error
 }
 
 type Flow struct {
@@ -113,6 +114,13 @@ func (s *Service) Logout(ctx context.Context, rawToken string) error {
 		return nil
 	}
 	return s.repository.RevokeSession(ctx, hashToken(rawToken), s.now().UTC())
+}
+
+// DeleteAccount soft-deletes the signed-in user (anonymize + revoke every
+// session). See postgres.AuthRepository.DeleteAccount for why it's a soft
+// delete rather than removing the row.
+func (s *Service) DeleteAccount(ctx context.Context, userID string) error {
+	return s.repository.DeleteAccount(ctx, userID, s.now().UTC())
 }
 
 func (s *Service) FlowTTL() time.Duration { return s.flowTTL }

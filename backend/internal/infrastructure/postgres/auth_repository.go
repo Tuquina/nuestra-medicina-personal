@@ -67,7 +67,8 @@ func (r *AuthRepository) GetUserByTokenHash(ctx context.Context, tokenHash, admi
 		JOIN users ON users.id = sessions.user_id
 		WHERE sessions.token_hash = $1
 		  AND sessions.expires_at > now()
-		  AND sessions.revoked_at IS NULL`, tokenHash,
+		  AND sessions.revoked_at IS NULL
+		  AND users.deleted_at IS NULL`, tokenHash,
 	).Scan(&user.ID, &googleSubject, &user.Email, &user.DisplayName, &user.PictureURL, &user.CreatedAt, &user.LastLoginAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.User{}, auth.ErrUnauthorized
@@ -84,6 +85,44 @@ func (r *AuthRepository) RevokeSession(ctx context.Context, tokenHash string, no
 		UPDATE sessions SET revoked_at = COALESCE(revoked_at, $2)
 		WHERE token_hash = $1`, tokenHash, now); err != nil {
 		return fmt.Errorf("revoke session: %w", err)
+	}
+	return nil
+}
+
+// DeleteAccount anonymizes the user row (soft-delete, per ADR — orders,
+// payments and reviews keep their FK to preserve historical/accounting
+// integrity) and revokes every session, so the deletion takes effect
+// immediately even if the caller's own cookie somehow survives the request.
+// google_subject is rewritten too, freeing its UNIQUE constraint so a future
+// login with the same Google account creates a fresh user instead of
+// colliding with the anonymized row.
+func (r *AuthRepository) DeleteAccount(ctx context.Context, userID string, now time.Time) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin account deletion transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	tag, err := tx.Exec(ctx, `
+		UPDATE users SET
+			email = 'deleted+' || id::text || '@deleted.local',
+			display_name = 'Cuenta eliminada',
+			picture_url = NULL,
+			google_subject = 'deleted:' || id::text,
+			deleted_at = $2
+		WHERE id = $1::uuid AND deleted_at IS NULL`, userID, now)
+	if err != nil {
+		return fmt.Errorf("anonymize user: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return auth.ErrUnauthorized
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE sessions SET revoked_at = COALESCE(revoked_at, $2)
+		WHERE user_id = $1::uuid AND revoked_at IS NULL`, userID, now); err != nil {
+		return fmt.Errorf("revoke sessions on account deletion: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit account deletion: %w", err)
 	}
 	return nil
 }

@@ -101,3 +101,9 @@
   color: color-mix(in oklch, var(--color-sky-soft) 75%, transparent);
   margin: 18px 0 0;
 }
+
+.error {
+  font-size: 13px;
+  color: var(--color-status-danger-icon);
+  margin: 12px 0 0;
+}

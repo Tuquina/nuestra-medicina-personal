@@ -31,6 +31,7 @@ var (
 	ErrPaymentNotReady = errors.New("payment provider is not configured")
 	ErrPaymentProvider = errors.New("payment provider request failed")
 	ErrInvalidWebhook  = errors.New("webhook signature is invalid")
+	ErrCouponInvalid   = errors.New("coupon code is not valid for this order")
 )
 
 type Order struct {
@@ -41,10 +42,17 @@ type Order struct {
 	Currency             string
 	ProviderPreferenceID string
 	CheckoutURL          string
-	Items                []Item
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-	PaidAt               *time.Time
+	// CouponID drives the atomic usage-count increment in the repository;
+	// it is never returned to clients. CouponCode/DiscountMinorUnits are
+	// the historical snapshot (ADR 0003) — they stay on the order even if
+	// the coupon is later edited or deleted.
+	CouponID           string
+	CouponCode         string
+	DiscountMinorUnits int64
+	Items              []Item
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	PaidAt             *time.Time
 }
 
 type Item struct {

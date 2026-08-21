@@ -5,9 +5,12 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/nuestra-medicina-personal/backend/internal/domain/book"
+	"github.com/nuestra-medicina-personal/backend/internal/domain/coupon"
 	"github.com/nuestra-medicina-personal/backend/internal/domain/order"
 )
 
@@ -15,6 +18,14 @@ const mercadoPagoProvider = "MERCADO_PAGO"
 
 type BookCatalog interface {
 	GetPublishedBySlug(context.Context, string) (book.Book, error)
+}
+
+// Coupons is the read-only slice of the coupon repository checkout needs —
+// looking a code up by its human-entered value. Usage-count reservation
+// happens atomically inside Repository.Create instead, alongside the order
+// insert, so it can't race with a concurrent checkout.
+type Coupons interface {
+	GetByCode(context.Context, string) (coupon.Coupon, error)
 }
 
 type Repository interface {
@@ -33,17 +44,18 @@ type CheckoutProvider interface {
 
 type Service struct {
 	books      BookCatalog
+	coupons    Coupons
 	repository Repository
 	provider   CheckoutProvider
 	now        func() time.Time
 	newID      func() (string, error)
 }
 
-func NewService(books BookCatalog, repository Repository, provider CheckoutProvider) *Service {
-	return &Service{books: books, repository: repository, provider: provider, now: time.Now, newID: randomUUID}
+func NewService(books BookCatalog, coupons Coupons, repository Repository, provider CheckoutProvider) *Service {
+	return &Service{books: books, coupons: coupons, repository: repository, provider: provider, now: time.Now, newID: randomUUID}
 }
 
-func (s *Service) Create(ctx context.Context, userID, userEmail, bookSlug string) (order.Order, error) {
+func (s *Service) Create(ctx context.Context, userID, userEmail, bookSlug, couponCode string) (order.Order, error) {
 	if !s.provider.Configured() {
 		return order.Order{}, order.ErrPaymentNotReady
 	}
@@ -57,6 +69,15 @@ func (s *Service) Create(ctx context.Context, userID, userEmail, bookSlug string
 	if selectedBook.PriceMinorUnits <= 0 {
 		return order.Order{}, order.ErrBookUnavailable
 	}
+	now := s.now().UTC()
+	var appliedCoupon coupon.Coupon
+	var discountMinorUnits int64
+	if couponCode != "" {
+		appliedCoupon, discountMinorUnits, err = s.resolveCoupon(ctx, couponCode, selectedBook.ID, selectedBook.PriceMinorUnits, now)
+		if err != nil {
+			return order.Order{}, err
+		}
+	}
 	orderID, err := s.newID()
 	if err != nil {
 		return order.Order{}, fmt.Errorf("generate order id: %w", err)
@@ -65,10 +86,10 @@ func (s *Service) Create(ctx context.Context, userID, userEmail, bookSlug string
 	if err != nil {
 		return order.Order{}, fmt.Errorf("generate order item id: %w", err)
 	}
-	now := s.now().UTC()
 	candidate := order.Order{
 		ID: orderID, UserID: userID, Status: order.StatusPending,
-		TotalMinorUnits: selectedBook.PriceMinorUnits, Currency: selectedBook.Currency,
+		TotalMinorUnits: selectedBook.PriceMinorUnits - discountMinorUnits, Currency: selectedBook.Currency,
+		CouponID: appliedCoupon.ID, CouponCode: appliedCoupon.Code, DiscountMinorUnits: discountMinorUnits,
 		CreatedAt: now, UpdatedAt: now,
 		Items: []order.Item{{
 			ID: itemID, BookID: selectedBook.ID, BookSlug: selectedBook.Slug,
@@ -113,6 +134,38 @@ func (s *Service) ProcessPayment(ctx context.Context, providerPaymentID string) 
 		return order.Order{}, order.ErrPaymentMismatch
 	}
 	return s.repository.ApplyPayment(ctx, mercadoPagoProvider, payment, s.now().UTC())
+}
+
+// resolveCoupon validates a customer-entered code against the coupon's
+// effective status (active/dates/usage — coupon.Coupon.EffectiveStatus,
+// shared with the admin screen) and book scope, then computes the discount.
+// It never reserves usage itself; that happens atomically inside
+// Repository.Create alongside the order insert.
+func (s *Service) resolveCoupon(ctx context.Context, code, bookID string, priceMinorUnits int64, now time.Time) (coupon.Coupon, int64, error) {
+	found, err := s.coupons.GetByCode(ctx, strings.ToUpper(strings.TrimSpace(code)))
+	if errors.Is(err, coupon.ErrNotFound) {
+		return coupon.Coupon{}, 0, order.ErrCouponInvalid
+	}
+	if err != nil {
+		return coupon.Coupon{}, 0, fmt.Errorf("look up coupon: %w", err)
+	}
+	if found.EffectiveStatus(now) != "ACTIVE" {
+		return coupon.Coupon{}, 0, order.ErrCouponInvalid
+	}
+	if !found.AppliesToAll && !slices.Contains(found.BookIDs, bookID) {
+		return coupon.Coupon{}, 0, order.ErrCouponInvalid
+	}
+	var discount int64
+	switch found.Kind {
+	case coupon.KindPercentage:
+		discount = priceMinorUnits * found.Value / 100
+	case coupon.KindFixed:
+		discount = found.Value
+	}
+	if discount > priceMinorUnits {
+		discount = priceMinorUnits
+	}
+	return found, discount, nil
 }
 
 func randomUUID() (string, error) {

@@ -139,16 +139,19 @@ El backend ya impide borrar archivos referenciados y responde `MEDIA_IN_USE`.
 La UI debe mostrar ese error; no necesita precalcular `usedIn` ni crear otro
 contrato antes de tener un requerimiento real para listar referencias.
 
-## Funciones fuera del contrato MVP
+## Funciones visibles y persistencia
 
-- Cupones y reseñas permanecen como prototipos locales. No se crearán endpoints
-  hasta confirmar esas funciones y escribir la decisión correspondiente.
-- Newsletter es marketing, no email transaccional. El formulario permanece sin
-  persistencia hasta elegir proveedor y consentimiento.
+- Cupones y reseñas son recursos PostgreSQL confirmados en ADR 0003. Sus
+  pantallas administrativas consumen las APIs reales y no usan `localStorage`.
+- Las reseñas requieren una compra pagada, comienzan pendientes y sólo se
+  muestran públicamente después de ser aprobadas.
+- Newsletter es marketing, no email transaccional. Debe persistir el
+  consentimiento antes de habilitar el formulario; la selección de un proveedor
+  para campañas puede hacerse después sin fingir un alta exitosa.
 - Eliminación de cuenta se gestiona por soporte hasta definir anonimización y
   retención legal de compras; no se inventará `DELETE /api/v1/me`.
-- Las rutas anteriores deben ocultarse o marcarse como no disponibles cuando se
-  retire el modo de demostración; nunca deben aparentar persistencia exitosa.
+- Ninguna pantalla visible puede aparentar persistencia exitosa mediante datos
+  locales o mensajes de demostración.
 
 ## Orden de integración posterior
 
@@ -157,5 +160,6 @@ contrato antes de tener un requerimiento real para listar referencias.
 3. ✅ libros, eBook y multimedia administrativos;
 4. ✅ dashboard, ventas, clientes y configuración;
 5. ✅ CMS público, borrador, publicación, vista previa y versiones;
-6. **Siguiente:** retirar mocks, toggles y mensajes de demostración;
-7. revisar estados vacíos y errores `401/403/409/422/429` en cada pantalla.
+6. ✅ persistencia y moderación de cupones y reseñas;
+7. **Siguiente:** newsletter, analítica y mensajes de demostración restantes;
+8. revisar estados vacíos y errores `401/403/409/422/429` en cada pantalla.

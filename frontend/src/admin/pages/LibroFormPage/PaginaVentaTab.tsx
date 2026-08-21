@@ -1,10 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FormField } from '../../../shared/components/FormField/FormField';
 import f from '../../../shared/components/FormField/FormField.module.css';
 import { useEditablePage } from '../../../shared/cms/useEditablePage';
 import { CmsEditorActions, CmsEditorLoadState } from '../../components/CmsEditorTools/CmsEditorTools';
 import { BOOK_LANDING_SECTION_TYPE, buildBookLandingSeedContent, readBookLandingProps, type BookLandingProps } from '../../../shared/cms/bookLandingContent';
-import { BOOKS } from '../../../public-store/data/books';
+import { apiRequest } from '../../../shared/api/client';
+import { ADMIN_BOOKS_URL } from '../../../shared/config/api';
+import type { AdminBook, AdminBookList } from '../../books/types';
 import type { BenefitsSection, ImageTextSection } from '../../../public-store/data/bookLandings';
 import styles from './PaginaVentaTab.module.css';
 
@@ -51,7 +53,16 @@ function PaginaVentaEditor({ bookId, slug, bookTitle }: PaginaVentaTabProps) {
     });
   };
 
-  const otherBooks = BOOKS.filter((book) => book.slug !== slug);
+  const [otherBooks, setOtherBooks] = useState<AdminBook[]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    apiRequest<AdminBookList>(ADMIN_BOOKS_URL, { signal: controller.signal })
+      .then((response) => setOtherBooks(response.items.filter((book) => book.slug !== slug)))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      });
+    return () => controller.abort();
+  }, [slug]);
 
   if (editor.loadStatus !== 'ready') return <CmsEditorLoadState editor={editor} />;
 

@@ -19,7 +19,7 @@ type observableOrderServiceStub struct {
 	processed order.Order
 }
 
-func (s observableOrderServiceStub) Create(context.Context, string, string, string) (order.Order, error) {
+func (s observableOrderServiceStub) Create(context.Context, string, string, string, string) (order.Order, error) {
 	return s.created, nil
 }
 

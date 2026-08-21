@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { NEWSLETTER_SUBSCRIBE_URL } from '../../config/api';
+import { apiRequest } from '../../api/client';
 import styles from './NewsletterSignup.module.css';
 
 interface NewsletterSignupProps {
@@ -12,10 +14,8 @@ interface NewsletterSignupProps {
 
 /**
  * The dark radial-gradient email capture used on Home, Meditaciones and
- * Herramientas. Local-only state — there's no `/api/v1/newsletter*`
- * endpoint in architecture.md yet (marketing_subscriptions is described
- * conceptually in §59.13 but not wired to an API contract). Wire this up
- * to a real endpoint once one exists instead of inventing a shape now.
+ * Herramientas. Posts to `POST /api/v1/newsletter/subscribe` — public,
+ * idempotent by email (architecture.md §59.13).
  */
 export function NewsletterSignup({
   title,
@@ -27,11 +27,26 @@ export function NewsletterSignup({
 }: NewsletterSignupProps) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!email) return;
-    setSubscribed(true);
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiRequest(NEWSLETTER_SUBSCRIBE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: sectionId ?? 'unknown' }),
+      });
+      setSubscribed(true);
+    } catch {
+      setError('No pudimos guardar tu suscripción. Intentá nuevamente.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputId = `newsletter-email${sectionId ? `-${sectionId}` : ''}`;
@@ -61,13 +76,15 @@ export function NewsletterSignup({
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className={styles.input}
+              disabled={submitting}
             />
-            <button type="submit" className={styles.submit}>
-              {buttonLabel}
+            <button type="submit" className={styles.submit} disabled={submitting}>
+              {submitting ? 'Enviando…' : buttonLabel}
             </button>
           </form>
         )}
 
+        {error && <p className={styles.error}>{error}</p>}
         {fineprint && <p className={styles.fineprint}>{fineprint}</p>}
       </div>
     </section>

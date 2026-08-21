@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS coupon_books;
+DROP TABLE IF EXISTS coupons;

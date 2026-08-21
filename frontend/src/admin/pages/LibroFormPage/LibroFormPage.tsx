@@ -278,7 +278,9 @@ function LibroFormContent({ initialBook }: { initialBook: AdminBook | null }) {
             onEbookUploaded={handleEbookUploaded}
           />
         )}
-        {activeTab === 'manuscript' && <ManuscritoTab bookTitle={form.title || 'Nuevo libro'} />}
+        {activeTab === 'manuscript' && (
+          <ManuscritoTab bookId={savedBook?.id ?? null} bookTitle={form.title || 'Nuevo libro'} />
+        )}
         {activeTab === 'page' && (
           <PaginaVentaTab
             bookId={savedBook?.id ?? null}

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../shared/components/Button/Button';
+import { apiRequest } from '../../../shared/api/client';
+import { adminBookManuscriptUrl } from '../../../shared/config/api';
 import { PageBreakOverlay } from './PageBreakOverlay';
 import { DEFAULT_PAGE_SIZE_ID, PAGE_MARGIN_MM, PAGE_SIZES, findPageSize, pageContentHeightPx } from './pageSizes';
 import styles from './ManuscritoTab.module.css';
@@ -10,8 +12,14 @@ interface Chapter {
   html: string;
 }
 
-const PLACEHOLDER_CONVERTED =
-  '<p>Este es un texto de ejemplo que representa el contenido convertido desde tu archivo. Reemplazalo por el contenido real de tu libro.</p>';
+interface ManuscriptResponse {
+  bookId: string;
+  chapters: Chapter[];
+  updatedAt: string | null;
+}
+
+const AUTOSAVE_DEBOUNCE_MS = 1500;
+const CONVERTIBLE_EXTENSION = '.txt';
 
 function wordCountOf(html: string): number {
   return html
@@ -20,6 +28,8 @@ function wordCountOf(html: string): number {
     .split(/\s+/)
     .filter(Boolean).length;
 }
+
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 /**
  * The manuscript editor: upload-and-convert or start blank, then a
@@ -30,33 +40,99 @@ function wordCountOf(html: string): number {
  * has to be in React: chapter HTML lives in state, but the live DOM is
  * only synced from it when switching chapters, not on every keystroke.
  *
- * "Generar EPUB/PDF" simulate the real conversion pipeline
- * (architecture.md doesn't define one yet); the preview modal renders
- * the author's own just-typed HTML from this same session — once a
- * backend persists manuscript content, whatever renders it *publicly*
- * must sanitize per architecture.md §40, but that's a different
- * surface than the admin reflecting back what you just typed.
+ * Chapters persist for real via `GET/PUT /api/v1/admin/books/{id}/manuscript`
+ * (autosaved, debounced). Real conversion is only implemented for plain
+ * text uploads (`file.text()`); other formats and "Generar EPUB/PDF" are
+ * honestly marked as not available yet rather than faking success —
+ * architecture.md doesn't define a real conversion/generation pipeline,
+ * and building one is a bigger, separate decision (new dependencies, an
+ * ADR) than this pass covers. Once a backend renders manuscript content
+ * *publicly*, that surface must sanitize per architecture.md §40 — this
+ * admin preview modal, which only ever reflects the author's own
+ * just-typed HTML from this session, is a different surface.
  */
 interface ManuscritoTabProps {
+  bookId: string | null;
   bookTitle: string;
 }
 
-export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
+export function ManuscritoTab({ bookId, bookTitle }: ManuscritoTabProps) {
+  if (!bookId) {
+    return (
+      <div className={styles.emptyCard}>
+        <p className={styles.emptyText}>
+          Guardá la información básica del libro antes de escribir el manuscrito.
+        </p>
+      </div>
+    );
+  }
+
+  return <ManuscritoEditor bookId={bookId} bookTitle={bookTitle} />;
+}
+
+function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: string }) {
+  const [loading, setLoading] = useState(true);
   const [manuscriptStarted, setManuscriptStarted] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState('');
+  const [uploadNotice, setUploadNotice] = useState('');
   const [chapters, setChapters] = useState<Chapter[]>([{ id: 1, title: 'Capítulo 1', html: '' }]);
   const [activeChapter, setActiveChapter] = useState(0);
   const [exportMessage, setExportMessage] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [pageSizeId, setPageSizeId] = useState(DEFAULT_PAGE_SIZE_ID);
   const [contentHeightPx, setContentHeightPx] = useState(0);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const previousChapterRef = useRef(activeChapter);
+  const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextAutosaveRef = useRef(true);
 
   const pageSize = findPageSize(pageSizeId);
+
+  // Load whatever was already saved for this book (if anything).
+  useEffect(() => {
+    const controller = new AbortController();
+    apiRequest<ManuscriptResponse>(adminBookManuscriptUrl(bookId), { signal: controller.signal })
+      .then((response) => {
+        if (response.chapters.length > 0) {
+          skipNextAutosaveRef.current = true;
+          setChapters(response.chapters);
+          setManuscriptStarted(true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per bookId
+  }, [bookId]);
+
+  // Debounced autosave — skips the run right after hydrating from the
+  // server so loading a manuscript doesn't immediately re-save it.
+  useEffect(() => {
+    if (skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      return;
+    }
+    if (!manuscriptStarted) return;
+    if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+    autosaveTimeoutRef.current = setTimeout(() => {
+      setSaveState('saving');
+      apiRequest(adminBookManuscriptUrl(bookId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapters }),
+      })
+        .then(() => setSaveState('saved'))
+        .catch(() => setSaveState('error'));
+    }, AUTOSAVE_DEBOUNCE_MS);
+    return () => {
+      if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bookId is stable per mount
+  }, [chapters, manuscriptStarted]);
 
   // Sync the contentEditable DOM only when the active chapter changes —
   // never on every keystroke, or the caret would jump on each input.
@@ -81,15 +157,28 @@ export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
     return () => observer.disconnect();
   }, [manuscriptStarted, activeChapter, pageSizeId]);
 
-  const handleFileUpload = (file: File) => {
-    setIsConverting(true);
-    setUploadedFileName(file.name);
-    setTimeout(() => {
-      setIsConverting(false);
-      setManuscriptStarted(true);
-      setChapters([{ id: 1, title: 'Capítulo 1', html: PLACEHOLDER_CONVERTED }]);
-      setActiveChapter(0);
-    }, 1200);
+  const handleFileUpload = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(CONVERTIBLE_EXTENSION)) {
+      setUploadNotice(
+        'La conversión automática de DOCX/PDF todavía no está disponible. Subí un archivo .txt o empezá a escribir directamente.',
+      );
+      return;
+    }
+    setUploadNotice('');
+    const text = await file.text();
+    const html = text
+      .split(/\n{2,}/)
+      .map((paragraph) => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+      .join('');
+    skipNextAutosaveRef.current = false;
+    setChapters([{ id: 1, title: 'Capítulo 1', html }]);
+    setActiveChapter(0);
+    setManuscriptStarted(true);
+  };
+
+  const startBlank = () => {
+    skipNextAutosaveRef.current = false;
+    setManuscriptStarted(true);
   };
 
   const addChapter = () => {
@@ -111,39 +200,45 @@ export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
   };
 
   const generate = (kind: 'EPUB' | 'PDF') => {
-    setExportMessage(`Generando ${kind}…`);
-    setTimeout(() => {
-      const filename = kind === 'EPUB' ? 'el-libro.epub' : 'el-libro.pdf';
-      setExportMessage(`${filename} generado (demo) — guardado en Archivo y portada.`);
-    }, 900);
+    setExportMessage(`La generación de ${kind} todavía no está disponible.`);
   };
 
+  const saveStatusText: Record<SaveState, string> = {
+    idle: 'Guardado automático activado',
+    saving: 'Guardando…',
+    saved: 'Guardado',
+    error: 'No pudimos guardar — reintentando en tu próximo cambio',
+  };
+
+  if (loading) {
+    return <div className={styles.converting}>Cargando manuscrito…</div>;
+  }
+
   if (!manuscriptStarted) {
-    return isConverting ? (
-      <div className={styles.converting}>Convirtiendo "{uploadedFileName}" a texto editable…</div>
-    ) : (
+    return (
       <div className={styles.startGrid}>
         <div className={styles.startCardDashed}>
           <p className={styles.startCardTitle}>Subir un archivo existente</p>
-          <p className={styles.startCardHint}>Aceptamos DOCX, DOC, PDF o TXT.</p>
+          <p className={styles.startCardHint}>Por ahora convertimos automáticamente sólo archivos TXT.</p>
           <input
             ref={fileInputRef}
             type="file"
             accept=".doc,.docx,.pdf,.txt"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) handleFileUpload(file);
+              if (file) void handleFileUpload(file);
             }}
             style={{ display: 'none' }}
           />
           <Button variant="primary" onClick={() => fileInputRef.current?.click()}>
             Elegir archivo
           </Button>
+          {uploadNotice && <p className={styles.startCardHint}>{uploadNotice}</p>}
         </div>
         <div className={styles.startCard}>
           <p className={styles.startCardTitle}>Empezar a escribir</p>
           <p className={styles.startCardHint}>Redactá tu libro directamente en el editor.</p>
-          <Button variant="secondary" onClick={() => setManuscriptStarted(true)}>
+          <Button variant="secondary" onClick={startBlank}>
             Abrir editor en blanco
           </Button>
         </div>
@@ -299,7 +394,7 @@ export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
             </div>
           </div>
           <p className={styles.wordCount}>
-            Guardado automático activado · {wordCountOf(active?.html ?? '')} palabras · {pageCount} hoja
+            {saveStatusText[saveState]} · {wordCountOf(active?.html ?? '')} palabras · {pageCount} hoja
             {pageCount === 1 ? '' : 's'} ({pageSize.label.split(' (')[0]}) en este capítulo.
           </p>
         </div>
@@ -315,7 +410,7 @@ export function ManuscritoTab({ bookTitle }: ManuscritoTabProps) {
           </Button>
           {exportMessage && <p className={styles.exportMessage}>{exportMessage}</p>}
           <p className={styles.exportHint}>
-            El archivo generado se guarda en la pestaña "Archivo y portada".
+            Los capítulos ya se guardan automáticamente. La generación de EPUB/PDF es una función futura.
           </p>
         </div>
       </div>

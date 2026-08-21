@@ -15,6 +15,8 @@ export interface OrderResponse {
   totalMinorUnits: number;
   currency: string;
   checkoutUrl?: string;
+  couponCode?: string;
+  discountMinorUnits?: number;
   items: OrderItemResponse[];
   createdAt: string;
   updatedAt: string;

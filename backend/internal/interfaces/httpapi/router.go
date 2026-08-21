@@ -14,11 +14,15 @@ type DatabaseHealth interface {
 type Dependencies struct {
 	Logger              *slog.Logger
 	Books               BookService
+	Coupons             CouponService
+	Reviews             ReviewService
+	Newsletter          NewsletterService
 	Authentication      AuthenticationService
 	Orders              OrderService
 	Library             LibraryService
 	Pages               PageService
 	Media               MediaService
+	Manuscripts         ManuscriptService
 	Backoffice          BackofficeService
 	Settings            SettingsService
 	IntegrationStatus   IntegrationStatus
@@ -37,11 +41,15 @@ type Dependencies struct {
 
 func NewRouter(dependencies Dependencies) http.Handler {
 	booksHandler := NewBookHandler(dependencies.Books, dependencies.Logger)
+	couponsHandler := NewCouponHandler(dependencies.Coupons, dependencies.Logger)
+	reviewsHandler := NewReviewHandler(dependencies.Reviews, dependencies.Logger)
+	newsletterHandler := NewNewsletterHandler(dependencies.Newsletter, dependencies.Logger)
 	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies)
 	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
 	pageHandler := NewPageHandler(dependencies.Pages, dependencies.Logger)
 	mediaHandler := NewMediaHandler(dependencies.Media, dependencies.Logger, dependencies.MediaMaxUploadBytes)
+	manuscriptHandler := NewManuscriptHandler(dependencies.Manuscripts, dependencies.Logger)
 	backofficeHandler := NewBackofficeHandler(dependencies.Backoffice, dependencies.Logger)
 	settingsHandler := NewSettingsHandler(dependencies.Settings, dependencies.Logger, dependencies.IntegrationStatus)
 	rateLimiter := NewRateLimiter(dependencies.RateLimits)
@@ -60,18 +68,27 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	})
 	root.HandleFunc("GET /api/v1/books", booksHandler.ListPublished)
 	root.HandleFunc("GET /api/v1/books/{slug}", booksHandler.GetPublished)
+	root.HandleFunc("GET /api/v1/books/{slug}/reviews", reviewsHandler.ListApproved)
 	root.HandleFunc("GET /api/v1/pages/{slug}", pageHandler.GetPublished)
 	root.HandleFunc("GET /api/v1/media/{id}", mediaHandler.Get)
 	root.Handle("GET /api/v1/auth/google", rateLimiter.Auth(http.HandlerFunc(authHandler.Start)))
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
 	root.HandleFunc("GET /api/v1/me", authHandler.Me)
 	root.Handle("POST /api/v1/auth/logout", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(authHandler.Logout)))
+	userAccountDeletion := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(authHandler.DeleteAccount))
+	root.Handle("DELETE /api/v1/me", requireSameOrigin(dependencies.BaseURL, userAccountDeletion))
 	userOrderCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, rateLimiter.Orders(http.HandlerFunc(orderHandler.Create)))
 	root.Handle("POST /api/v1/orders", requireSameOrigin(dependencies.BaseURL, userOrderCreation))
 	root.Handle("GET /api/v1/orders/{id}", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Get)))
 	root.Handle("GET /api/v1/me/books", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(libraryHandler.List)))
 	protectedDownload := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, rateLimiter.Downloads(http.HandlerFunc(libraryHandler.Download)))
 	root.Handle("GET /api/v1/books/{id}/download", protectedDownload)
+	userReviewCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(reviewsHandler.Create))
+	root.Handle("POST /api/v1/books/{slug}/reviews", requireSameOrigin(dependencies.BaseURL, userReviewCreation))
+	root.Handle("POST /api/v1/newsletter/subscribe", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(newsletterHandler.Subscribe)))
+	root.Handle("GET /api/v1/me/newsletter", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(newsletterHandler.GetPreference)))
+	userNewsletterPreference := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(newsletterHandler.SetPreference))
+	root.Handle("PUT /api/v1/me/newsletter", requireSameOrigin(dependencies.BaseURL, userNewsletterPreference))
 	root.HandleFunc("POST /api/v1/webhooks/mercadopago", orderHandler.MercadoPagoWebhook)
 
 	admin := http.NewServeMux()
@@ -81,6 +98,8 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}", booksHandler.Update)
 	admin.HandleFunc("DELETE /api/v1/admin/books/{identifier}", booksHandler.Archive)
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/ebook", libraryHandler.Upload)
+	admin.HandleFunc("GET /api/v1/admin/books/{identifier}/manuscript", manuscriptHandler.Get)
+	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/manuscript", manuscriptHandler.Save)
 	admin.HandleFunc("POST /api/v1/admin/pages", pageHandler.Create)
 	admin.HandleFunc("GET /api/v1/admin/pages/{identifier}", pageHandler.GetAdmin)
 	admin.HandleFunc("PUT /api/v1/admin/pages/{identifier}/draft", pageHandler.SaveDraft)
@@ -95,6 +114,13 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("GET /api/v1/admin/customers", backofficeHandler.Customers)
 	admin.HandleFunc("GET /api/v1/admin/settings", settingsHandler.Get)
 	admin.HandleFunc("PUT /api/v1/admin/settings", settingsHandler.Update)
+	admin.HandleFunc("GET /api/v1/admin/coupons", couponsHandler.List)
+	admin.HandleFunc("POST /api/v1/admin/coupons", couponsHandler.Create)
+	admin.HandleFunc("PUT /api/v1/admin/coupons/{id}", couponsHandler.Update)
+	admin.HandleFunc("DELETE /api/v1/admin/coupons/{id}", couponsHandler.Delete)
+	admin.HandleFunc("GET /api/v1/admin/reviews", reviewsHandler.ListAdmin)
+	admin.HandleFunc("PUT /api/v1/admin/reviews/{id}/status", reviewsHandler.SetStatus)
+	admin.HandleFunc("DELETE /api/v1/admin/reviews/{id}", reviewsHandler.Delete)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
 		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, rateLimiter.AdminWrites(admin)))
 	root.Handle("/api/v1/admin/", adminHandler)

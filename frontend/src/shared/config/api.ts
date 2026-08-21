@@ -70,6 +70,10 @@ export function adminBookEbookUrl(identifier: string): string {
   return `${adminBookUrl(identifier)}/ebook`;
 }
 
+export function adminBookManuscriptUrl(identifier: string): string {
+  return `${adminBookUrl(identifier)}/manuscript`;
+}
+
 export const ADMIN_MEDIA_URL = `${API_PREFIX}/admin/media`;
 
 export function adminMediaUrl(mediaId: string): string {
@@ -80,6 +84,31 @@ export const ADMIN_DASHBOARD_URL = `${API_PREFIX}/admin/dashboard`;
 export const ADMIN_SALES_URL = `${API_PREFIX}/admin/sales`;
 export const ADMIN_CUSTOMERS_URL = `${API_PREFIX}/admin/customers`;
 export const ADMIN_SETTINGS_URL = `${API_PREFIX}/admin/settings`;
+export const ADMIN_COUPONS_URL = `${API_PREFIX}/admin/coupons`;
+
+export function adminCouponUrl(couponId: string): string {
+  return `${ADMIN_COUPONS_URL}/${encodeURIComponent(couponId)}`;
+}
+
+export const ADMIN_REVIEWS_URL = `${API_PREFIX}/admin/reviews`;
+
+export function adminReviewUrl(reviewId: string): string {
+  return `${ADMIN_REVIEWS_URL}/${encodeURIComponent(reviewId)}`;
+}
+
+export function adminReviewStatusUrl(reviewId: string): string {
+  return `${adminReviewUrl(reviewId)}/status`;
+}
+
+export function bookReviewsUrl(bookSlug: string): string {
+  return `${BOOKS_URL}/${encodeURIComponent(bookSlug)}/reviews`;
+}
+
+/** Public newsletter signup — no authentication required. */
+export const NEWSLETTER_SUBSCRIBE_URL = `${API_PREFIX}/newsletter/subscribe`;
+
+/** The signed-in user's own newsletter preference (Mi Cuenta switch). */
+export const ME_NEWSLETTER_URL = `${API_PREFIX}/me/newsletter`;
 
 export const PAGES_URL = `${API_PREFIX}/pages`;
 

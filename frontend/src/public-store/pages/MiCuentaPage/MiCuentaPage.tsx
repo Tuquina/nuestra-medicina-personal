@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GradientTopBar } from '../../../shared/components/GradientTopBar/GradientTopBar';
 import { SiteHeader } from '../../../shared/components/SiteHeader/SiteHeader';
 import { MinimalFooter } from '../../../shared/components/MinimalFooter/MinimalFooter';
@@ -10,7 +10,8 @@ import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { useAuth } from '../../../shared/auth/useAuth';
 import { initialsFrom } from '../../../shared/auth/types';
 import { AuthLoading } from '../../../shared/components/AuthLoading/AuthLoading';
-import { LOGOUT_URL } from '../../../shared/config/api';
+import { LOGOUT_URL, ME_URL, ME_NEWSLETTER_URL } from '../../../shared/config/api';
+import { apiRequest } from '../../../shared/api/client';
 import { hardNavigate } from '../../../shared/utils/navigation';
 import styles from './MiCuentaPage.module.css';
 
@@ -21,8 +22,40 @@ export function MiCuentaPage() {
   useDocumentTitle('Mi cuenta · Nuestra Medicina Personal');
   const auth = useAuth();
 
-  const [newsletterOn, setNewsletterOn] = useState(true);
+  const [newsletterOn, setNewsletterOn] = useState<boolean | null>(null);
+  const [newsletterError, setNewsletterError] = useState<string | null>(null);
   const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (auth.status !== 'authenticated') return;
+    const controller = new AbortController();
+    apiRequest<{ subscribed: boolean }>(ME_NEWSLETTER_URL, { signal: controller.signal })
+      .then((response) => setNewsletterOn(response.subscribed))
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setNewsletterOn(false);
+      });
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mount, auth.status is guarded above
+  }, [auth.status]);
+
+  const handleNewsletterChange = async (next: boolean) => {
+    const previous = newsletterOn;
+    setNewsletterOn(next);
+    setNewsletterError(null);
+    try {
+      await apiRequest(ME_NEWSLETTER_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscribed: next }),
+      });
+    } catch {
+      setNewsletterOn(previous);
+      setNewsletterError('No pudimos guardar tu preferencia. Intentá nuevamente.');
+    }
+  };
 
   if (auth.status !== 'authenticated') return <AuthLoading />;
   const user = auth.user;
@@ -35,6 +68,20 @@ export function MiCuentaPage() {
       // `/api/v1/me` once per app load, so an in-SPA `navigate('/')`
       // would leave the header showing the now-stale signed-in state.
       hardNavigate('/');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await apiRequest(ME_URL, { method: 'DELETE' });
+      // Full reload for the same reason as handleLogout above — the
+      // session cookie is already cleared server-side by this point.
+      hardNavigate('/');
+    } catch {
+      setDeleteError('No pudimos eliminar tu cuenta. Intentá nuevamente.');
+      setDeleting(false);
     }
   };
 
@@ -68,11 +115,13 @@ export function MiCuentaPage() {
               <p className={styles.settingHint}>Libros, meditaciones y contenidos nuevos.</p>
             </div>
             <Switch
-              checked={newsletterOn}
-              onChange={setNewsletterOn}
+              checked={newsletterOn ?? false}
+              onChange={handleNewsletterChange}
               label="Recibir novedades por correo"
+              disabled={newsletterOn === null}
             />
           </div>
+          {newsletterError && <p className={styles.newsletterError}>{newsletterError}</p>}
         </div>
 
         <Button variant="secondary" fullWidth className={styles.logoutButton} onClick={handleLogout}>
@@ -96,17 +145,18 @@ export function MiCuentaPage() {
         title="¿Eliminar tu cuenta?"
         actions={
           <>
-            <Button variant="secondary" onClick={() => setShowDelete(false)}>
+            <Button variant="secondary" onClick={() => setShowDelete(false)} disabled={deleting}>
               Cancelar
             </Button>
-            {/* No DELETE /api/v1/me endpoint exists yet (architecture.md
-                §34 doesn't define one) — left unwired rather than faked. */}
-            <Button variant="danger">Eliminar</Button>
+            <Button variant="danger" onClick={handleDeleteAccount} disabled={deleting}>
+              {deleting ? 'Eliminando…' : 'Eliminar'}
+            </Button>
           </>
         }
       >
         Esta acción no se puede deshacer. Vas a perder el acceso a tu
         biblioteca y a tus libros comprados.
+        {deleteError && <p className={styles.deleteError}>{deleteError}</p>}
       </Dialog>
 
       <MinimalFooter />

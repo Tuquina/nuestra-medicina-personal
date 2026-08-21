@@ -1527,9 +1527,16 @@ GET  /api/v1/me
 ## Usuario
 
 ```text
-GET  /api/v1/me/books
-GET  /api/v1/books/{id}/download
+GET    /api/v1/me/books
+GET    /api/v1/books/{id}/download
+DELETE /api/v1/me
+GET    /api/v1/me/newsletter
+PUT    /api/v1/me/newsletter
 ```
+
+`DELETE /api/v1/me` es un soft-delete: anonimiza `users` (email, nombre,
+foto, `google_subject`) y revoca todas las sesiones, sin borrar la fila —
+órdenes, pagos y reseñas conservan su FK para preservar el histórico.
 
 ## Compra
 
@@ -1684,6 +1691,10 @@ Preferir minor units cuando el dominio lo permita.
 Toda orden debe almacenar el precio histórico del item.
 
 No depender del precio actual del libro después de crear una orden.
+
+Lo mismo aplica a cualquier descuento aplicado: `orders.coupon_code` y
+`orders.discount_minor_units` son un snapshot histórico, sin FK a `coupons`,
+para que editar o borrar un cupón nunca altere una orden ya creada.
 
 ---
 
@@ -2737,23 +2748,30 @@ Marketing incluye:
 
 Guardar consentimiento explícito.
 
-Tabla conceptual:
+Implementado en `marketing_subscriptions` (migración `010`):
 
 ```text
 marketing_subscriptions
 ────────────────────────
 id
 user_id NULL
-email
-status
+email UNIQUE
+status        SUBSCRIBED | UNSUBSCRIBED
+source
 subscribed_at
 unsubscribed_at
-source
+created_at
+updated_at
 ```
 
-El sistema debe permitir cancelar suscripción.
+API (`docs/openapi.yaml`):
 
-No asumir que comprar un libro equivale automáticamente a aceptar comunicaciones promocionales.
+- `POST /api/v1/newsletter/subscribe` — público, idempotente por `email`. Usado por el formulario de Home/Meditaciones/Herramientas.
+- `GET /api/v1/me/newsletter` / `PUT /api/v1/me/newsletter` — requieren sesión; el switch de Mi Cuenta los usa para leer y cambiar la preferencia del usuario autenticado.
+
+El sistema permite cancelar suscripción (`PUT .../newsletter` con `subscribed: false`, o el mismo `Upsert` con `status = UNSUBSCRIBED`).
+
+No asumir que comprar un libro equivale automáticamente a aceptar comunicaciones promocionales — la suscripción vía Mi Cuenta y la compra son flujos independientes.
 
 ---
 

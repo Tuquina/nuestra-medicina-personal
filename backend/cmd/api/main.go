@@ -12,11 +12,15 @@ import (
 	"github.com/nuestra-medicina-personal/backend/internal/application/authentication"
 	"github.com/nuestra-medicina-personal/backend/internal/application/backoffice"
 	"github.com/nuestra-medicina-personal/backend/internal/application/books"
+	"github.com/nuestra-medicina-personal/backend/internal/application/coupons"
 	emailapp "github.com/nuestra-medicina-personal/backend/internal/application/email"
 	"github.com/nuestra-medicina-personal/backend/internal/application/library"
+	"github.com/nuestra-medicina-personal/backend/internal/application/manuscripts"
 	mediaapp "github.com/nuestra-medicina-personal/backend/internal/application/media"
+	"github.com/nuestra-medicina-personal/backend/internal/application/newsletter"
 	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
 	"github.com/nuestra-medicina-personal/backend/internal/application/pages"
+	"github.com/nuestra-medicina-personal/backend/internal/application/reviews"
 	settingsapp "github.com/nuestra-medicina-personal/backend/internal/application/settings"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/gmail"
@@ -57,19 +61,27 @@ func run(logger *slog.Logger) error {
 
 	bookRepository := postgres.NewBookRepository(pool)
 	bookService := books.NewService(bookRepository)
+	couponRepository := postgres.NewCouponRepository(pool)
+	couponService := coupons.NewService(couponRepository)
+	reviewRepository := postgres.NewReviewRepository(pool)
+	reviewService := reviews.NewService(reviewRepository)
+	newsletterRepository := postgres.NewNewsletterRepository(pool)
+	newsletterService := newsletter.NewService(newsletterRepository)
 	authRepository := postgres.NewAuthRepository(pool)
 	googleProvider := google.NewOIDCProvider(ctx, cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect)
 	authService := authentication.NewService(googleProvider, authRepository, cfg.AdminGoogleSub, cfg.SessionTTL)
 	authorizer := postgres.NewSessionAuthorizer(pool, cfg.AdminGoogleSub)
 	orderRepository := postgres.NewOrderRepository(pool)
 	mercadoPagoClient := mercadopago.NewClient(cfg.MercadoPagoToken, cfg.MercadoPagoPublicBaseURL)
-	orderService := orders.NewService(bookService, orderRepository, mercadoPagoClient)
+	orderService := orders.NewService(bookService, couponRepository, orderRepository, mercadoPagoClient)
 	ebookStorage, err := storage.NewLocalEbookStorage(cfg.EbookStoragePath)
 	if err != nil {
 		return err
 	}
 	libraryRepository := postgres.NewLibraryRepository(pool)
 	libraryService := library.NewService(libraryRepository, bookService, ebookStorage, cfg.EbookMaxUploadBytes)
+	manuscriptRepository := postgres.NewManuscriptRepository(pool)
+	manuscriptService := manuscripts.NewService(manuscriptRepository, bookService)
 	pageRepository := postgres.NewPageRepository(pool)
 	pageService := pages.NewService(pageRepository)
 	mediaStorage, err := storage.NewLocalMediaStorage(cfg.MediaStoragePath)
@@ -103,7 +115,7 @@ func run(logger *slog.Logger) error {
 	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
+		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Newsletter: newsletterService, Authentication: authService, Orders: orderService, Library: libraryService, Manuscripts: manuscriptService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
 		IntegrationStatus: httpapi.IntegrationStatus{
 			GoogleConfigured:      cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
 			MercadoPagoConfigured: cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",

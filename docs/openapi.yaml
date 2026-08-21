@@ -13,6 +13,8 @@ tags:
   - name: Health
   - name: Authentication
   - name: Books
+  - name: Reviews
+  - name: Newsletter
   - name: Orders
   - name: Library
   - name: Pages
@@ -23,6 +25,8 @@ tags:
   - name: Admin media
   - name: Admin reporting
   - name: Admin settings
+  - name: Admin coupons
+  - name: Admin reviews
 paths:
   /health/live:
     get:
@@ -95,6 +99,19 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/User'}
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
+    delete:
+      tags: [Authentication]
+      operationId: deleteAccount
+      description: >-
+        Soft-delete: anonimiza el usuario (email, nombre, foto, google_subject)
+        y revoca todas sus sesiones. Órdenes, pagos y reseñas conservan su FK
+        para preservar el histórico — no se borra la fila.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': {description: Cuenta anonimizada y sesión cerrada.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
   /api/v1/books:
     get:
       tags: [Books]
@@ -120,6 +137,33 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Book'}
         '404': {$ref: '#/components/responses/BookNotFound'}
+  /api/v1/books/{slug}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/BookSlug'
+    get:
+      tags: [Reviews]
+      operationId: listApprovedReviews
+      description: Devuelve únicamente reseñas aprobadas de un libro publicado.
+      responses:
+        '200': {description: Reseñas públicas., content: {application/json: {schema: {$ref: '#/components/schemas/ReviewList'}}}}
+    post:
+      tags: [Reviews]
+      operationId: createReview
+      description: Crea una reseña pendiente si el usuario tiene una compra pagada del libro.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReviewInput'}
+      responses:
+        '201': {description: Reseña pendiente creada., content: {application/json: {schema: {$ref: '#/components/schemas/Review'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {description: El usuario no compró el libro., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: El usuario ya reseñó el libro., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '422': {description: Rating o texto inválidos., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
   /api/v1/pages/{slug}:
     get:
       tags: [Pages]
@@ -186,6 +230,69 @@ paths:
           description: El usuario no compró el libro o el archivo no está disponible.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
+  /api/v1/newsletter/subscribe:
+    post:
+      tags: [Newsletter]
+      operationId: subscribeNewsletter
+      description: Suscribe un correo a novedades. Público e idempotente por email.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email: {type: string, format: email}
+                source: {type: string}
+      responses:
+        '204': {description: Suscripción creada o actualizada.}
+        '422':
+          description: Email inválido.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/me/newsletter:
+    get:
+      tags: [Newsletter]
+      operationId: getMyNewsletterPreference
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Preferencia actual del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscribed]
+                properties: {subscribed: {type: boolean}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+    put:
+      tags: [Newsletter]
+      operationId: setMyNewsletterPreference
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [subscribed]
+              properties: {subscribed: {type: boolean}}
+      responses:
+        '200':
+          description: Preferencia actualizada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscribed]
+                properties: {subscribed: {type: boolean}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
   /api/v1/orders:
     post:
       tags: [Orders]
@@ -204,6 +311,9 @@ paths:
               required: [bookSlug]
               properties:
                 bookSlug: {type: string}
+                couponCode:
+                  type: string
+                  description: Código opcional. Se valida y descuenta server-side; nunca se confía en un precio calculado por el cliente.
       responses:
         '201':
           description: Orden pendiente con URL de Checkout Pro.
@@ -213,7 +323,7 @@ paths:
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422':
-          description: El libro no está publicado o no tiene precio válido.
+          description: El libro no está publicado o no tiene precio válido, o el cupón no es válido (código `COUPON_INVALID`).
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
         '503':
           description: Mercado Pago no está configurado.
@@ -518,6 +628,90 @@ paths:
         '403': {$ref: '#/components/responses/AdminRequired'}
         '404': {description: Página o versión inexistente., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
+  /api/v1/admin/coupons:
+    get:
+      tags: [Admin coupons]
+      operationId: listAdminCoupons
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Cupones con estado efectivo calculado por el servidor., content: {application/json: {schema: {$ref: '#/components/schemas/CouponList'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+    post:
+      tags: [Admin coupons]
+      operationId: createAdminCoupon
+      security: [{sessionCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Origin'}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CouponInput'}}}}
+      responses:
+        '201': {description: Cupón creado., content: {application/json: {schema: {$ref: '#/components/schemas/Coupon'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '409': {description: Código duplicado., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '422': {description: Datos inválidos., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+  /api/v1/admin/coupons/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      tags: [Admin coupons]
+      operationId: updateAdminCoupon
+      security: [{sessionCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Origin'}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CouponInput'}}}}
+      responses:
+        '200': {description: Cupón actualizado., content: {application/json: {schema: {$ref: '#/components/schemas/Coupon'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {description: Cupón inexistente., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: Código duplicado., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '422': {description: Datos inválidos., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    delete:
+      tags: [Admin coupons]
+      operationId: deleteAdminCoupon
+      security: [{sessionCookie: []}]
+      parameters: [{$ref: '#/components/parameters/Origin'}]
+      responses:
+        '204': {description: Cupón eliminado.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {description: Cupón inexistente., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+  /api/v1/admin/reviews:
+    get:
+      tags: [Admin reviews]
+      operationId: listAdminReviews
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Todas las reseñas para moderación., content: {application/json: {schema: {$ref: '#/components/schemas/ReviewList'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+  /api/v1/admin/reviews/{id}/status:
+    put:
+      tags: [Admin reviews]
+      operationId: moderateAdminReview
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - $ref: '#/components/parameters/Origin'
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReviewStatusInput'}}}}
+      responses:
+        '200': {description: Reseña moderada., content: {application/json: {schema: {$ref: '#/components/schemas/Review'}}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {description: Reseña inexistente., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '422': {description: Estado inválido., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+  /api/v1/admin/reviews/{id}:
+    delete:
+      tags: [Admin reviews]
+      operationId: deleteAdminReview
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': {description: Reseña eliminada.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {description: Reseña inexistente., content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
   /api/v1/admin/media:
     get:
       tags: [Admin media]
@@ -600,6 +794,54 @@ paths:
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
         '422':
           description: El archivo no es un PDF o EPUB válido.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/admin/books/{identifier}/manuscript:
+    parameters:
+      - $ref: '#/components/parameters/BookIdentifier'
+    get:
+      tags: [Admin books]
+      operationId: getBookManuscript
+      description: 'Sin manuscrito guardado todavía, responde con `chapters: []` en vez de 404.'
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Manuscrito actual del libro.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Manuscript'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+    put:
+      tags: [Admin books]
+      operationId: saveBookManuscript
+      description: Reemplaza los capítulos completos (autosave del editor). Como máximo 200 capítulos, 2MB de HTML cada uno.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [chapters]
+              properties:
+                chapters:
+                  type: array
+                  items: {$ref: '#/components/schemas/ManuscriptChapter'}
+      responses:
+        '200':
+          description: Manuscrito guardado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Manuscript'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+        '422':
+          description: Demasiados capítulos o un capítulo demasiado grande.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
 components:
   securitySchemes:
@@ -690,6 +932,10 @@ components:
         totalMinorUnits: {type: integer, format: int64, minimum: 0}
         currency: {type: string, minLength: 3, maxLength: 3}
         checkoutUrl: {type: string, format: uri}
+        couponCode:
+          type: string
+          description: Código del cupón aplicado, como snapshot histórico — no cambia si el cupón se edita o borra después.
+        discountMinorUnits: {type: integer, format: int64, minimum: 0}
         items:
           type: array
           items: {$ref: '#/components/schemas/OrderItem'}
@@ -878,6 +1124,23 @@ components:
         filename: {type: string}
         mediaType: {type: string, enum: [application/pdf, application/epub+zip]}
         sizeBytes: {type: integer, format: int64, minimum: 1}
+    ManuscriptChapter:
+      type: object
+      required: [id, title, html]
+      properties:
+        id: {type: integer}
+        title: {type: string}
+        html: {type: string, maxLength: 2097152}
+    Manuscript:
+      type: object
+      required: [bookId, chapters]
+      properties:
+        bookId: {type: string, format: uuid}
+        chapters:
+          type: array
+          maxItems: 200
+          items: {$ref: '#/components/schemas/ManuscriptChapter'}
+        updatedAt: {type: [string, 'null'], format: date-time}
     SiteSettingsInput:
       type: object
       additionalProperties: false
@@ -1410,6 +1673,71 @@ components:
         items:
           type: array
           items: {$ref: '#/components/schemas/MediaAsset'}
+        total: {type: integer, minimum: 0}
+    CouponInput:
+      type: object
+      additionalProperties: false
+      required: [code, kind, value, currency, startsAt, endsAt, usageLimit, appliesToAll, bookIds, active]
+      properties:
+        code: {type: string, pattern: '^[A-Z0-9][A-Z0-9_-]*$', maxLength: 80}
+        kind: {type: string, enum: [PERCENTAGE, FIXED]}
+        value: {type: integer, format: int64, minimum: 1, description: Porcentaje entero o unidades menores para FIXED.}
+        currency: {type: string, minLength: 3, maxLength: 3}
+        startsAt: {type: string, format: date}
+        endsAt: {type: string, format: date}
+        usageLimit: {type: [integer, 'null'], minimum: 1}
+        appliesToAll: {type: boolean}
+        bookIds: {type: array, uniqueItems: true, items: {type: string, format: uuid}}
+        active: {type: boolean}
+    Coupon:
+      allOf:
+        - $ref: '#/components/schemas/CouponInput'
+        - type: object
+          required: [id, usageCount, status, createdAt, updatedAt]
+          properties:
+            id: {type: string, format: uuid}
+            usageCount: {type: integer, minimum: 0}
+            status: {type: string, enum: [ACTIVE, SCHEDULED, EXPIRED, INACTIVE]}
+            createdAt: {type: string, format: date-time}
+            updatedAt: {type: string, format: date-time}
+    CouponList:
+      type: object
+      required: [items, total]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Coupon'}}
+        total: {type: integer, minimum: 0}
+    ReviewInput:
+      type: object
+      additionalProperties: false
+      required: [rating, body]
+      properties:
+        rating: {type: integer, minimum: 1, maximum: 5}
+        body: {type: string, minLength: 1, maxLength: 4000}
+    ReviewStatusInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: {type: string, enum: [APPROVED, REJECTED]}
+    Review:
+      type: object
+      required: [id, bookId, bookSlug, bookTitle, customerName, rating, body, status, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        bookId: {type: string, format: uuid}
+        bookSlug: {type: string}
+        bookTitle: {type: string}
+        customerName: {type: string}
+        rating: {type: integer, minimum: 1, maximum: 5}
+        body: {type: string}
+        status: {type: string, enum: [PENDING, APPROVED, REJECTED]}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    ReviewList:
+      type: object
+      required: [items, total]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Review'}}
         total: {type: integer, minimum: 0}
     Error:
       type: object

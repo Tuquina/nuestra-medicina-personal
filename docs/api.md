@@ -40,10 +40,21 @@ cerradas.
 
 ## Órdenes y pagos
 
-`POST /api/v1/orders` requiere sesión y recibe un único `bookSlug`. La orden y
-su item se insertan en una transacción antes de crear la preferencia de Checkout
-Pro. El item conserva título, precio y moneda históricos; cambios posteriores
-en el libro no alteran la venta.
+`POST /api/v1/orders` requiere sesión y recibe un `bookSlug` y, opcionalmente,
+un `couponCode`. La orden y su item se insertan en una transacción antes de
+crear la preferencia de Checkout Pro. El item conserva título, precio y
+moneda históricos; cambios posteriores en el libro no alteran la venta.
+
+Si se envía `couponCode`, el servidor lo busca, valida vigencia/fecha/uso
+(`Coupon.EffectiveStatus`, la misma regla que usa la pantalla admin) y alcance
+por libro, y calcula el descuento — nunca se confía en un monto calculado por
+el cliente. El código, el monto descontado y el total ya descontado quedan
+grabados en la orden como snapshot histórico (`couponCode`,
+`discountMinorUnits`): si el cupón se edita o se borra después, la orden no
+cambia. El incremento de `usage_count` del cupón ocurre en la misma
+transacción que el insert de la orden (`UPDATE ... WHERE usage_count <
+usage_limit`), así que dos checkouts simultáneos contra un cupón con límite de
+uso nunca pueden sobreusarlo — el segundo recibe `422 COUPON_INVALID`.
 
 La redirección de Checkout Pro sólo informa estado visual. Una orden pasa a
 `PAID` exclusivamente cuando `/api/v1/webhooks/mercadopago` valida la firma
@@ -120,6 +131,16 @@ identificadores de correlación de orden, pago, job y mensaje del proveedor. No
 se registran cookies, tokens, destinatarios, credenciales ni cuerpos completos.
 Nginx usa el mismo `request_id` y Docker rota los logs en producción.
 
+## Cuenta
+
+`DELETE /api/v1/me` requiere sesión y `Origin` válido. Es un soft-delete:
+anonimiza `email`, `display_name`, `picture_url` y `google_subject`, marca
+`deleted_at` y revoca todas las sesiones del usuario en la misma transacción
+— no borra la fila, porque órdenes, pagos y reseñas mantienen su FK para
+conservar el histórico de ventas. Un futuro login con la misma cuenta de
+Google crea un usuario nuevo, ya que `google_subject` queda liberado. La
+respuesta limpia la cookie de sesión, igual que `/api/v1/auth/logout`.
+
 ## Biblioteca y archivos protegidos
 
 `GET /api/v1/me/books` requiere sesión y devuelve una sola entrada por libro
@@ -191,6 +212,18 @@ las entrega con ETag y caché immutable. `DELETE /api/v1/admin/media/{id}` revis
 portadas, borradores, publicaciones y todas las versiones del CMS. Si encuentra
 una referencia responde `MEDIA_IN_USE` y no borra ni la fila ni el archivo.
 
+## Manuscrito
+
+`GET/PUT /api/v1/admin/books/{identifier}/manuscript` persisten los capítulos
+del editor de manuscrito (`book_manuscripts`, un JSONB por libro). `GET` sobre
+un libro sin manuscrito guardado responde `200` con `chapters: []`, no `404`
+— "todavía no empezado" no es un error. `PUT` reemplaza el arreglo completo
+(lo que envía el autosave del editor); un máximo de 200 capítulos y 2MB de
+HTML por capítulo evitan que un bucle de autosave descontrolado haga crecer
+la fila sin límite. No existe todavía conversión automática de DOCX/PDF ni
+generación real de EPUB/PDF — el editor lo indica explícitamente en vez de
+simular una operación que no ocurre.
+
 ## Backoffice de datos
 
 `GET /api/v1/admin/dashboard`, `GET /api/v1/admin/sales` y
@@ -220,3 +253,28 @@ exponer secretos.
 requiere sesión administrativa y `Origin` válido. El estado de las integraciones
 es de sólo lectura: las credenciales continúan fuera de PostgreSQL y del
 repositorio.
+
+## Cupones y reseñas
+
+`GET/POST /api/v1/admin/coupons` y `PUT/DELETE
+/api/v1/admin/coupons/{id}` administran cupones persistidos. El código se
+normaliza a mayúsculas, los montos fijos usan unidades menores y moneda
+explícita, y la API calcula `ACTIVE`, `SCHEDULED`, `EXPIRED` o `INACTIVE` con
+la fecha del servidor y el límite de usos. Un cupón puede aplicarse a todos los
+libros o a UUIDs de libros concretos. `POST /api/v1/orders` acepta ese mismo
+código en `couponCode` — ver [Órdenes y pagos](#órdenes-y-pagos).
+
+`GET /api/v1/books/{slug}/reviews` publica sólo reseñas aprobadas. Para enviar
+una reseña, `POST` sobre la misma ruta requiere sesión, `Origin` válido y una
+orden `PAID` del usuario para ese libro. La reseña nace `PENDING` y sólo admite
+una entrada por usuario y libro. El administrador lista, aprueba, rechaza o
+elimina mediante `/api/v1/admin/reviews`; no existen reseñas ficticias semilla.
+
+## Newsletter
+
+`POST /api/v1/newsletter/subscribe` es público e idempotente por email —
+crea o reactiva una fila en `marketing_subscriptions` (`ON CONFLICT (email)`).
+Un usuario autenticado gestiona su propia preferencia con `GET`/`PUT
+/api/v1/me/newsletter`; si más tarde se suscribe con el mismo email desde el
+formulario público, la fila existente se vincula a su `user_id` en vez de
+duplicarse. No hay envío de campañas todavía — sólo el consentimiento.

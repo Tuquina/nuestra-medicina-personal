@@ -50,6 +50,7 @@ export function CheckoutPage() {
   const [verification, setVerification] = useState<VerificationState>({ status: 'checking' });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState('');
 
   useDocumentTitle(
     book ? `Checkout · ${book.title} · Nuestra Medicina Personal` : 'Checkout · Nuestra Medicina Personal',
@@ -119,13 +120,15 @@ export function CheckoutPage() {
       const order = await apiRequest<OrderResponse>(ORDERS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookSlug: book.slug }),
+        body: JSON.stringify({ bookSlug: book.slug, couponCode: couponCode.trim() || undefined }),
       });
       if (!order.checkoutUrl) throw new Error('Order has no checkout URL');
       storeCheckoutOrderId(book.slug, order.id);
       hardNavigate(order.checkoutUrl);
     } catch (error: unknown) {
-      if (error instanceof ApiError && error.status === 429) {
+      if (error instanceof ApiError && error.code === 'COUPON_INVALID') {
+        setCreateError('Ese cupón no es válido para este libro.');
+      } else if (error instanceof ApiError && error.status === 429) {
         setCreateError('Alcanzaste el límite de intentos. Esperá un minuto y volvé a probar.');
       } else if (error instanceof ApiError && error.status === 503) {
         setCreateError('Los pagos todavía no están disponibles. Intentá nuevamente más tarde.');
@@ -160,6 +163,22 @@ export function CheckoutPage() {
               <p className={styles.eyebrow}>Estás por comprar</p>
               <h1 className={styles.title}>{book.title}</h1>
               <p className={styles.price}>{formatPrice(book.priceMinorUnits, book.currency)}</p>
+              {auth.status === 'authenticated' && (
+                <div className={styles.couponRow}>
+                  <label className={styles.couponLabel} htmlFor="coupon-code">
+                    Código de cupón (opcional)
+                  </label>
+                  <input
+                    id="coupon-code"
+                    type="text"
+                    className={styles.couponInput}
+                    placeholder="CUPÓN"
+                    value={couponCode}
+                    onChange={(event) => setCouponCode(event.target.value)}
+                    disabled={creating}
+                  />
+                </div>
+              )}
               {auth.status === 'authenticated' ? (
                 <button
                   type="button"
@@ -197,6 +216,12 @@ export function CheckoutPage() {
               </span>
               <h1 className={[styles.title, styles.titleWithGap].join(' ')}>¡Tu compra fue confirmada!</h1>
               <p className={styles.body}>El libro ya está disponible en tu biblioteca.</p>
+              {verification.status === 'ready' && !!verification.order.discountMinorUnits && (
+                <p className={styles.discountLine}>
+                  Cupón {verification.order.couponCode} aplicado: -
+                  {formatPrice(verification.order.discountMinorUnits, verification.order.currency)}
+                </p>
+              )}
               <Link to="/biblioteca" className={styles.primaryAction}>
                 Ir a mi biblioteca
               </Link>
@@ -211,6 +236,12 @@ export function CheckoutPage() {
               </span>
               <h1 className={[styles.title, styles.titleWithGap].join(' ')}>Tu pago está pendiente</h1>
               <p className={styles.body}>Mercado Pago todavía no confirmó la operación.</p>
+              {verification.status === 'ready' && !!verification.order.discountMinorUnits && (
+                <p className={styles.discountLine}>
+                  Cupón {verification.order.couponCode} aplicado: -
+                  {formatPrice(verification.order.discountMinorUnits, verification.order.currency)}
+                </p>
+              )}
               <button type="button" className={styles.primaryAction} onClick={retryVerification}>
                 Volver a verificar
               </button>

@@ -96,29 +96,19 @@ admin form, reading/writing through the shared CMS API adapter.
 - Sidebar: "Páginas" section gains "Meditaciones", "Herramientas", and
   "Sobre el proyecto" links (`AdminLayout.tsx`).
 
-**B. Build out the 3 "Próximamente" admin sections** (Cupones, Reseñas,
-Analítica — listed as future extensions in architecture.md §6). Cupones y
-Reseñas no forman parte del contrato backend MVP; cada una mantiene una
-localStorage-backed mock data layer shaped like the eventual REST
-resource, so swapping in real `fetch` calls later is a small, isolated
-change (same principle as `admin/data/sales.ts` / `customers.ts` today,
-just with write operations too since these are admin-editable).
+**B. Build out the 3 commerce admin sections** (Cupones, Reseñas,
+Analítica — listed as extensions in architecture.md §6). No visible section is
+treated as a local prototype: every operational value comes from the API.
 
-- **Cupones** (`/admin/cupones`): `Coupon { id, code, kind:
-  'percentage'|'fixed', value, status, startDateISO, endDateISO,
-  usageLimit, usageCount, appliesTo: 'all' | string[] (book slugs) }`.
-  List + create/edit dialog, matching the table conventions in
-  `VentasPage`/`ClientesPage`. Store: `admin/data/couponsStore.ts`
-  (localStorage-backed CRUD for a plain resource list; it remains outside
-  the CMS draft/published page contract).
-- **Reseñas** (`/admin/resenas`): `Review { id, bookSlug, customerName,
-  rating (1-5), text, status: 'pending'|'approved'|'rejected',
-  createdAtISO }`. List with per-status filter + approve/reject actions.
-  Store: `admin/data/reviewsStore.ts`.
+- **Cupones** (`/admin/cupones`): API-backed list and create/edit/delete dialog.
+  Dates and effective status are authoritative on the server; fixed discounts
+  use minor units and explicit currency.
+- **Reseñas** (`/admin/resenas`): API-backed moderation. Customers can submit
+  only after a paid purchase; the public contract exposes approved reviews.
 - **Analítica** (`/admin/analitica`): read-only dashboard extending
   `DashboardPage`'s stat-card/chart components with more detail (revenue
   by period, top books, funnel-ish counts) computed from the existing
-  mock `SALES`/`CUSTOMERS` data — architecture.md §60 explicitly says to
+  persisted reporting data — architecture.md §60 explicitly says to
   compute these via Postgres aggregate queries rather than a separate
   analytics tool, so this page is structured to call one future
   aggregate endpoint (`GET /api/v1/admin/analytics?range=...`), not
@@ -310,9 +300,19 @@ and the sidebar are the two places to extend.
   projections. Filters and pagination run on the server, sale details preserve
   order/payment separation and historical amounts, and settings load before
   editing while integration status remains read-only.
-- **Next real milestone for these screens**: retire the remaining unrelated
-  mock stores, demonstration toggles and placeholder success messages, then
-  review empty and authorization/error states consistently.
+- Checkout now accepts an optional coupon code, applied and validated
+  server-side; the public book page shows approved reviews and a
+  purchase-gated submission form; the newsletter signup form and Mi Cuenta's
+  switch persist to `marketing_subscriptions` instead of flipping local
+  state; Mi Cuenta's "Eliminar cuenta" calls the real soft-delete endpoint;
+  `ManuscritoTab` autosaves chapters to the backend and no longer fakes file
+  conversion or EPUB/PDF generation — both are marked as not available yet
+  instead.
+- **Next real milestone for these screens**: a real DOCX/PDF-to-HTML
+  conversion pipeline and EPUB/PDF generation for the manuscript editor are
+  still open — deliberately out of scope until there's a concrete decision
+  (new dependencies, an ADR) proportional to a ~5-book catalog. Otherwise,
+  review empty and authorization/error states consistently across the app.
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing

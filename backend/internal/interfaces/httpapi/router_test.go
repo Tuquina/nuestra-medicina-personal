@@ -84,7 +84,8 @@ func (s *authServiceStub) Logout(_ context.Context, token string) error {
 	s.logoutToken = token
 	return nil
 }
-func (*authServiceStub) FlowTTL() time.Duration { return 10 * time.Minute }
+func (*authServiceStub) DeleteAccount(context.Context, string) error { return nil }
+func (*authServiceStub) FlowTTL() time.Duration                      { return 10 * time.Minute }
 
 func testRouter(authorizer AdminAuthorizer) http.Handler {
 	return NewRouter(Dependencies{
