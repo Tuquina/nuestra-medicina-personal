@@ -78,14 +78,25 @@ services:
       SESSION_TTL: ${SESSION_TTL:-720h}
       MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN}
       MERCADOPAGO_WEBHOOK_SECRET: ${MERCADOPAGO_WEBHOOK_SECRET}
-      MERCADOPAGO_PUBLIC_BASE_URL: https://${APP_DOMAIN}
+      # Driven from .env, not derived from APP_DOMAIN like GOOGLE_REDIRECT_URL
+      # above — config.go requires all three Mercado Pago variables empty or
+      # all three set (unlike Google's, whose validation tolerates the
+      # redirect URL being set alone). Hardcoding this to a non-empty value
+      # would make it impossible to ever start without Mercado Pago
+      # configured, even to bootstrap a brand new environment.
+      MERCADOPAGO_PUBLIC_BASE_URL: ${MERCADOPAGO_PUBLIC_BASE_URL:-}
       EBOOK_STORAGE_PATH: /data/ebooks
       EBOOK_INTERNAL_PREFIX: /_protected/ebooks
       EBOOK_MAX_UPLOAD_BYTES: ${EBOOK_MAX_UPLOAD_BYTES:-52428800}
       MEDIA_STORAGE_PATH: /data/media
       MEDIA_MAX_UPLOAD_BYTES: ${MEDIA_MAX_UPLOAD_BYTES:-10485760}
       GOOGLE_MAIL_SENDER: ${GOOGLE_MAIL_SENDER}
-      GOOGLE_MAIL_CREDENTIALS_PATH: /run/secrets/gmail-service-account.json
+      # Driven from .env, same reasoning as MERCADOPAGO_PUBLIC_BASE_URL above
+      # — config.go requires this and GOOGLE_MAIL_SENDER empty together or
+      # set together. When Gmail is configured, set this in .env to
+      # /run/secrets/gmail-service-account.json (the path the `secrets:`
+      # block below mounts it at, via the `target:` set on the api service).
+      GOOGLE_MAIL_CREDENTIALS_PATH: ${GOOGLE_MAIL_CREDENTIALS_PATH:-}
       SUPPORT_EMAIL: ${SUPPORT_EMAIL}
       EMAIL_WORKER_INTERVAL: ${EMAIL_WORKER_INTERVAL:-10s}
       EMAIL_LEASE_TIMEOUT: ${EMAIL_LEASE_TIMEOUT:-5m}
