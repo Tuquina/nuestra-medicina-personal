@@ -15,6 +15,7 @@ import (
 	"github.com/nuestra-medicina-personal/backend/internal/application/coupons"
 	emailapp "github.com/nuestra-medicina-personal/backend/internal/application/email"
 	"github.com/nuestra-medicina-personal/backend/internal/application/library"
+	"github.com/nuestra-medicina-personal/backend/internal/application/manuscripts"
 	mediaapp "github.com/nuestra-medicina-personal/backend/internal/application/media"
 	"github.com/nuestra-medicina-personal/backend/internal/application/newsletter"
 	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
@@ -79,6 +80,8 @@ func run(logger *slog.Logger) error {
 	}
 	libraryRepository := postgres.NewLibraryRepository(pool)
 	libraryService := library.NewService(libraryRepository, bookService, ebookStorage, cfg.EbookMaxUploadBytes)
+	manuscriptRepository := postgres.NewManuscriptRepository(pool)
+	manuscriptService := manuscripts.NewService(manuscriptRepository, bookService)
 	pageRepository := postgres.NewPageRepository(pool)
 	pageService := pages.NewService(pageRepository)
 	mediaStorage, err := storage.NewLocalMediaStorage(cfg.MediaStoragePath)
@@ -112,7 +115,7 @@ func run(logger *slog.Logger) error {
 	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Newsletter: newsletterService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
+		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Newsletter: newsletterService, Authentication: authService, Orders: orderService, Library: libraryService, Manuscripts: manuscriptService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
 		IntegrationStatus: httpapi.IntegrationStatus{
 			GoogleConfigured:      cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
 			MercadoPagoConfigured: cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",

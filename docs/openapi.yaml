@@ -795,6 +795,54 @@ paths:
         '422':
           description: El archivo no es un PDF o EPUB válido.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/admin/books/{identifier}/manuscript:
+    parameters:
+      - $ref: '#/components/parameters/BookIdentifier'
+    get:
+      tags: [Admin books]
+      operationId: getBookManuscript
+      description: 'Sin manuscrito guardado todavía, responde con `chapters: []` en vez de 404.'
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Manuscrito actual del libro.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Manuscript'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+    put:
+      tags: [Admin books]
+      operationId: saveBookManuscript
+      description: Reemplaza los capítulos completos (autosave del editor). Como máximo 200 capítulos, 2MB de HTML cada uno.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [chapters]
+              properties:
+                chapters:
+                  type: array
+                  items: {$ref: '#/components/schemas/ManuscriptChapter'}
+      responses:
+        '200':
+          description: Manuscrito guardado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Manuscript'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+        '422':
+          description: Demasiados capítulos o un capítulo demasiado grande.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
 components:
   securitySchemes:
     sessionCookie:
@@ -1076,6 +1124,23 @@ components:
         filename: {type: string}
         mediaType: {type: string, enum: [application/pdf, application/epub+zip]}
         sizeBytes: {type: integer, format: int64, minimum: 1}
+    ManuscriptChapter:
+      type: object
+      required: [id, title, html]
+      properties:
+        id: {type: integer}
+        title: {type: string}
+        html: {type: string, maxLength: 2097152}
+    Manuscript:
+      type: object
+      required: [bookId, chapters]
+      properties:
+        bookId: {type: string, format: uuid}
+        chapters:
+          type: array
+          maxItems: 200
+          items: {$ref: '#/components/schemas/ManuscriptChapter'}
+        updatedAt: {type: [string, 'null'], format: date-time}
     SiteSettingsInput:
       type: object
       additionalProperties: false

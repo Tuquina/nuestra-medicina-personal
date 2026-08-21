@@ -212,6 +212,18 @@ las entrega con ETag y caché immutable. `DELETE /api/v1/admin/media/{id}` revis
 portadas, borradores, publicaciones y todas las versiones del CMS. Si encuentra
 una referencia responde `MEDIA_IN_USE` y no borra ni la fila ni el archivo.
 
+## Manuscrito
+
+`GET/PUT /api/v1/admin/books/{identifier}/manuscript` persisten los capítulos
+del editor de manuscrito (`book_manuscripts`, un JSONB por libro). `GET` sobre
+un libro sin manuscrito guardado responde `200` con `chapters: []`, no `404`
+— "todavía no empezado" no es un error. `PUT` reemplaza el arreglo completo
+(lo que envía el autosave del editor); un máximo de 200 capítulos y 2MB de
+HTML por capítulo evitan que un bucle de autosave descontrolado haga crecer
+la fila sin límite. No existe todavía conversión automática de DOCX/PDF ni
+generación real de EPUB/PDF — el editor lo indica explícitamente en vez de
+simular una operación que no ocurre.
+
 ## Backoffice de datos
 
 `GET /api/v1/admin/dashboard`, `GET /api/v1/admin/sales` y

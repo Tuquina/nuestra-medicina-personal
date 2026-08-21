@@ -70,6 +70,10 @@ export function adminBookEbookUrl(identifier: string): string {
   return `${adminBookUrl(identifier)}/ebook`;
 }
 
+export function adminBookManuscriptUrl(identifier: string): string {
+  return `${adminBookUrl(identifier)}/manuscript`;
+}
+
 export const ADMIN_MEDIA_URL = `${API_PREFIX}/admin/media`;
 
 export function adminMediaUrl(mediaId: string): string {

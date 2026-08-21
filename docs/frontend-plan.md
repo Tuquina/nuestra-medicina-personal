@@ -300,9 +300,19 @@ and the sidebar are the two places to extend.
   projections. Filters and pagination run on the server, sale details preserve
   order/payment separation and historical amounts, and settings load before
   editing while integration status remains read-only.
-- **Next real milestone for these screens**: retire the remaining unrelated
-  mock stores, demonstration toggles and placeholder success messages, then
-  review empty and authorization/error states consistently.
+- Checkout now accepts an optional coupon code, applied and validated
+  server-side; the public book page shows approved reviews and a
+  purchase-gated submission form; the newsletter signup form and Mi Cuenta's
+  switch persist to `marketing_subscriptions` instead of flipping local
+  state; Mi Cuenta's "Eliminar cuenta" calls the real soft-delete endpoint;
+  `ManuscritoTab` autosaves chapters to the backend and no longer fakes file
+  conversion or EPUB/PDF generation — both are marked as not available yet
+  instead.
+- **Next real milestone for these screens**: a real DOCX/PDF-to-HTML
+  conversion pipeline and EPUB/PDF generation for the manuscript editor are
+  still open — deliberately out of scope until there's a concrete decision
+  (new dependencies, an ADR) proportional to a ~5-book catalog. Otherwise,
+  review empty and authorization/error states consistently across the app.
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing
