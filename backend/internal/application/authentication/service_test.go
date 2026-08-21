@@ -17,15 +17,14 @@ type providerStub struct {
 }
 
 func (p *providerStub) Configured() bool { return p.configured }
-func (p *providerStub) AuthorizationURL(state, nonce, challenge string) string {
-	return "https://accounts.example/auth?state=" + state + "&nonce=" + nonce + "&challenge=" + challenge
+func (p *providerStub) AuthorizationURL(state, nonce, verifier string) string {
+	return "https://accounts.example/auth?state=" + state + "&nonce=" + nonce + "&challenge=" + verifier
 }
 func (p *providerStub) Exchange(context.Context, string, string, string) (auth.Identity, error) {
 	p.exchange = true
 	return p.identity, nil
 }
-func (*providerStub) NewVerifier() string             { return "verifier-value" }
-func (*providerStub) VerifierChallenge(string) string { return "challenge-value" }
+func (*providerStub) NewVerifier() string { return "verifier-value" }
 
 type repositoryStub struct {
 	identity  auth.Identity
@@ -71,8 +70,15 @@ func TestStartCreatesIndependentFlowSecretsAndPKCE(t *testing.T) {
 	if flow.State == "" || flow.Nonce == "" || flow.State == flow.Nonce || flow.Verifier != "verifier-value" {
 		t.Fatalf("invalid flow values: %#v", flow)
 	}
-	if !strings.Contains(flow.AuthorizationURL, "challenge=challenge-value") {
-		t.Fatalf("authorization URL is missing PKCE challenge: %s", flow.AuthorizationURL)
+	// The *raw verifier* must reach AuthorizationURL unchanged --
+	// oauth2.S256ChallengeOption (oidc.go) does the SHA256+base64url hashing
+	// itself. Pre-hashing it here (as this code used to, via a since-removed
+	// VerifierChallenge helper) double-hashes it, so Google can never match
+	// it back against the raw verifier Exchange sends later — invisible to
+	// this stub-based test unless it asserts on the *exact* value passed
+	// through, which is what this checks.
+	if !strings.Contains(flow.AuthorizationURL, "challenge=verifier-value") {
+		t.Fatalf("authorization URL is missing the raw PKCE verifier: %s", flow.AuthorizationURL)
 	}
 }
 

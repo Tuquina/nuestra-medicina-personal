@@ -18,7 +18,6 @@ type Provider interface {
 	AuthorizationURL(state, nonce, verifier string) string
 	Exchange(context.Context, string, string, string) (auth.Identity, error)
 	NewVerifier() string
-	VerifierChallenge(string) string
 }
 
 type Repository interface {
@@ -66,7 +65,14 @@ func (s *Service) Start() (Flow, error) {
 	verifier := s.provider.NewVerifier()
 	return Flow{
 		State: state, Nonce: nonce, Verifier: verifier,
-		AuthorizationURL: s.provider.AuthorizationURL(state, nonce, s.provider.VerifierChallenge(verifier)),
+		// AuthorizationURL (oidc.go) hands this straight to
+		// oauth2.S256ChallengeOption, which hashes it itself -- passing an
+		// already-hashed challenge here double-hashes it, so Google can
+		// never match it back against the raw verifier sent at Exchange
+		// time. That was exactly this bug, invisible to unit tests because
+		// the provider stub never did the real crypto (see
+		// service_test.go) -- only surfaced against the real Google server.
+		AuthorizationURL: s.provider.AuthorizationURL(state, nonce, verifier),
 	}, nil
 }
 

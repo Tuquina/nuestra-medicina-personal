@@ -39,11 +39,16 @@ func NewOIDCProvider(ctx context.Context, clientID, clientSecret, redirectURL st
 
 func (p *OIDCProvider) Configured() bool { return p.configured }
 
-func (p *OIDCProvider) AuthorizationURL(state, nonce, challenge string) string {
+// AuthorizationURL takes the raw PKCE verifier, not a pre-hashed challenge --
+// oauth2.S256ChallengeOption hashes it (SHA256 + base64url) itself. Passing
+// an already-hashed value here double-hashes it, so Google can never match
+// it back against the raw verifier Exchange sends later (see Complete() in
+// application/authentication/service.go for the full story on this bug).
+func (p *OIDCProvider) AuthorizationURL(state, nonce, verifier string) string {
 	return p.oauth.AuthCodeURL(state,
 		oidc.Nonce(nonce),
 		oauth2.AccessTypeOnline,
-		oauth2.S256ChallengeOption(challenge),
+		oauth2.S256ChallengeOption(verifier),
 		oauth2.SetAuthURLParam("prompt", "select_account"),
 	)
 }
@@ -81,7 +86,3 @@ func (p *OIDCProvider) Exchange(ctx context.Context, code, expectedNonce, verifi
 }
 
 func (*OIDCProvider) NewVerifier() string { return oauth2.GenerateVerifier() }
-
-func (*OIDCProvider) VerifierChallenge(verifier string) string {
-	return oauth2.S256ChallengeFromVerifier(verifier)
-}
