@@ -2741,23 +2741,30 @@ Marketing incluye:
 
 Guardar consentimiento explícito.
 
-Tabla conceptual:
+Implementado en `marketing_subscriptions` (migración `010`):
 
 ```text
 marketing_subscriptions
 ────────────────────────
 id
 user_id NULL
-email
-status
+email UNIQUE
+status        SUBSCRIBED | UNSUBSCRIBED
+source
 subscribed_at
 unsubscribed_at
-source
+created_at
+updated_at
 ```
 
-El sistema debe permitir cancelar suscripción.
+API (`docs/openapi.yaml`):
 
-No asumir que comprar un libro equivale automáticamente a aceptar comunicaciones promocionales.
+- `POST /api/v1/newsletter/subscribe` — público, idempotente por `email`. Usado por el formulario de Home/Meditaciones/Herramientas.
+- `GET /api/v1/me/newsletter` / `PUT /api/v1/me/newsletter` — requieren sesión; el switch de Mi Cuenta los usa para leer y cambiar la preferencia del usuario autenticado.
+
+El sistema permite cancelar suscripción (`PUT .../newsletter` con `subscribed: false`, o el mismo `Upsert` con `status = UNSUBSCRIBED`).
+
+No asumir que comprar un libro equivale automáticamente a aceptar comunicaciones promocionales — la suscripción vía Mi Cuenta y la compra son flujos independientes.
 
 ---
 

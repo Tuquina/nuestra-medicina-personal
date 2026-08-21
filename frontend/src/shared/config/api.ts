@@ -100,6 +100,12 @@ export function bookReviewsUrl(bookSlug: string): string {
   return `${BOOKS_URL}/${encodeURIComponent(bookSlug)}/reviews`;
 }
 
+/** Public newsletter signup — no authentication required. */
+export const NEWSLETTER_SUBSCRIBE_URL = `${API_PREFIX}/newsletter/subscribe`;
+
+/** The signed-in user's own newsletter preference (Mi Cuenta switch). */
+export const ME_NEWSLETTER_URL = `${API_PREFIX}/me/newsletter`;
+
 export const PAGES_URL = `${API_PREFIX}/pages`;
 
 export function pageUrl(slug: string): string {

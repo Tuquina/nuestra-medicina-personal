@@ -16,6 +16,7 @@ import (
 	emailapp "github.com/nuestra-medicina-personal/backend/internal/application/email"
 	"github.com/nuestra-medicina-personal/backend/internal/application/library"
 	mediaapp "github.com/nuestra-medicina-personal/backend/internal/application/media"
+	"github.com/nuestra-medicina-personal/backend/internal/application/newsletter"
 	"github.com/nuestra-medicina-personal/backend/internal/application/orders"
 	"github.com/nuestra-medicina-personal/backend/internal/application/pages"
 	"github.com/nuestra-medicina-personal/backend/internal/application/reviews"
@@ -63,6 +64,8 @@ func run(logger *slog.Logger) error {
 	couponService := coupons.NewService(couponRepository)
 	reviewRepository := postgres.NewReviewRepository(pool)
 	reviewService := reviews.NewService(reviewRepository)
+	newsletterRepository := postgres.NewNewsletterRepository(pool)
+	newsletterService := newsletter.NewService(newsletterRepository)
 	authRepository := postgres.NewAuthRepository(pool)
 	googleProvider := google.NewOIDCProvider(ctx, cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect)
 	authService := authentication.NewService(googleProvider, authRepository, cfg.AdminGoogleSub, cfg.SessionTTL)
@@ -109,7 +112,7 @@ func run(logger *slog.Logger) error {
 	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
+		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Newsletter: newsletterService, Authentication: authService, Orders: orderService, Library: libraryService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
 		IntegrationStatus: httpapi.IntegrationStatus{
 			GoogleConfigured:      cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
 			MercadoPagoConfigured: cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",

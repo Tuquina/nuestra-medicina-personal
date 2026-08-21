@@ -239,10 +239,20 @@ repositorio.
 normaliza a mayúsculas, los montos fijos usan unidades menores y moneda
 explícita, y la API calcula `ACTIVE`, `SCHEDULED`, `EXPIRED` o `INACTIVE` con
 la fecha del servidor y el límite de usos. Un cupón puede aplicarse a todos los
-libros o a UUIDs de libros concretos.
+libros o a UUIDs de libros concretos. `POST /api/v1/orders` acepta ese mismo
+código en `couponCode` — ver [Órdenes y pagos](#órdenes-y-pagos).
 
 `GET /api/v1/books/{slug}/reviews` publica sólo reseñas aprobadas. Para enviar
 una reseña, `POST` sobre la misma ruta requiere sesión, `Origin` válido y una
 orden `PAID` del usuario para ese libro. La reseña nace `PENDING` y sólo admite
 una entrada por usuario y libro. El administrador lista, aprueba, rechaza o
 elimina mediante `/api/v1/admin/reviews`; no existen reseñas ficticias semilla.
+
+## Newsletter
+
+`POST /api/v1/newsletter/subscribe` es público e idempotente por email —
+crea o reactiva una fila en `marketing_subscriptions` (`ON CONFLICT (email)`).
+Un usuario autenticado gestiona su propia preferencia con `GET`/`PUT
+/api/v1/me/newsletter`; si más tarde se suscribe con el mismo email desde el
+formulario público, la fila existente se vincula a su `user_id` en vez de
+duplicarse. No hay envío de campañas todavía — sólo el consentimiento.

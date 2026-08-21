@@ -16,6 +16,7 @@ type Dependencies struct {
 	Books               BookService
 	Coupons             CouponService
 	Reviews             ReviewService
+	Newsletter          NewsletterService
 	Authentication      AuthenticationService
 	Orders              OrderService
 	Library             LibraryService
@@ -41,6 +42,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	booksHandler := NewBookHandler(dependencies.Books, dependencies.Logger)
 	couponsHandler := NewCouponHandler(dependencies.Coupons, dependencies.Logger)
 	reviewsHandler := NewReviewHandler(dependencies.Reviews, dependencies.Logger)
+	newsletterHandler := NewNewsletterHandler(dependencies.Newsletter, dependencies.Logger)
 	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies)
 	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
@@ -79,6 +81,10 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.Handle("GET /api/v1/books/{id}/download", protectedDownload)
 	userReviewCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(reviewsHandler.Create))
 	root.Handle("POST /api/v1/books/{slug}/reviews", requireSameOrigin(dependencies.BaseURL, userReviewCreation))
+	root.Handle("POST /api/v1/newsletter/subscribe", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(newsletterHandler.Subscribe)))
+	root.Handle("GET /api/v1/me/newsletter", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(newsletterHandler.GetPreference)))
+	userNewsletterPreference := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(newsletterHandler.SetPreference))
+	root.Handle("PUT /api/v1/me/newsletter", requireSameOrigin(dependencies.BaseURL, userNewsletterPreference))
 	root.HandleFunc("POST /api/v1/webhooks/mercadopago", orderHandler.MercadoPagoWebhook)
 
 	admin := http.NewServeMux()

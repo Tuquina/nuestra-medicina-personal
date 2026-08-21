@@ -14,6 +14,7 @@ tags:
   - name: Authentication
   - name: Books
   - name: Reviews
+  - name: Newsletter
   - name: Orders
   - name: Library
   - name: Pages
@@ -216,6 +217,69 @@ paths:
           description: El usuario no compró el libro o el archivo no está disponible.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
+  /api/v1/newsletter/subscribe:
+    post:
+      tags: [Newsletter]
+      operationId: subscribeNewsletter
+      description: Suscribe un correo a novedades. Público e idempotente por email.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email: {type: string, format: email}
+                source: {type: string}
+      responses:
+        '204': {description: Suscripción creada o actualizada.}
+        '422':
+          description: Email inválido.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/me/newsletter:
+    get:
+      tags: [Newsletter]
+      operationId: getMyNewsletterPreference
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: Preferencia actual del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscribed]
+                properties: {subscribed: {type: boolean}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+    put:
+      tags: [Newsletter]
+      operationId: setMyNewsletterPreference
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [subscribed]
+              properties: {subscribed: {type: boolean}}
+      responses:
+        '200':
+          description: Preferencia actualizada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscribed]
+                properties: {subscribed: {type: boolean}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
   /api/v1/orders:
     post:
       tags: [Orders]

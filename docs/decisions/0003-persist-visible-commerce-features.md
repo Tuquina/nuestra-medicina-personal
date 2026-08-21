@@ -38,3 +38,10 @@ del CMS.
 - Los prototipos basados en `localStorage` y datasets de demostración se retiran
   al conectar cada pantalla.
 
+## Estado
+
+Cupones, Reseñas y Analítica: implementados. Newsletter: implementado
+(`marketing_subscriptions`, migración `010`; `POST /api/v1/newsletter/subscribe`,
+`GET`/`PUT /api/v1/me/newsletter`) — el formulario público y el switch de Mi
+Cuenta ya no son locales.
+
