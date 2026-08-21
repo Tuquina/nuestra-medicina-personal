@@ -27,6 +27,7 @@ type Config struct {
 	EbookMaxUploadBytes       int64
 	MediaStoragePath          string
 	MediaMaxUploadBytes       int64
+	ManuscriptMaxUploadBytes  int64
 	GoogleMailCredentials     string
 	GoogleMailSender          string
 	SupportEmail              string
@@ -78,6 +79,7 @@ func Load() (Config, error) {
 		EbookMaxUploadBytes:       int64OrDefault("EBOOK_MAX_UPLOAD_BYTES", 50<<20),
 		MediaStoragePath:          envOrDefault("MEDIA_STORAGE_PATH", "/data/media"),
 		MediaMaxUploadBytes:       int64OrDefault("MEDIA_MAX_UPLOAD_BYTES", 10<<20),
+		ManuscriptMaxUploadBytes:  int64OrDefault("MANUSCRIPT_MAX_UPLOAD_BYTES", 20<<20),
 		GoogleMailCredentials:     os.Getenv("GOOGLE_MAIL_CREDENTIALS_PATH"),
 		GoogleMailSender:          os.Getenv("GOOGLE_MAIL_SENDER"),
 		SupportEmail:              os.Getenv("SUPPORT_EMAIL"),
@@ -150,6 +152,9 @@ func Load() (Config, error) {
 	}
 	if cfg.MediaMaxUploadBytes < 1<<20 || cfg.MediaMaxUploadBytes > 25<<20 {
 		validationErrors = append(validationErrors, errors.New("MEDIA_MAX_UPLOAD_BYTES must be between 1 MiB and 25 MiB"))
+	}
+	if cfg.ManuscriptMaxUploadBytes < 1<<20 || cfg.ManuscriptMaxUploadBytes > 50<<20 {
+		validationErrors = append(validationErrors, errors.New("MANUSCRIPT_MAX_UPLOAD_BYTES must be between 1 MiB and 50 MiB"))
 	}
 	mailValues := 0
 	for _, value := range []string{cfg.GoogleMailCredentials, cfg.GoogleMailSender} {

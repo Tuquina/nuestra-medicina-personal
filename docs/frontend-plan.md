@@ -305,14 +305,15 @@ and the sidebar are the two places to extend.
   purchase-gated submission form; the newsletter signup form and Mi Cuenta's
   switch persist to `marketing_subscriptions` instead of flipping local
   state; Mi Cuenta's "Eliminar cuenta" calls the real soft-delete endpoint;
-  `ManuscritoTab` autosaves chapters to the backend and no longer fakes file
-  conversion or EPUB/PDF generation — both are marked as not available yet
-  instead.
-- **Next real milestone for these screens**: a real DOCX/PDF-to-HTML
-  conversion pipeline and EPUB/PDF generation for the manuscript editor are
-  still open — deliberately out of scope until there's a concrete decision
-  (new dependencies, an ADR) proportional to a ~5-book catalog. Otherwise,
-  review empty and authorization/error states consistently across the app.
+  `ManuscritoTab` autosaves chapters to the backend, converts uploaded
+  DOCX/PDF/TXT files server-side into real chapter HTML, and downloads a
+  real, freshly generated EPUB or PDF (ADR 0004) instead of any of that
+  being faked or marked unavailable.
+- **Next real milestone for these screens**: review empty and
+  authorization/error states consistently across the app. A future pass
+  could add automatic chapter-splitting on import (page breaks, heading
+  detection beyond the current style-ID heuristic) — deliberately out of
+  scope for now (ADR 0004).
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing

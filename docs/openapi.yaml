@@ -843,6 +843,73 @@ paths:
         '422':
           description: Demasiados capítulos o un capítulo demasiado grande.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/admin/books/{identifier}/manuscript/import:
+    parameters:
+      - $ref: '#/components/parameters/BookIdentifier'
+    put:
+      tags: [Admin books]
+      operationId: importBookManuscript
+      description: >-
+        Convierte un archivo subido (.txt/.docx/.pdf) en un solo capítulo y lo
+        persiste de inmediato. Extensión y firma de bytes se validan antes de
+        convertir (ADR 0004).
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        '200':
+          description: Manuscrito reemplazado por el contenido convertido.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Manuscript'}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+        '413':
+          description: El archivo supera el límite configurado.
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '415':
+          description: Extensión no soportada (código `MANUSCRIPT_UNSUPPORTED_FORMAT`).
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '422':
+          description: Extensión válida pero el archivo no pudo convertirse (código `MANUSCRIPT_CONVERSION_FAILED`).
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  /api/v1/admin/books/{identifier}/manuscript/export:
+    parameters:
+      - $ref: '#/components/parameters/BookIdentifier'
+    get:
+      tags: [Admin books]
+      operationId: exportBookManuscript
+      description: >-
+        Genera EPUB o PDF a partir de los capítulos guardados y lo devuelve
+        como descarga. Nunca reemplaza el ebook vendible del libro (ADR 0004).
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema: {type: string, enum: [epub, pdf]}
+      responses:
+        '200':
+          description: Archivo generado.
+          content:
+            application/epub+zip: {schema: {type: string, format: binary}}
+            application/pdf: {schema: {type: string, format: binary}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '404': {$ref: '#/components/responses/BookNotFound'}
+        '415':
+          description: Formato no soportado (código `MANUSCRIPT_UNSUPPORTED_FORMAT`).
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
 components:
   securitySchemes:
     sessionCookie:

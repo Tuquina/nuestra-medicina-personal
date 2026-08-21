@@ -74,6 +74,14 @@ export function adminBookManuscriptUrl(identifier: string): string {
   return `${adminBookUrl(identifier)}/manuscript`;
 }
 
+export function adminBookManuscriptImportUrl(identifier: string): string {
+  return `${adminBookManuscriptUrl(identifier)}/import`;
+}
+
+export function adminBookManuscriptExportUrl(identifier: string, format: 'epub' | 'pdf'): string {
+  return `${adminBookManuscriptUrl(identifier)}/export?format=${format}`;
+}
+
 export const ADMIN_MEDIA_URL = `${API_PREFIX}/admin/media`;
 
 export function adminMediaUrl(mediaId: string): string {
