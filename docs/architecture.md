@@ -1064,7 +1064,7 @@ Nunca confiar en ocultar componentes del frontend.
 MVP posible:
 
 ```text
-ADMIN_GOOGLE_SUBS=<google_subject_1>,<google_subject_2>,...
+ADMIN_EMAILS=<email_1>,<email_2>,...
 ```
 
 O tabla:
@@ -1775,8 +1775,8 @@ GOOGLE_MAIL_SENDER=ventas@tudominio.com
 GOOGLE_MAIL_CREDENTIALS_PATH=/run/secrets/google-mail-credentials
 SUPPORT_EMAIL=soporte@tudominio.com
 
-# Comma-separated -- one or more admin accounts.
-ADMIN_GOOGLE_SUBS=...
+# Comma-separated Google account emails -- one or more admin accounts.
+ADMIN_EMAILS=...
 
 EBOOK_STORAGE_PATH=/data/ebooks
 MEDIA_STORAGE_PATH=/data/media

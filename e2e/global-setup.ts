@@ -1,6 +1,6 @@
 // Brings up the real dev stack (docker-compose.yml) plus the E2E-only
 // overrides (e2e/docker-compose.e2e.yml — fake Mercado Pago server,
-// deterministic ADMIN_GOOGLE_SUBS, raised rate limits) before any test file
+// deterministic ADMIN_EMAILS, raised rate limits) before any test file
 // runs. See README.md for the full rationale.
 import { compose } from './fixtures/compose';
 

@@ -15,10 +15,14 @@ type Config struct {
 	BaseURL                   string
 	HTTPAddress               string
 	DatabaseURL               string
-	// AdminGoogleSubs holds every Google account "sub" (subject identifier)
-	// granted admin access -- parsed from ADMIN_GOOGLE_SUBS, comma-separated,
-	// so more than one person can administer the store.
-	AdminGoogleSubs           []string
+	// AdminEmails holds every Google account email granted admin access --
+	// parsed from ADMIN_EMAILS, comma-separated, lowercased for
+	// case-insensitive comparison against Google's own "email" claim
+	// (which is itself usually already lowercase, but never assume). Using
+	// email instead of the Google "sub" (subject identifier) means an
+	// admin can be granted access before ever logging in -- the comparison
+	// happens fresh on every request, against whatever's in users.email.
+	AdminEmails               []string
 	GoogleClientID            string
 	GoogleSecret              string
 	GoogleRedirect            string
@@ -75,7 +79,7 @@ func Load() (Config, error) {
 		BaseURL:                   envOrDefault("APP_BASE_URL", "http://localhost:5173"),
 		HTTPAddress:               envOrDefault("HTTP_ADDRESS", ":8080"),
 		DatabaseURL:               os.Getenv("DATABASE_URL"),
-		AdminGoogleSubs:           splitList(os.Getenv("ADMIN_GOOGLE_SUBS")),
+		AdminEmails:               lowercasedList(os.Getenv("ADMIN_EMAILS")),
 		GoogleClientID:            os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleSecret:              os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirect:            os.Getenv("GOOGLE_REDIRECT_URL"),
@@ -230,13 +234,16 @@ func envOrDefault(key, fallback string) string {
 	return fallback
 }
 
-// splitList parses a comma-separated env var into a trimmed, non-empty
-// slice ("" -> nil, "a, ,b" -> []string{"a", "b"}).
-func splitList(value string) []string {
+// lowercasedList parses a comma-separated env var into a trimmed,
+// lowercased, non-empty slice ("" -> nil, "A@x.com, ,b@x.com" ->
+// []string{"a@x.com", "b@x.com"}). Lowercasing here means every consumer
+// only needs to lowercase the *other* side of a comparison, not this list
+// too.
+func lowercasedList(value string) []string {
 	var items []string
 	for _, part := range strings.Split(value, ",") {
 		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			items = append(items, trimmed)
+			items = append(items, strings.ToLower(trimmed))
 		}
 	}
 	return items

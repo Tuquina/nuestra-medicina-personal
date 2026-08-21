@@ -95,10 +95,13 @@ func TestCompleteRejectsInvalidStateBeforeProviderExchange(t *testing.T) {
 func TestCompleteCreatesOpaqueHashedSession(t *testing.T) {
 	t.Parallel()
 	provider := &providerStub{configured: true, identity: auth.Identity{
-		GoogleSubject: "admin-sub", Email: "admin@example.com", EmailVerified: true,
+		GoogleSubject: "admin-sub", Email: "Admin@Example.com", EmailVerified: true,
 	}}
 	repository := &repositoryStub{}
-	service := NewService(provider, repository, []string{"admin-sub"}, 24*time.Hour)
+	// Admin list is lowercased at config-load time (see config.lowercasedList);
+	// the incoming Google email is compared case-insensitively against it, so
+	// this also exercises that "Admin@Example.com" still matches "admin@example.com".
+	service := NewService(provider, repository, []string{"admin@example.com"}, 24*time.Hour)
 	now := time.Date(2026, 8, 19, 14, 0, 0, 0, time.UTC)
 	service.now = func() time.Time { return now }
 

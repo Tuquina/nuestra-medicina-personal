@@ -26,8 +26,8 @@ la API y registra cada versión en `schema_migrations`.
 
 Las rutas `/api/v1/admin/*` no confían en el frontend. Requieren la cookie de
 sesión opaca `nmp_session`; el backend almacena solamente su hash SHA-256 y
-comprueba que la sesión esté vigente y que el `google_subject` figure entre
-los valores (separados por coma) de `ADMIN_GOOGLE_SUBS`. Las operaciones de
+comprueba que la sesión esté vigente y que el `email` (en minúsculas) figure
+entre los valores (separados por coma) de `ADMIN_EMAILS`. Las operaciones de
 escritura también exigen un encabezado `Origin` que coincida con
 `APP_BASE_URL`.
 
