@@ -11,17 +11,17 @@ import (
 type Repository interface {
 	Dashboard(context.Context, backofficedomain.Period, string, string, time.Time) (backofficedomain.Dashboard, error)
 	Sales(context.Context, backofficedomain.SalesFilter) (backofficedomain.SalesPage, error)
-	Customers(context.Context, backofficedomain.CustomerFilter, string, string) (backofficedomain.CustomerPage, error)
+	Customers(context.Context, backofficedomain.CustomerFilter, []string, string) (backofficedomain.CustomerPage, error)
 }
 
 type Service struct {
-	repository     Repository
-	adminGoogleSub string
-	now            func() time.Time
+	repository      Repository
+	adminGoogleSubs []string
+	now             func() time.Time
 }
 
-func NewService(repository Repository, adminGoogleSub string) *Service {
-	return &Service{repository: repository, adminGoogleSub: adminGoogleSub, now: time.Now}
+func NewService(repository Repository, adminGoogleSubs []string) *Service {
+	return &Service{repository: repository, adminGoogleSubs: adminGoogleSubs, now: time.Now}
 }
 
 func (s *Service) Dashboard(ctx context.Context, rangeValue, bookSlug, currency string) (backofficedomain.Dashboard, error) {
@@ -73,7 +73,7 @@ func (s *Service) Customers(ctx context.Context, filter backofficedomain.Custome
 	if len(currency) != 3 {
 		return backofficedomain.CustomerPage{}, &backofficedomain.ValidationError{Fields: map[string]string{"currency": "must contain 3 letters"}}
 	}
-	return s.repository.Customers(ctx, filter, s.adminGoogleSub, currency)
+	return s.repository.Customers(ctx, filter, s.adminGoogleSubs, currency)
 }
 
 func parsePeriod(value string, now time.Time) (backofficedomain.Period, error) {

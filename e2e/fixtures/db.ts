@@ -35,7 +35,7 @@ export interface SeededSession {
 /**
  * Seeds a user + a valid session, returning the raw token to hand to
  * withSessionCookie() (fixtures/auth.ts). Pass role: 'admin' to make the
- * user's google_subject match ADMIN_GOOGLE_SUB (e2e-admin-fixture, set in
+ * user's google_subject match one of the (comma-separated) ADMIN_GOOGLE_SUBS entries (e2e-admin-fixture, set in
  * docker-compose.e2e.yml) — requireAdmin checks that at query time, there's
  * no separate "is admin" column to set.
  */

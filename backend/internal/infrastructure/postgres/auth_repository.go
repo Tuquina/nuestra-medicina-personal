@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -57,7 +58,7 @@ func (r *AuthRepository) CreateSession(ctx context.Context, identity auth.Identi
 	return user, nil
 }
 
-func (r *AuthRepository) GetUserByTokenHash(ctx context.Context, tokenHash, adminGoogleSub string) (auth.User, error) {
+func (r *AuthRepository) GetUserByTokenHash(ctx context.Context, tokenHash string, adminGoogleSubs []string) (auth.User, error) {
 	var user auth.User
 	var googleSubject string
 	err := r.pool.QueryRow(ctx, `
@@ -76,7 +77,7 @@ func (r *AuthRepository) GetUserByTokenHash(ctx context.Context, tokenHash, admi
 	if err != nil {
 		return auth.User{}, fmt.Errorf("get session user: %w", err)
 	}
-	user.IsAdmin = adminGoogleSub != "" && googleSubject == adminGoogleSub
+	user.IsAdmin = slices.Contains(adminGoogleSubs, googleSubject)
 	return user, nil
 }
 

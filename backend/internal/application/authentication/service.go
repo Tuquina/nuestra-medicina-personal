@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/nuestra-medicina-personal/backend/internal/domain/auth"
@@ -22,7 +23,7 @@ type Provider interface {
 
 type Repository interface {
 	CreateSession(context.Context, auth.Identity, auth.Session, time.Time) (auth.User, error)
-	GetUserByTokenHash(context.Context, string, string) (auth.User, error)
+	GetUserByTokenHash(context.Context, string, []string) (auth.User, error)
 	RevokeSession(context.Context, string, time.Time) error
 	DeleteAccount(context.Context, string, time.Time) error
 }
@@ -35,17 +36,17 @@ type Flow struct {
 }
 
 type Service struct {
-	provider       Provider
-	repository     Repository
-	adminGoogleSub string
-	sessionTTL     time.Duration
-	flowTTL        time.Duration
-	now            func() time.Time
+	provider        Provider
+	repository      Repository
+	adminGoogleSubs []string
+	sessionTTL      time.Duration
+	flowTTL         time.Duration
+	now             func() time.Time
 }
 
-func NewService(provider Provider, repository Repository, adminGoogleSub string, sessionTTL time.Duration) *Service {
+func NewService(provider Provider, repository Repository, adminGoogleSubs []string, sessionTTL time.Duration) *Service {
 	return &Service{
-		provider: provider, repository: repository, adminGoogleSub: adminGoogleSub,
+		provider: provider, repository: repository, adminGoogleSubs: adminGoogleSubs,
 		sessionTTL: sessionTTL, flowTTL: 10 * time.Minute, now: time.Now,
 	}
 }
@@ -104,7 +105,7 @@ func (s *Service) Complete(ctx context.Context, code, state, expectedState, nonc
 	if err != nil {
 		return auth.User{}, auth.Session{}, fmt.Errorf("persist authenticated session: %w", err)
 	}
-	user.IsAdmin = identity.GoogleSubject == s.adminGoogleSub && s.adminGoogleSub != ""
+	user.IsAdmin = slices.Contains(s.adminGoogleSubs, identity.GoogleSubject)
 	return user, session, nil
 }
 
@@ -112,7 +113,7 @@ func (s *Service) CurrentUser(ctx context.Context, rawToken string) (auth.User, 
 	if rawToken == "" {
 		return auth.User{}, auth.ErrUnauthorized
 	}
-	return s.repository.GetUserByTokenHash(ctx, hashToken(rawToken), s.adminGoogleSub)
+	return s.repository.GetUserByTokenHash(ctx, hashToken(rawToken), s.adminGoogleSubs)
 }
 
 func (s *Service) Logout(ctx context.Context, rawToken string) error {

@@ -64,7 +64,7 @@ func TestDeleteAccountAnonymizesUserAndRevokesSessions(t *testing.T) {
 		t.Fatal("session was not revoked")
 	}
 
-	if _, err := repository.GetUserByTokenHash(ctx, tokenHash, ""); !errors.Is(err, auth.ErrUnauthorized) {
+	if _, err := repository.GetUserByTokenHash(ctx, tokenHash, nil); !errors.Is(err, auth.ErrUnauthorized) {
 		t.Fatalf("expected the revoked/deleted session to be unauthorized, got %v", err)
 	}
 
