@@ -13,10 +13,14 @@ manualmente desde GitHub Actions.
 - El despliegue futuro será otro workflow, limitado a `main` y al environment de
   GitHub `production`, con aprobación manual y secretos propios de la VPS.
 
-No se define un environment remoto de desarrollo por ahora. Docker Compose es
-el entorno persistente local y cada ejecución de Actions crea un entorno Linux
-efímero con PostgreSQL real. Esto cubre integración sin pagar ni mantener una
-segunda VPS.
+Docker Compose sigue siendo el entorno persistente local y cada ejecución de
+Actions crea un entorno Linux efímero con PostgreSQL real para la integración
+de código. Además, existe un ambiente de desarrollo desplegado de verdad
+(`dev.tudominio.com`), en el mismo VPS que producción pero como un stack
+Compose totalmente aislado — ver
+[docs/decisions/0005-dev-environment-shared-caddy-proxy.md](decisions/0005-dev-environment-shared-caddy-proxy.md)
+y [deploy/README.md](../deploy/README.md). Sirve para probar contra Mercado
+Pago real en modo test antes de tocar producción; no reemplaza al CI.
 
 ## Controles automáticos
 

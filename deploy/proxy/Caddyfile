@@ -1,0 +1,27 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# Each block below is one environment stack (deploy/docker-compose.yml,
+# brought up separately with STACK_NAME=prod / STACK_NAME=dev — see
+# ../README.md). `nginx-prod`/`nginx-dev` are the network aliases those
+# stacks' own nginx registers on this shared `edge` network.
+#
+# X-Real-IP is set explicitly here because nginx's own template
+# (../nginx/default.conf.template) trusts whatever X-Real-IP it receives
+# instead of deriving it — without this, the backend's rate limiter
+# (rate_limit.go, which reads X-Real-IP) would see every request as coming
+# from this Caddy container.
+{$PROD_DOMAIN} {
+	encode gzip
+	reverse_proxy nginx-prod:80 {
+		header_up X-Real-IP {http.request.remote.host}
+	}
+}
+
+{$DEV_DOMAIN} {
+	encode gzip
+	reverse_proxy nginx-dev:80 {
+		header_up X-Real-IP {http.request.remote.host}
+	}
+}
