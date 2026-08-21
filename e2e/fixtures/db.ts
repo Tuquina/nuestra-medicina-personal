@@ -255,6 +255,12 @@ export async function cleanup(ids: {
   bookIds?: string[];
   orderIds?: string[];
   couponIds?: string[];
+  /** CMS pages not tied to a book (HOME/FAQ/TERMINOS/etc.) — there's no
+   * admin endpoint to delete one (pages_handler.go has no Delete), so
+   * anything admin-pages.spec.ts creates needs this to clean up. Pages tied
+   * to a book (type BOOK) cascade from the book itself instead — pass
+   * those via `bookIds`, not here. */
+  pageIds?: string[];
 }): Promise<void> {
   const client = await db().connect();
   try {
@@ -262,6 +268,10 @@ export async function cleanup(ids: {
       await client.query(`DELETE FROM order_items WHERE order_id = $1::uuid`, [orderId]);
       await client.query(`DELETE FROM payments WHERE order_id = $1::uuid`, [orderId]);
       await client.query(`DELETE FROM orders WHERE id = $1::uuid`, [orderId]);
+    }
+    for (const pageId of ids.pageIds ?? []) {
+      // page_versions.page_id is ON DELETE CASCADE (migrations/001).
+      await client.query(`DELETE FROM pages WHERE id = $1::uuid`, [pageId]);
     }
     for (const couponId of ids.couponIds ?? []) {
       await client.query(`DELETE FROM coupon_books WHERE coupon_id = $1::uuid`, [couponId]);
@@ -274,6 +284,10 @@ export async function cleanup(ids: {
     }
     for (const userId of ids.userIds ?? []) {
       await client.query(`DELETE FROM reviews WHERE user_id = $1::uuid`, [userId]);
+      // page_versions.created_by references users too — an admin who
+      // published a CMS page (admin-pages.spec.ts) leaves one of these per
+      // publish, which would otherwise block deleting that admin user.
+      await client.query(`DELETE FROM page_versions WHERE created_by = $1::uuid`, [userId]);
       await client.query(`DELETE FROM sessions WHERE user_id = $1::uuid`, [userId]);
       await client.query(`DELETE FROM users WHERE id = $1::uuid`, [userId]);
     }

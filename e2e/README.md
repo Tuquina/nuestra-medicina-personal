@@ -132,6 +132,40 @@ per area:
   `PENDING` and invisible on the public book page until an admin approves
   it.
 
+Phase 3 covers the admin panel — one representative flow per section
+rather than every button, since most of the 19 `/admin/*` routes are thin
+UI over a handful of shared backend mechanisms:
+
+- `admin-guard.spec.ts` — the boundary itself: the API rejects a non-admin
+  (401/403) and the UI shows "no autorizado" instead of silently rendering
+  the panel.
+- `admin-books.spec.ts` — "Libros" (list + form): create a draft, get
+  blocked from publishing before its landing page is published (a real
+  rule — `books/service.go`), publish once it is, see it in the public
+  catalog, then archive it.
+- `admin-pages.spec.ts` — the generic CMS mechanism (`pages_handler.go`)
+  behind PageBuilder, the Meditaciones/Herramientas editors,
+  SobreElProyecto, both LegalDocEditorPages and all three AyudaEditorPages:
+  save a draft, publish, list versions, restore an older one. These
+  editorial page types are singletons seeded once by `migrations/007` (like
+  the real UI, this test edits the existing seeded FAQ page rather than
+  creating a new one) and restores its original content in `finally` so the
+  test is non-destructive.
+- `admin-media.spec.ts` — "Multimedia": upload an image, list it, and the
+  real in-use guard (`media_repository.go`) — can't delete an image while a
+  book's cover still references it.
+- `admin-coupons.spec.ts` — "Cupones" admin CRUD (create/update/delete);
+  the checkout-side validation rules a coupon is subject to are
+  `purchase.spec.ts`'s job.
+- `admin-settings.spec.ts` — "Configuración": read/update site settings.
+- `admin-dashboard.spec.ts` — Dashboard, Ventas, Clientes and Analítica
+  (which just calls `/admin/dashboard` with its own `range` — see
+  `AnaliticaPage.tsx`) actually reflecting a real paid order, not just
+  responding.
+- `admin-reviews.spec.ts` — an admin deleting a review outright; list +
+  approve are already exercised in `reviews.spec.ts` as part of the full
+  purchase → review → moderation flow.
+
 ## CI
 
 The `e2e` job in `.github/workflows/ci.yml` runs this suite after the
