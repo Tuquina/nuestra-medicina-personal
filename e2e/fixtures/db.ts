@@ -51,8 +51,14 @@ export async function seedSession(
 
   const client = await db().connect();
   try {
+    // last_login_at is nullable in the schema, but every real login path
+    // (auth_repository.go's UpsertUser) always sets it — domain/auth.User's
+    // LastLoginAt is a plain time.Time, not a pointer, so any authenticated
+    // request 500s the moment it scans a NULL here. A direct-SQL fixture is
+    // the only way that column can ever end up NULL; set it explicitly so
+    // this seeded row matches what a real login always produces.
     await client.query(
-      `INSERT INTO users (id, google_subject, email, display_name) VALUES ($1::uuid, $2, $3, $4)`,
+      `INSERT INTO users (id, google_subject, email, display_name, last_login_at) VALUES ($1::uuid, $2, $3, $4, now())`,
       [userId, googleSubject, email, displayName],
     );
     await client.query(
@@ -88,7 +94,13 @@ export interface SeededBook {
  * readBookLandingProps) and can pass one via `publishedContent`.
  */
 export async function seedBook(
-  overrides: Partial<SeededBook> & { slug: string; publishedContent?: Record<string, unknown> },
+  overrides: Partial<SeededBook> & {
+    slug: string;
+    publishedContent?: Record<string, unknown>;
+    /** Set to make the book downloadable from the library right away (see library.spec.ts) — bypasses the admin upload flow, same rationale as everything else in this file: a known fixture beats driving a precondition through the UI when that flow is already covered elsewhere (the admin ebook upload tests). */
+    ebookFilePath?: string;
+    format?: string;
+  },
 ): Promise<SeededBook> {
   const book: SeededBook = {
     id: randomUUID(),
@@ -98,13 +110,15 @@ export async function seedBook(
     ...overrides,
   };
   const publishedContent = overrides.publishedContent ?? { schemaVersion: 1, sections: [] };
+  const ebookFilePath = overrides.ebookFilePath ?? null;
+  const format = overrides.format ?? (ebookFilePath ? 'pdf' : '');
 
   const client = await db().connect();
   try {
     await client.query(
-      `INSERT INTO books (id, slug, title, author_name, price_minor_units, currency, status)
-       VALUES ($1::uuid, $2, $3, 'E2E Author', $4, $5, 'PUBLISHED')`,
-      [book.id, book.slug, book.title, book.priceMinorUnits, book.currency],
+      `INSERT INTO books (id, slug, title, author_name, price_minor_units, currency, status, ebook_file_path, format)
+       VALUES ($1::uuid, $2, $3, 'E2E Author', $4, $5, 'PUBLISHED', $6, $7)`,
+      [book.id, book.slug, book.title, book.priceMinorUnits, book.currency, ebookFilePath, format],
     );
     await client.query(
       `INSERT INTO pages (id, type, book_id, slug, title, status, draft_content, published_content, published_at)
@@ -117,13 +131,131 @@ export async function seedBook(
   return book;
 }
 
+export interface SeededCoupon {
+  id: string;
+  code: string;
+}
+
+/**
+ * Seeds a coupon directly (coupons + coupon_books), for the checkout
+ * validation scenarios (valid/invalid/expired/wrong-book/currency-mismatch
+ * — see purchase.spec.ts) — same rationale as seedBook/seedSession: known,
+ * deterministic fixtures beat driving the admin coupon UI for every case.
+ * `startsAt`/`endsAt` are 'YYYY-MM-DD' strings (coupon.go's own format).
+ */
+export async function seedCoupon(overrides: {
+  code: string;
+  kind: 'PERCENTAGE' | 'FIXED';
+  value: number;
+  currency?: string;
+  startsAt?: string;
+  endsAt?: string;
+  usageLimit?: number | null;
+  appliesToAll?: boolean;
+  bookIds?: string[];
+  active?: boolean;
+}): Promise<SeededCoupon> {
+  const id = randomUUID();
+  const startsAt = overrides.startsAt ?? '2020-01-01';
+  const endsAt = overrides.endsAt ?? '2999-12-31';
+  const client = await db().connect();
+  try {
+    await client.query(
+      `INSERT INTO coupons (id, code, kind, value, currency, starts_at, ends_at, usage_limit, applies_to_all, active)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10)`,
+      [
+        id, overrides.code, overrides.kind, overrides.value, overrides.currency ?? 'ARS',
+        startsAt, endsAt, overrides.usageLimit ?? null, overrides.appliesToAll ?? true, overrides.active ?? true,
+      ],
+    );
+    for (const bookId of overrides.bookIds ?? []) {
+      await client.query(`INSERT INTO coupon_books (coupon_id, book_id) VALUES ($1::uuid, $2::uuid)`, [id, bookId]);
+    }
+  } finally {
+    client.release();
+  }
+  return { id, code: overrides.code };
+}
+
+export interface SeededOrder {
+  id: string;
+}
+
+/**
+ * Seeds a PAID order + a matching APPROVED payment directly — mirrors
+ * exactly what ApplyPayment (orders_repository.go) leaves behind after a
+ * real webhook. Used by tests whose focus is downstream of a successful
+ * purchase (library access, reviews) — the checkout-to-webhook pipeline
+ * itself is purchase.spec.ts's job, not every other test's.
+ */
+export async function seedPaidOrder(overrides: {
+  userId: string;
+  book: SeededBook;
+  discountMinorUnits?: number;
+  couponCode?: string;
+}): Promise<SeededOrder> {
+  const orderId = randomUUID();
+  const itemId = randomUUID();
+  const paymentId = randomUUID();
+  const discount = overrides.discountMinorUnits ?? 0;
+  const total = overrides.book.priceMinorUnits - discount;
+  const client = await db().connect();
+  try {
+    await client.query(
+      `INSERT INTO orders (id, user_id, status, total_minor_units, currency, coupon_code, discount_minor_units, paid_at)
+       VALUES ($1::uuid, $2::uuid, 'PAID', $3, $4, $5, $6, now())`,
+      [orderId, overrides.userId, total, overrides.book.currency, overrides.couponCode ?? null, discount],
+    );
+    await client.query(
+      `INSERT INTO order_items (id, order_id, book_id, book_title, unit_price_minor_units, quantity, currency)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, 1, $6)`,
+      [itemId, orderId, overrides.book.id, overrides.book.title, overrides.book.priceMinorUnits, overrides.book.currency],
+    );
+    await client.query(
+      `INSERT INTO payments (id, order_id, provider, provider_payment_id, status, amount_minor_units, currency, raw_status)
+       VALUES ($1::uuid, $2::uuid, 'MERCADO_PAGO', $3, 'APPROVED', $4, $5, 'approved')`,
+      [paymentId, orderId, `e2e-seed-payment-${paymentId}`, total, overrides.book.currency],
+    );
+  } finally {
+    client.release();
+  }
+  return { id: orderId };
+}
+
+/** Reads an order's current status — for webhook.spec.ts assertions on what ApplyPayment actually left behind. */
+export async function getOrderStatus(orderId: string): Promise<string | undefined> {
+  const client = await db().connect();
+  try {
+    const result = await client.query(`SELECT status FROM orders WHERE id = $1::uuid`, [orderId]);
+    return result.rows[0]?.status;
+  } finally {
+    client.release();
+  }
+}
+
+/** Counts payment rows for an order — for webhook.spec.ts's "a retried webhook upserts, it doesn't duplicate" assertion. */
+export async function countPayments(orderId: string): Promise<number> {
+  const client = await db().connect();
+  try {
+    const result = await client.query(`SELECT count(*)::int AS count FROM payments WHERE order_id = $1::uuid`, [orderId]);
+    return result.rows[0].count;
+  } finally {
+    client.release();
+  }
+}
+
 /**
  * Deletes everything a test seeded, by the exact ids it tracked — call in
  * a test's `afterEach`/`afterAll`. Order matters (children before parents)
  * so FKs don't block the delete; each statement is a no-op if that kind of
  * fixture wasn't used.
  */
-export async function cleanup(ids: { userIds?: string[]; bookIds?: string[]; orderIds?: string[] }): Promise<void> {
+export async function cleanup(ids: {
+  userIds?: string[];
+  bookIds?: string[];
+  orderIds?: string[];
+  couponIds?: string[];
+}): Promise<void> {
   const client = await db().connect();
   try {
     for (const orderId of ids.orderIds ?? []) {
@@ -131,11 +263,17 @@ export async function cleanup(ids: { userIds?: string[]; bookIds?: string[]; ord
       await client.query(`DELETE FROM payments WHERE order_id = $1::uuid`, [orderId]);
       await client.query(`DELETE FROM orders WHERE id = $1::uuid`, [orderId]);
     }
+    for (const couponId of ids.couponIds ?? []) {
+      await client.query(`DELETE FROM coupon_books WHERE coupon_id = $1::uuid`, [couponId]);
+      await client.query(`DELETE FROM coupons WHERE id = $1::uuid`, [couponId]);
+    }
     for (const bookId of ids.bookIds ?? []) {
       await client.query(`DELETE FROM reviews WHERE book_id = $1::uuid`, [bookId]);
+      await client.query(`DELETE FROM order_items WHERE book_id = $1::uuid`, [bookId]);
       await client.query(`DELETE FROM books WHERE id = $1::uuid`, [bookId]);
     }
     for (const userId of ids.userIds ?? []) {
+      await client.query(`DELETE FROM reviews WHERE user_id = $1::uuid`, [userId]);
       await client.query(`DELETE FROM sessions WHERE user_id = $1::uuid`, [userId]);
       await client.query(`DELETE FROM users WHERE id = $1::uuid`, [userId]);
     }

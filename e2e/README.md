@@ -79,11 +79,24 @@ a fake provider. Session/authorization enforcement (`requireUser`/
 ## Fixtures (`fixtures/`)
 
 - `db.ts` — seeds/cleans rows directly in Postgres (`seedSession`,
-  `seedBook`, `cleanup`). Same rationale as the Go integration tests: known,
-  deterministic fixtures beat trying to drive every precondition through
-  the UI.
+  `seedBook`, `seedCoupon`, `seedPaidOrder`, `cleanup`, plus the read-only
+  `getOrderStatus`/`countPayments` helpers webhook tests assert against).
+  Same rationale as the Go integration tests: known, deterministic fixtures
+  beat trying to drive every precondition through the UI — `seedPaidOrder`
+  in particular exists so library/review tests don't have to re-run the
+  whole checkout-to-webhook pipeline just to get a paid order; that
+  pipeline itself is `tests/purchase.spec.ts`'s job.
 - `auth.ts` — `signInAs(context, session)` injects the `nmp_session`
   cookie from a seeded session.
+- `http.ts` — `SAME_ORIGIN_HEADERS`, for tests that call a
+  `requireSameOrigin`-guarded POST/PUT/DELETE directly instead of through
+  the UI (which sets a real Origin header on its own).
+- `mercadopago.ts` — drives the fake server's test-only control endpoints
+  (`registerFakePayment`, `resetFakePayments`) and sends real, correctly
+  HMAC-signed webhook requests (`sendWebhook`) — the signature math mirrors
+  `webhook.go`'s `Validate()` exactly. `nextFakePaymentId()` hands out
+  numeric ids, because the real client decodes a payment's `id` as
+  `json.Number` (a bare JSON number, not a quoted string).
 - `mercadopago-fake-server.js` — the fake payment provider described
   above.
 - `compose.ts` — the one place `docker compose` gets invoked from
@@ -95,6 +108,29 @@ Every test that seeds fixtures is responsible for cleaning them up
 shared stack/database instance (`fullyParallel: false`, `workers: 1` in
 `playwright.config.ts`), so leftover rows from a failed cleanup would leak
 into the next test.
+
+## Tests (`tests/`)
+
+Phase 1 (`smoke.spec.ts`) only proves the harness itself works. Phase 2
+covers the actual purchase/webhook/library/review business flows, one file
+per area:
+
+- `purchase.spec.ts` — the checkout pipeline: a real UI-driven happy path
+  (catalog → checkout → a real, fake-upstream Mercado Pago webhook →
+  biblioteca), plus the coupon validation rules checkout applies before
+  ever creating an order (valid/nonexistent/expired/wrong-book/currency
+  mismatch — see PR #9).
+- `webhook.spec.ts` — the webhook endpoint on its own: invalid signature
+  rejected, a payment that doesn't match any local order ignored silently
+  (by design — see `order.ErrNotFound`/`ErrPaymentMismatch` handling in
+  `orders_handler.go`), and a pending-then-approved payment transitioning
+  the order without duplicating the payment row on a retried delivery.
+- `library.spec.ts` — access control on `/api/v1/me/books` and
+  `/api/v1/books/{id}/download`: anonymous, authenticated-but-never-bought,
+  and the actual owner.
+- `reviews.spec.ts` — a purchase is required to review; a new review stays
+  `PENDING` and invisible on the public book page until an admin approves
+  it.
 
 ## CI
 
