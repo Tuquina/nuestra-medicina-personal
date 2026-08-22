@@ -87,6 +87,63 @@ func TestNewClientDefaultsToRealAPIWhenNoOverrideIsGiven(t *testing.T) {
 	}
 }
 
+// TestCreatePreferenceSubstitutesTestPayerEmailForSandboxCredentials guards
+// the fix for Mercado Pago's "Una de las partes con la que intentás hacer el
+// pago es de prueba" sandbox error: a TEST- access token must never carry the
+// buyer's real email into the preference.
+func TestCreatePreferenceSubstitutesTestPayerEmailForSandboxCredentials(t *testing.T) {
+	t.Parallel()
+	var sentEmail string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		sentEmail = payload["payer"].(map[string]any)["email"].(string)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"id":"pref-1","init_point":"https://mercadopago.example/checkout"}`)
+	}))
+	defer server.Close()
+	client := NewClient("TEST-abc123", "https://store.example", server.URL)
+	client.httpClient = server.Client()
+
+	if _, err := client.CreatePreference(context.Background(), order.PreferenceRequest{
+		OrderID: "order-1", BookID: "book-1", BookSlug: "un-libro", Title: "Un libro",
+		AmountMinorUnits: 1000, Currency: "ARS", PayerEmail: "real.buyer@gmail.com",
+	}); err != nil {
+		t.Fatalf("create preference: %v", err)
+	}
+	if sentEmail != "order-1@testuser.com" {
+		t.Fatalf("expected synthetic @testuser.com payer email for a TEST- token, got %q", sentEmail)
+	}
+}
+
+// TestCreatePreferenceKeepsRealPayerEmailForProductionCredentials is the
+// regression guard on the other side: a non-"TEST-" access token (production)
+// must keep sending the buyer's real email exactly as before.
+func TestCreatePreferenceKeepsRealPayerEmailForProductionCredentials(t *testing.T) {
+	t.Parallel()
+	var sentEmail string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		sentEmail = payload["payer"].(map[string]any)["email"].(string)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"id":"pref-1","init_point":"https://mercadopago.example/checkout"}`)
+	}))
+	defer server.Close()
+	client := NewClient("APP_USR-real-token", "https://store.example", server.URL)
+	client.httpClient = server.Client()
+
+	if _, err := client.CreatePreference(context.Background(), order.PreferenceRequest{
+		OrderID: "order-1", BookID: "book-1", BookSlug: "un-libro", Title: "Un libro",
+		AmountMinorUnits: 1000, Currency: "ARS", PayerEmail: "real.buyer@gmail.com",
+	}); err != nil {
+		t.Fatalf("create preference: %v", err)
+	}
+	if sentEmail != "real.buyer@gmail.com" {
+		t.Fatalf("expected the real payer email to pass through unchanged for a production token, got %q", sentEmail)
+	}
+}
+
 // TestNewClientHonorsAPIURLOverride is the E2E seam itself: given a custom
 // apiURL (what MERCADOPAGO_API_BASE_URL ultimately feeds into main.go),
 // every call goes to it instead of the real API — this is what lets a fake

@@ -40,14 +40,32 @@ func NewClient(accessToken, publicBaseURL, apiURL string) *Client {
 
 func (c *Client) Configured() bool { return c.accessToken != "" && c.publicBaseURL != "" }
 
+// isTestCredential reports whether this client is running against Mercado
+// Pago's sandbox, per their own naming convention: every test access token
+// starts with "TEST-", every production one doesn't.
+func (c *Client) isTestCredential() bool { return strings.HasPrefix(c.accessToken, "TEST-") }
+
 func (c *Client) CreatePreference(ctx context.Context, input order.PreferenceRequest) (order.Preference, error) {
 	checkoutPath := "/checkout/" + url.PathEscape(input.BookSlug)
+	payerEmail := input.PayerEmail
+	if c.isTestCredential() {
+		// Mercado Pago's sandbox rejects a checkout the moment the
+		// preference's payer.email resolves to a real account -- which ours
+		// always does, since it's the buyer's real Google-login email --
+		// while the person actually completing checkout is a fictitious
+		// MP test user: "Una de las partes con la que intentás hacer el pago
+		// es de prueba." Substituting a synthetic @testuser.com address
+		// (Mercado Pago's own documented convention for sandbox payers)
+		// sidesteps that mismatch. Real access tokens never start with
+		// "TEST-", so production purchases are untouched.
+		payerEmail = input.OrderID + "@testuser.com"
+	}
 	payload := preferencePayload{
 		Items: []preferenceItem{{
 			ID: input.BookID, Title: input.Title, Description: input.Description,
 			CurrencyID: input.Currency, Quantity: 1, UnitPrice: decimalAmount(input.AmountMinorUnits),
 		}},
-		Payer: payer{Email: input.PayerEmail},
+		Payer: payer{Email: payerEmail},
 		BackURLs: backURLs{
 			Success: c.publicBaseURL + checkoutPath + "?status=approved",
 			Pending: c.publicBaseURL + checkoutPath + "?status=pending",
