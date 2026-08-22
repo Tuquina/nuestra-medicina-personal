@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { Button } from '../../../shared/components/Button/Button';
 import { Switch } from '../../../shared/components/Switch/Switch';
 import { apiRequest, ApiError } from '../../../shared/api/client';
@@ -29,6 +29,21 @@ import {
   wrapOf,
   type ImageWrap,
 } from './manuscriptImages';
+import {
+  ALIGN_COMMANDS,
+  ALIGN_OPTIONS,
+  FONT_SIZES,
+  TEXT_COLORS,
+  applyFontSize,
+  applyTextColor,
+  normalizeEditorDom,
+  queryBlockFormat,
+  queryState,
+  runCommand,
+  sanitizePastedHTML,
+  wordCountOfHTML,
+  type AlignValue,
+} from './manuscriptFormatting';
 import styles from './ManuscritoTab.module.css';
 
 interface Chapter {
@@ -42,17 +57,47 @@ interface Chapter {
 interface ManuscriptResponse {
   bookId: string;
   chapters: Chapter[];
+  pageSize: string | null;
   updatedAt: string | null;
 }
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 
-function wordCountOf(html: string): number {
-  return html
-    .replace(/<[^>]+>/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
+/** Formatting currently in effect at the caret, reflected in the toolbar. */
+interface ActiveFormats {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strike: boolean;
+  bulletList: boolean;
+  numberList: boolean;
+  align: AlignValue;
+}
+
+const NO_ACTIVE_FORMATS: ActiveFormats = {
+  bold: false,
+  italic: false,
+  underline: false,
+  strike: false,
+  bulletList: false,
+  numberList: false,
+  align: 'left',
+};
+
+function readActiveFormats(): ActiveFormats {
+  let align: AlignValue = 'left';
+  if (queryState('justifyCenter')) align = 'center';
+  else if (queryState('justifyRight')) align = 'right';
+  else if (queryState('justifyFull')) align = 'justify';
+  return {
+    bold: queryState('bold'),
+    italic: queryState('italic'),
+    underline: queryState('underline'),
+    strike: queryState('strikeThrough'),
+    bulletList: queryState('insertUnorderedList'),
+    numberList: queryState('insertOrderedList'),
+    align,
+  };
 }
 
 /** Normalizes chapters loaded from the server (or freshly imported) to
@@ -156,8 +201,13 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [selectedImage, setSelectedImage] = useState<HTMLElement | null>(null);
   const [imageVersion, setImageVersion] = useState(0);
+  const [activeFormats, setActiveFormats] = useState<ActiveFormats>(NO_ACTIVE_FORMATS);
+  const [blockFormat, setBlockFormat] = useState('p');
+  const [showColors, setShowColors] = useState(false);
+  const [lastColor, setLastColor] = useState(TEXT_COLORS[0].value);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const appendInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   // Sentinel (no real chapter index) so the very first hydration — server
@@ -182,13 +232,19 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     setChapters((prev) => withResolvedTitles(updater(prev), bookTitle));
   };
 
+  // The chosen paper is part of the manuscript, not just a viewing
+  // preference: PDF export renders those exact physical pages, so it has
+  // to travel with every save.
+  const pageSizeRef = useRef(pageSizeId);
+  pageSizeRef.current = pageSizeId;
+
   const persistChapters = (value: Chapter[]) => {
     pendingChaptersRef.current = null;
     setSaveState('saving');
     return apiRequest(adminBookManuscriptUrl(bookId), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chapters: value }),
+      body: JSON.stringify({ chapters: value, pageSize: pageSizeRef.current }),
     })
       .then(() => setSaveState('saved'))
       .catch(() => setSaveState('error'));
@@ -201,6 +257,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     setLoadError(false);
     apiRequest<ManuscriptResponse>(adminBookManuscriptUrl(bookId), { signal: controller.signal })
       .then((response) => {
+        if (response.pageSize) setPageSizeId(response.pageSize);
         if (response.chapters.length > 0) {
           const normalized = normalizeChapters(response.chapters);
           nextIdRef.current = Math.max(1, ...normalized.map((c) => c.id)) + 1;
@@ -238,8 +295,11 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     return () => {
       if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
     };
+    // pageSizeId is a dependency because it is saved alongside the
+    // chapters — changing the paper has to persist on its own, without
+    // waiting for the next keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bookId is stable per mount
-  }, [chapters, manuscriptStarted]);
+  }, [chapters, manuscriptStarted, pageSizeId]);
 
   // Unmount-only: if the debounce above never got to fire (e.g. the admin
   // switched tabs within AUTOSAVE_DEBOUNCE_MS of typing), flush the last
@@ -256,7 +316,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
       void apiRequest(adminBookManuscriptUrl(bookId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapters: chaptersToFlush }),
+        body: JSON.stringify({ chapters: chaptersToFlush, pageSize: pageSizeRef.current }),
       }).catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount-only flush; must read the latest ref, not re-subscribe per keystroke
@@ -272,6 +332,19 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     }
   }, [activeChapter, chapters]);
 
+  // Dismiss the colour menu on any click outside it, the way a menu is
+  // expected to behave — without this it stays open until re-clicked.
+  useEffect(() => {
+    if (!showColors) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest(`.${styles.colorPicker}`)) {
+        setShowColors(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [showColors]);
+
   // Tracks the editable region's real height so the page-break overlay
   // (and the page count shown below it) stay accurate as the author
   // types, switches chapters, changes font size, or picks a different
@@ -286,13 +359,13 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     return () => observer.disconnect();
   }, [manuscriptStarted, activeChapter, pageSizeId]);
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = async (file: File, mode: 'replace' | 'append' = 'replace') => {
     setConverting(true);
     setUploadNotice('');
     try {
       const body = new FormData();
       body.append('file', file);
-      const response = await apiRequest<ManuscriptResponse>(adminBookManuscriptImportUrl(bookId), {
+      const response = await apiRequest<ManuscriptResponse>(adminBookManuscriptImportUrl(bookId, mode), {
         method: 'PUT',
         body,
       });
@@ -302,8 +375,13 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
       // without re-triggering the autosave effect for a no-op re-save.
       skipNextAutosaveRef.current = true;
       setChapters(normalized);
-      setActiveChapter(0);
+      // Land on the first newly-imported section rather than jumping back
+      // to the top of a manuscript the author was already deep into.
+      setActiveChapter(mode === 'append' ? Math.max(0, chapters.length) : 0);
       setManuscriptStarted(true);
+      if (mode === 'append') {
+        setUploadNotice(`Se agregaron ${normalized.length - chapters.length} secciones.`);
+      }
     } catch (error: unknown) {
       if (error instanceof ApiError && error.code === 'MANUSCRIPT_UNSUPPORTED_FORMAT') {
         setUploadNotice('Formato no soportado. Subí un archivo .txt, .docx o .pdf.');
@@ -365,14 +443,51 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   };
 
   const onEditorInput = () => {
-    const html = stripSelectionMarker(editorRef.current?.innerHTML ?? '');
+    const editor = editorRef.current;
+    if (!editor) return;
+    const html = stripSelectionMarker(editor.innerHTML);
     setChapters((prev) => prev.map((c, i) => (i === activeChapter ? { ...c, html } : c)));
+  };
+
+  const refreshToolbarState = () => {
+    setActiveFormats(readActiveFormats());
+    setBlockFormat(queryBlockFormat());
+  };
+
+  /**
+   * Runs after a toolbar command or a paste — never on plain typing.
+   * `normalizeEditorDom` rewrites nodes, which would move the caret if it
+   * ran on every keystroke; it is only needed here anyway, since the
+   * legacy `<font>` markup it folds away can only ever be produced by
+   * execCommand in the first place.
+   */
+  const syncAfterCommand = () => {
+    if (editorRef.current) normalizeEditorDom(editorRef.current);
+    onEditorInput();
+    refreshToolbarState();
   };
 
   const exec = (command: string, value?: string) => {
     editorRef.current?.focus();
-    document.execCommand(command, false, value);
-    onEditorInput();
+    runCommand(command, value);
+    syncAfterCommand();
+  };
+
+  // Pasting from Word, Docs or a web page otherwise drags in fixed pixel
+  // fonts, background colours and wrapper soup that make the exported book
+  // inconsistent with everything typed by hand.
+  const onEditorPaste = (event: ReactClipboardEvent<HTMLDivElement>) => {
+    const html = event.clipboardData.getData('text/html');
+    const text = event.clipboardData.getData('text/plain');
+    if (!html && !text) return;
+    event.preventDefault();
+    editorRef.current?.focus();
+    if (html) {
+      runCommand('insertHTML', sanitizePastedHTML(html));
+    } else {
+      runCommand('insertText', text);
+    }
+    syncAfterCommand();
   };
 
   const onEditorMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -497,11 +612,11 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
       <div className={styles.startGrid}>
         <div className={styles.startCardDashed}>
           <p className={styles.startCardTitle}>Subir un archivo existente</p>
-          <p className={styles.startCardHint}>Aceptamos DOCX, PDF o TXT.</p>
+          <p className={styles.startCardHint}>Aceptamos DOCX, PDF, TXT o EPUB. Si el archivo usa títulos, se separa en secciones automáticamente.</p>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".docx,.pdf,.txt"
+            accept=".docx,.pdf,.txt,.epub"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void handleFileUpload(file);
@@ -532,6 +647,8 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   const contentPerPage = pageContentHeightPx(pageSize);
   const pageCount = Math.max(1, Math.ceil(contentHeightPx / contentPerPage));
   const selectedWrap = selectedImage ? wrapOf(selectedImage) : null;
+  const sectionWords = wordCountOfHTML(active?.html ?? '');
+  const bookWords = chapters.reduce((total, chapter) => total + wordCountOfHTML(chapter.html), 0);
 
   return (
     <>
@@ -673,84 +790,240 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
             </button>
           </div>
 
-          <div className={styles.toolbar}>
-            <select className={styles.toolbarSelect} onChange={(e) => exec('formatBlock', e.target.value)} defaultValue="P">
-              <option value="P">Texto normal</option>
-              <option value="H1">Título 1</option>
-              <option value="H2">Título 2</option>
-              <option value="H3">Título 3</option>
-              <option value="BLOCKQUOTE">Cita</option>
+          {/* Pressing a toolbar button must not steal focus from the
+              editor: a contentEditable that blurs can lose its selection,
+              and the command would then apply to nothing. Selects and
+              inputs are exempt — preventing their mousedown would stop
+              them opening at all. */}
+          <div
+            className={styles.toolbar}
+            onMouseDown={(event) => {
+              if (event.target instanceof HTMLElement && event.target.closest('select, input')) return;
+              event.preventDefault();
+            }}
+          >
+            <button
+              type="button"
+              className={styles.toolbarButton}
+              onClick={() => exec('undo')}
+              aria-label="Deshacer"
+              title="Deshacer (Ctrl+Z)"
+            >
+              ↶
+            </button>
+            <button
+              type="button"
+              className={styles.toolbarButton}
+              onClick={() => exec('redo')}
+              aria-label="Rehacer"
+              title="Rehacer (Ctrl+Shift+Z)"
+            >
+              ↷
+            </button>
+
+            <div className={styles.toolbarDivider} />
+
+            <select
+              className={styles.toolbarSelect}
+              value={blockFormat}
+              onChange={(e) => exec('formatBlock', e.target.value)}
+              aria-label="Estilo de párrafo"
+            >
+              <option value="p">Texto normal</option>
+              <option value="h1">Título 1</option>
+              <option value="h2">Título 2</option>
+              <option value="h3">Título 3</option>
+              <option value="blockquote">Cita</option>
             </select>
-            <select className={styles.toolbarSelect} onChange={(e) => exec('fontName', e.target.value)} defaultValue="Newsreader">
-              <option value="Newsreader">Newsreader</option>
-              <option value="Public Sans">Public Sans</option>
-              <option value="Georgia">Georgia</option>
-              <option value="ui-monospace">Monoespaciada</option>
-            </select>
-            <select className={styles.toolbarSelect} onChange={(e) => exec('fontSize', e.target.value)} defaultValue="3">
-              <option value="2">Pequeño</option>
-              <option value="3">Normal</option>
-              <option value="5">Grande</option>
-              <option value="6">Muy grande</option>
+            <select
+              className={styles.toolbarSelect}
+              defaultValue="1em"
+              onChange={(e) => {
+                // execCommand acts on the selection, so the editor has to
+                // hold focus again after the select stole it.
+                editorRef.current?.focus();
+                if (editorRef.current) applyFontSize(editorRef.current, e.target.value);
+                syncAfterCommand();
+              }}
+              aria-label="Tamaño de texto"
+            >
+              {FONT_SIZES.map((size) => (
+                <option key={size.value} value={size.value}>
+                  {size.label}
+                </option>
+              ))}
             </select>
 
             <div className={styles.toolbarDivider} />
 
             <button
               type="button"
-              className={[styles.toolbarButton, styles.toolbarButtonBold].join(' ')}
+              className={[
+                styles.toolbarButton,
+                styles.toolbarButtonBold,
+                activeFormats.bold ? styles.toolbarButtonActive : '',
+              ].join(' ')}
               onClick={() => exec('bold')}
               aria-label="Negrita"
+              aria-pressed={activeFormats.bold}
+              title="Negrita (Ctrl+B)"
             >
               B
             </button>
             <button
               type="button"
-              className={[styles.toolbarButton, styles.toolbarButtonItalic].join(' ')}
+              className={[
+                styles.toolbarButton,
+                styles.toolbarButtonItalic,
+                activeFormats.italic ? styles.toolbarButtonActive : '',
+              ].join(' ')}
               onClick={() => exec('italic')}
               aria-label="Itálica"
+              aria-pressed={activeFormats.italic}
+              title="Itálica (Ctrl+I)"
             >
               I
             </button>
             <button
               type="button"
-              className={[styles.toolbarButton, styles.toolbarButtonUnderline].join(' ')}
+              className={[
+                styles.toolbarButton,
+                styles.toolbarButtonUnderline,
+                activeFormats.underline ? styles.toolbarButtonActive : '',
+              ].join(' ')}
               onClick={() => exec('underline')}
               aria-label="Subrayado"
+              aria-pressed={activeFormats.underline}
+              title="Subrayado (Ctrl+U)"
             >
               U
             </button>
+            <button
+              type="button"
+              className={[
+                styles.toolbarButton,
+                styles.toolbarButtonStrike,
+                activeFormats.strike ? styles.toolbarButtonActive : '',
+              ].join(' ')}
+              onClick={() => exec('strikeThrough')}
+              aria-label="Tachado"
+              aria-pressed={activeFormats.strike}
+              title="Tachado"
+            >
+              S
+            </button>
+
+            {/* Text colour. The swatch shows what would be applied, and the
+                menu is a plain list of book-appropriate inks rather than a
+                full picker — an arbitrary RGB wheel invites colours that
+                print badly. */}
+            <div className={styles.colorPicker}>
+              <button
+                type="button"
+                className={styles.toolbarButton}
+                onClick={() => setShowColors((open) => !open)}
+                aria-label="Color del texto"
+                aria-expanded={showColors}
+                title="Color del texto"
+              >
+                <span className={styles.colorGlyph} aria-hidden="true">
+                  A
+                  <span className={styles.colorGlyphBar} style={{ background: lastColor }} />
+                </span>
+              </button>
+              {showColors && (
+                <div className={styles.colorMenu} role="menu">
+                  {TEXT_COLORS.map((color) => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      role="menuitem"
+                      className={styles.colorSwatch}
+                      style={{ background: color.value }}
+                      onClick={() => {
+                        setLastColor(color.value);
+                        setShowColors(false);
+                        editorRef.current?.focus();
+                        applyTextColor(color.value);
+                        syncAfterCommand();
+                      }}
+                      aria-label={color.label}
+                      title={color.label}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className={styles.toolbarDivider} />
 
-            {(['justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull'] as const).map((command) => (
+            {/* Each alignment button draws its own alignment. They used to
+                render byte-identical bar stacks, so all four looked like
+                "left" and there was no way to tell them apart. */}
+            {ALIGN_OPTIONS.map((option) => (
               <button
-                key={command}
+                key={option.value}
                 type="button"
-                className={styles.toolbarButton}
-                onClick={() => exec(command)}
-                aria-label={command}
+                className={[
+                  styles.toolbarButton,
+                  activeFormats.align === option.value ? styles.toolbarButtonActive : '',
+                ].join(' ')}
+                onClick={() => exec(ALIGN_COMMANDS[option.value])}
+                aria-label={option.label}
+                aria-pressed={activeFormats.align === option.value}
+                title={option.label}
               >
-                <span className={styles.alignBars} aria-hidden="true">
-                  <span className={styles.alignBar} style={{ width: 14 }} />
-                  <span className={styles.alignBar} style={{ width: 10 }} />
-                  <span className={styles.alignBar} style={{ width: 12 }} />
+                <span
+                  className={[styles.alignBars, styles[`alignBars_${option.value}`]].join(' ')}
+                  aria-hidden="true"
+                >
+                  <span className={styles.alignBar} />
+                  <span className={[styles.alignBar, styles.alignBarShort].join(' ')} />
+                  <span className={styles.alignBar} />
+                  <span className={[styles.alignBar, styles.alignBarShort].join(' ')} />
                 </span>
               </button>
             ))}
 
             <div className={styles.toolbarDivider} />
 
-            <button type="button" className={styles.toolbarButton} onClick={() => exec('insertUnorderedList')} aria-label="Lista">
-              ≡
+            <button
+              type="button"
+              className={[styles.toolbarButton, activeFormats.bulletList ? styles.toolbarButtonActive : ''].join(' ')}
+              onClick={() => exec('insertUnorderedList')}
+              aria-label="Lista con viñetas"
+              aria-pressed={activeFormats.bulletList}
+              title="Lista con viñetas"
+            >
+              •≡
+            </button>
+            <button
+              type="button"
+              className={[styles.toolbarButton, activeFormats.numberList ? styles.toolbarButtonActive : ''].join(' ')}
+              onClick={() => exec('insertOrderedList')}
+              aria-label="Lista numerada"
+              aria-pressed={activeFormats.numberList}
+              title="Lista numerada"
+            >
+              1≡
             </button>
             <button
               type="button"
               className={[styles.toolbarButton, styles.toolbarButtonQuote].join(' ')}
-              onClick={() => exec('formatBlock', 'BLOCKQUOTE')}
+              onClick={() => exec('formatBlock', 'blockquote')}
               aria-label="Cita"
+              title="Cita"
             >
               "
+            </button>
+            <button
+              type="button"
+              className={styles.toolbarButton}
+              onClick={() => exec('insertHorizontalRule')}
+              aria-label="Separador"
+              title="Separador"
+            >
+              —
             </button>
 
             <div className={styles.toolbarDivider} />
@@ -774,6 +1047,15 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
               title="Insertar imagen"
             >
               🖼
+            </button>
+            <button
+              type="button"
+              className={styles.toolbarButton}
+              onClick={() => exec('removeFormat')}
+              aria-label="Quitar formato"
+              title="Quitar formato"
+            >
+              ⌫
             </button>
 
             <div className={styles.toolbarSpacer} />
@@ -836,6 +1118,10 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
                 contentEditable
                 onInput={onEditorInput}
                 onMouseDown={onEditorMouseDown}
+                onPaste={onEditorPaste}
+                onKeyUp={refreshToolbarState}
+                onMouseUp={refreshToolbarState}
+                onFocus={refreshToolbarState}
                 className={styles.editable}
                 style={{ width: `${pageSize.widthMm}mm`, maxWidth: '100%', padding: `${PAGE_MARGIN_MM}mm` }}
                 suppressContentEditableWarning
@@ -844,8 +1130,9 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
             </div>
           </div>
           <p className={styles.wordCount}>
-            {saveStatusText[saveState]} · {wordCountOf(active?.html ?? '')} palabras · {pageCount} hoja
-            {pageCount === 1 ? '' : 's'} ({pageSize.label.split(' (')[0]}) en esta sección.
+            {saveStatusText[saveState]} · {sectionWords.toLocaleString('es-AR')} palabras en esta sección ·{' '}
+            {bookWords.toLocaleString('es-AR')} en todo el libro · {pageCount} hoja
+            {pageCount === 1 ? '' : 's'} ({pageSize.label.split(' (')[0]}).
           </p>
         </div>
 
@@ -868,6 +1155,32 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
           <p className={styles.exportHint}>
             Las secciones ya se guardan automáticamente. El EPUB/PDF generado se descarga para que lo revises antes
             de subirlo como archivo vendible en "Archivo y portada".
+          </p>
+
+          <div className={styles.exportSeparator} />
+          <p className={styles.exportTitle}>Importar</p>
+          <input
+            ref={appendInputRef}
+            type="file"
+            accept=".docx,.pdf,.txt,.epub"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleFileUpload(file, 'append');
+              e.target.value = '';
+            }}
+            style={{ display: 'none' }}
+          />
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => appendInputRef.current?.click()}
+            disabled={converting}
+          >
+            {converting ? 'Importando…' : 'Agregar desde archivo'}
+          </Button>
+          {uploadNotice && <p className={styles.exportMessage}>{uploadNotice}</p>}
+          <p className={styles.exportHint}>
+            Suma las secciones de un DOCX, PDF, TXT o EPUB al final del manuscrito, sin reemplazar lo ya escrito.
           </p>
         </div>
       </div>

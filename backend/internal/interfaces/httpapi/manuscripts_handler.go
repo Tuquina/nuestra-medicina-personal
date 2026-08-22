@@ -15,8 +15,8 @@ import (
 
 type ManuscriptService interface {
 	Get(context.Context, string) (manuscript.Manuscript, error)
-	Save(context.Context, string, []manuscript.Chapter) (manuscript.Manuscript, error)
-	Import(context.Context, string, string, []byte) (manuscript.Manuscript, error)
+	Save(context.Context, string, []manuscript.Chapter, string) (manuscript.Manuscript, error)
+	Import(context.Context, string, string, []byte, bool) (manuscript.Manuscript, error)
 	Export(context.Context, string, string) ([]byte, string, error)
 }
 
@@ -42,12 +42,13 @@ func (h *ManuscriptHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *ManuscriptHandler) Save(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Chapters []manuscript.Chapter `json:"chapters"`
+		PageSize string               `json:"pageSize"`
 	}
 	if decodeJSON(r, &input) != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Request body is not valid JSON", nil)
 		return
 	}
-	saved, err := h.service.Save(r.Context(), r.PathValue("identifier"), input.Chapters)
+	saved, err := h.service.Save(r.Context(), r.PathValue("identifier"), input.Chapters, input.PageSize)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -83,7 +84,11 @@ func (h *ManuscriptHandler) Import(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_MANUSCRIPT_UPLOAD", "A multipart manuscript file is required", nil)
 		return
 	}
-	saved, err := h.service.Import(r.Context(), r.PathValue("identifier"), header.Filename, content)
+	// mode=append adds the imported sections after the existing ones; the
+	// default stays "replace" so the original start-a-manuscript flow is
+	// unchanged.
+	appendToExisting := r.FormValue("mode") == "append"
+	saved, err := h.service.Import(r.Context(), r.PathValue("identifier"), header.Filename, content, appendToExisting)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -133,11 +138,16 @@ func (h *ManuscriptHandler) fail(w http.ResponseWriter, r *http.Request, err err
 type manuscriptResponse struct {
 	BookID    string               `json:"bookId"`
 	Chapters  []manuscript.Chapter `json:"chapters"`
+	PageSize  string               `json:"pageSize"`
 	UpdatedAt *time.Time           `json:"updatedAt"`
 }
 
 func mapManuscript(value manuscript.Manuscript) manuscriptResponse {
-	response := manuscriptResponse{BookID: value.BookID, Chapters: value.Chapters}
+	pageSize := value.PageSize
+	if pageSize == "" {
+		pageSize = manuscript.DefaultPageSizeID
+	}
+	response := manuscriptResponse{BookID: value.BookID, Chapters: value.Chapters, PageSize: pageSize}
 	if !value.UpdatedAt.IsZero() {
 		response.UpdatedAt = &value.UpdatedAt
 	}

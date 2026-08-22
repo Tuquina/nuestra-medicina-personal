@@ -39,7 +39,11 @@ func (s *Service) Get(ctx context.Context, identifier string) (manuscript.Manusc
 	}
 	value, err := s.repository.Get(ctx, selectedBook.ID)
 	if errors.Is(err, manuscript.ErrNotFound) {
-		return manuscript.Manuscript{BookID: selectedBook.ID, Chapters: []manuscript.Chapter{}}, nil
+		return manuscript.Manuscript{
+			BookID:   selectedBook.ID,
+			Chapters: []manuscript.Chapter{},
+			PageSize: manuscript.DefaultPageSizeID,
+		}, nil
 	}
 	if err != nil {
 		return manuscript.Manuscript{}, fmt.Errorf("get manuscript: %w", err)
@@ -47,7 +51,7 @@ func (s *Service) Get(ctx context.Context, identifier string) (manuscript.Manusc
 	return value, nil
 }
 
-func (s *Service) Save(ctx context.Context, identifier string, chapters []manuscript.Chapter) (manuscript.Manuscript, error) {
+func (s *Service) Save(ctx context.Context, identifier string, chapters []manuscript.Chapter, pageSize string) (manuscript.Manuscript, error) {
 	selectedBook, err := s.books.Get(ctx, identifier)
 	if err != nil {
 		return manuscript.Manuscript{}, err
@@ -55,7 +59,15 @@ func (s *Service) Save(ctx context.Context, identifier string, chapters []manusc
 	if chapters == nil {
 		chapters = []manuscript.Chapter{}
 	}
-	candidate := manuscript.Manuscript{BookID: selectedBook.ID, Chapters: chapters, UpdatedAt: s.now().UTC()}
+	candidate := manuscript.Manuscript{
+		BookID: selectedBook.ID,
+		// An unknown/empty page size resolves to the default rather than
+		// being rejected — the field is a rendering preference, not data
+		// worth failing an autosave over.
+		Chapters:  chapters,
+		PageSize:  manuscript.FindPageSize(pageSize).ID,
+		UpdatedAt: s.now().UTC(),
+	}
 	if err := candidate.Validate(); err != nil {
 		return manuscript.Manuscript{}, err
 	}
@@ -65,16 +77,53 @@ func (s *Service) Save(ctx context.Context, identifier string, chapters []manusc
 // Import converts an uploaded file into chapters (see Import in
 // importer.go) and persists them immediately — same effect as opening the
 // editor and clicking save, not just a preview held in the browser.
-func (s *Service) Import(ctx context.Context, identifier, filename string, content []byte) (manuscript.Manuscript, error) {
+//
+// When append is true the imported sections are added after whatever the
+// book already has, so importing a second chapter into a manuscript in
+// progress no longer silently destroys the work already in it; the
+// existing page size is preserved either way.
+func (s *Service) Import(ctx context.Context, identifier, filename string, content []byte, appendToExisting bool) (manuscript.Manuscript, error) {
 	selectedBook, err := s.books.Get(ctx, identifier)
 	if err != nil {
 		return manuscript.Manuscript{}, err
 	}
-	chapters, err := Import(filename, content)
+	imported, err := Import(filename, content)
 	if err != nil {
 		return manuscript.Manuscript{}, err
 	}
-	candidate := manuscript.Manuscript{BookID: selectedBook.ID, Chapters: chapters, UpdatedAt: s.now().UTC()}
+
+	existing, err := s.repository.Get(ctx, selectedBook.ID)
+	if err != nil && !errors.Is(err, manuscript.ErrNotFound) {
+		return manuscript.Manuscript{}, fmt.Errorf("get manuscript for import: %w", err)
+	}
+
+	chapters := imported
+	if appendToExisting && len(existing.Chapters) > 0 {
+		nextID := 0
+		for _, chapter := range existing.Chapters {
+			nextID = max(nextID, chapter.ID)
+		}
+		chapters = append([]manuscript.Chapter{}, existing.Chapters...)
+		for _, chapter := range imported {
+			nextID++
+			chapter.ID = nextID
+			chapters = append(chapters, chapter)
+		}
+	}
+	if len(chapters) > manuscript.MaxChapters {
+		chapters = chapters[:manuscript.MaxChapters]
+	}
+
+	pageSize := existing.PageSize
+	if pageSize == "" {
+		pageSize = manuscript.DefaultPageSizeID
+	}
+	candidate := manuscript.Manuscript{
+		BookID:    selectedBook.ID,
+		Chapters:  chapters,
+		PageSize:  pageSize,
+		UpdatedAt: s.now().UTC(),
+	}
 	if err := candidate.Validate(); err != nil {
 		return manuscript.Manuscript{}, err
 	}
@@ -104,7 +153,7 @@ func (s *Service) Export(ctx context.Context, identifier, format string) ([]byte
 		}
 		return data, selectedBook.Slug + ".epub", nil
 	case "pdf":
-		data, err := ExportPDF(selectedBook.Title, selectedBook.AuthorName, saved.Chapters)
+		data, err := ExportPDF(selectedBook.Title, selectedBook.AuthorName, saved.Chapters, saved.PageSize)
 		if err != nil {
 			return nil, "", err
 		}

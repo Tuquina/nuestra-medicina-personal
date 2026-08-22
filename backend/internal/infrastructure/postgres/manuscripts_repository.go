@@ -20,8 +20,8 @@ func NewManuscriptRepository(pool *pgxpool.Pool) *ManuscriptRepository {
 func (r *ManuscriptRepository) Get(ctx context.Context, bookID string) (manuscript.Manuscript, error) {
 	var chaptersJSON []byte
 	var value manuscript.Manuscript
-	err := r.pool.QueryRow(ctx, `SELECT book_id::text, chapters, updated_at FROM book_manuscripts WHERE book_id = $1::uuid`, bookID).
-		Scan(&value.BookID, &chaptersJSON, &value.UpdatedAt)
+	err := r.pool.QueryRow(ctx, `SELECT book_id::text, chapters, page_size, updated_at FROM book_manuscripts WHERE book_id = $1::uuid`, bookID).
+		Scan(&value.BookID, &chaptersJSON, &value.PageSize, &value.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return manuscript.Manuscript{}, manuscript.ErrNotFound
 	}
@@ -40,10 +40,13 @@ func (r *ManuscriptRepository) Save(ctx context.Context, value manuscript.Manusc
 		return manuscript.Manuscript{}, fmt.Errorf("encode manuscript chapters: %w", err)
 	}
 	if _, err := r.pool.Exec(ctx, `
-		INSERT INTO book_manuscripts (book_id, chapters, updated_at)
-		VALUES ($1::uuid, $2::jsonb, $3)
-		ON CONFLICT (book_id) DO UPDATE SET chapters = EXCLUDED.chapters, updated_at = EXCLUDED.updated_at`,
-		value.BookID, chaptersJSON, value.UpdatedAt,
+		INSERT INTO book_manuscripts (book_id, chapters, page_size, updated_at)
+		VALUES ($1::uuid, $2::jsonb, $3, $4)
+		ON CONFLICT (book_id) DO UPDATE SET
+			chapters = EXCLUDED.chapters,
+			page_size = EXCLUDED.page_size,
+			updated_at = EXCLUDED.updated_at`,
+		value.BookID, chaptersJSON, value.PageSize, value.UpdatedAt,
 	); err != nil {
 		return manuscript.Manuscript{}, fmt.Errorf("save manuscript: %w", err)
 	}

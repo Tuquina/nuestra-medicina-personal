@@ -309,11 +309,21 @@ and the sidebar are the two places to extend.
   DOCX/PDF/TXT files server-side into real chapter HTML, and downloads a
   real, freshly generated EPUB or PDF (ADR 0004) instead of any of that
   being faked or marked unavailable.
+- `ManuscritoTab` is now a full writing surface rather than a formatting
+  demo: sections have a kind (portada, prólogo, capítulo, epílogo…) with
+  auto or custom titles and can be reordered/deleted, the toolbar gained
+  undo/redo, strikethrough, text colour, ordered lists, a separator,
+  remove-formatting and live active-state highlighting, and the four
+  alignment buttons now each draw their own alignment — they used to
+  render byte-identical icons, so all four looked like "left". Pasted
+  markup is sanitized into the stored subset, the chosen paper size
+  persists with the manuscript (PDF export renders those exact physical
+  pages), and imports accept `.epub` and can append to a manuscript in
+  progress instead of replacing it.
 - **Next real milestone for these screens**: review empty and
-  authorization/error states consistently across the app. A future pass
-  could add automatic chapter-splitting on import (page breaks, heading
-  detection beyond the current style-ID heuristic) — deliberately out of
-  scope for now (ADR 0004).
+  authorization/error states consistently across the app. Still out of
+  scope in the manuscript editor (ADR 0004): page numbers in the exported
+  PDF's footer, and text flowing around a floated image in the PDF.
 - If new frontend pages get added later that *do* have a mockup: read
   the `.dc.html` source in full first (see `AGENTS.md`), extract any new
   tokens into `design-system/tokens.css` + `docs/design-system.md` before writing

@@ -26,7 +26,10 @@ func TestImportPlainTextSplitsParagraphs(t *testing.T) {
 	if len(chapters) != 1 || chapters[0].ID != 1 {
 		t.Fatalf("expected a single chapter, got %#v", chapters)
 	}
-	want := "<p>Primer párrafo.</p><p>Segundo párrafo<br>con salto simple.</p>"
+	// Void elements come back self-closed: imported chapters are
+	// re-serialized as XHTML so the EPUB they end up in stays well-formed
+	// XML (see ExportEPUB), not just parseable-as-HTML.
+	want := "<p>Primer párrafo.</p><p>Segundo párrafo<br />con salto simple.</p>"
 	if chapters[0].HTML != want {
 		t.Fatalf("unexpected html:\n got: %s\nwant: %s", chapters[0].HTML, want)
 	}
@@ -65,9 +68,61 @@ func TestImportDocxReconstructsHeadingsAndInlineFormatting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
-	want := "<h1>Introducción</h1><p>Texto normal con <b>negrita</b> y <i>itálica</i>.</p>"
+	// The document's own Heading1 becomes the section's title rather than
+	// being repeated inside the body — both exporters already render the
+	// section heading themselves.
+	want := "<p>Texto normal con <b>negrita</b> y <i>itálica</i>.</p>"
 	if len(chapters) != 1 || chapters[0].HTML != want {
 		t.Fatalf("unexpected chapters: %#v\nwant html: %s", chapters, want)
+	}
+	if chapters[0].Title != "Introducción" || chapters[0].TitleMode != manuscript.TitleModeCustom {
+		t.Fatalf("expected the heading to become a custom section title, got %#v", chapters[0])
+	}
+}
+
+// A document that uses headings to separate its chapters should import as
+// separate sections — having to hand-split a whole imported book was the
+// biggest friction point in getting an existing manuscript into the editor.
+func TestImportSplitsIntoChaptersOnTopLevelHeadings(t *testing.T) {
+	t.Parallel()
+	documentXML := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Primero</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Cuerpo del primero.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Segundo</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Cuerpo del segundo.</w:t></w:r></w:p>
+  </w:body>
+</w:document>`
+
+	chapters, err := Import("manuscript.docx", buildTestDocx(t, documentXML))
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	if len(chapters) != 2 {
+		t.Fatalf("expected 2 chapters, got %d: %#v", len(chapters), chapters)
+	}
+	if chapters[0].Title != "Primero" || !strings.Contains(chapters[0].HTML, "Cuerpo del primero") {
+		t.Fatalf("unexpected first chapter: %#v", chapters[0])
+	}
+	if chapters[1].Title != "Segundo" || !strings.Contains(chapters[1].HTML, "Cuerpo del segundo") {
+		t.Fatalf("unexpected second chapter: %#v", chapters[1])
+	}
+	if chapters[0].ID == chapters[1].ID {
+		t.Fatalf("expected distinct chapter ids, got %d twice", chapters[0].ID)
+	}
+}
+
+// A document with no headings at all still imports as a single chapter,
+// exactly as it did before splitting existed.
+func TestImportKeepsAHeadinglessDocumentAsOneChapter(t *testing.T) {
+	t.Parallel()
+	chapters, err := Import("manuscript.txt", []byte("Sólo un párrafo.\n\nY otro más."))
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	if len(chapters) != 1 || chapters[0].Title != "Capítulo 1" {
+		t.Fatalf("expected one auto-titled chapter, got %#v", chapters)
 	}
 }
 
@@ -78,7 +133,7 @@ func TestImportPDFRoundTripsTextGeneratedByOurOwnExporter(t *testing.T) {
 	// the text we put in it.
 	pdfBytes, err := ExportPDF("Libro de prueba", "Autora de prueba", []manuscript.Chapter{
 		{ID: 1, Title: "Capítulo uno", HTML: "<p>Contenido reconocible del primer capítulo.</p>"},
-	})
+	}, manuscript.DefaultPageSizeID)
 	if err != nil {
 		t.Fatalf("export pdf: %v", err)
 	}

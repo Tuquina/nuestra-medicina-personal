@@ -70,9 +70,49 @@ func (c Chapter) EffectiveKind() SectionKind {
 	return c.Kind
 }
 
+// PageSize is a physical paper size the manuscript is written against.
+// The editor already simulates these on screen (page width, margins, the
+// page-break overlay and the "N hojas" count); persisting the choice is
+// what lets PDF export produce those same physical pages instead of
+// always falling back to A4.
+type PageSize struct {
+	ID       string
+	Label    string
+	WidthMm  float64
+	HeightMm float64
+}
+
+// PageMarginMm is the standard one-inch manuscript margin on every side,
+// matching the editor's own PAGE_MARGIN_MM.
+const PageMarginMm = 25.4
+
+// PageSizes mirrors the frontend's pageSizes.ts — keep the two in sync.
+var PageSizes = []PageSize{
+	{ID: "a4", Label: "A4", WidthMm: 210, HeightMm: 297},
+	{ID: "carta", Label: "Carta / Letter", WidthMm: 215.9, HeightMm: 279.4},
+	{ID: "oficio", Label: "Oficio", WidthMm: 215.9, HeightMm: 330},
+	{ID: "legal", Label: "Legal", WidthMm: 215.9, HeightMm: 355.6},
+	{ID: "pocket", Label: "Libro de bolsillo", WidthMm: 127, HeightMm: 203},
+}
+
+const DefaultPageSizeID = "a4"
+
+// FindPageSize resolves an id to its size, falling back to the default for
+// an empty or unknown value — a manuscript saved before page size was
+// persisted simply keeps behaving as A4.
+func FindPageSize(id string) PageSize {
+	for _, size := range PageSizes {
+		if size.ID == id {
+			return size
+		}
+	}
+	return PageSizes[0]
+}
+
 type Manuscript struct {
 	BookID    string
 	Chapters  []Chapter
+	PageSize  string
 	UpdatedAt time.Time
 }
 
