@@ -34,6 +34,41 @@ func TestCompleteMercadoPagoConfigurationLoads(t *testing.T) {
 	}
 }
 
+// LocalDebugAuth() must require both LOCAL_ADMIN_BYPASS=true *and*
+// Environment != "production" — the second condition is a safety net that
+// has to hold on its own even if the first is ever set somewhere it
+// shouldn't be, since deploy/docker-compose.yml always sets
+// APP_ENV=production for both the deployed development and production
+// stacks (see the method's own doc comment).
+func TestLocalDebugAuthRequiresBothTheFlagAndANonProductionEnvironment(t *testing.T) {
+	tests := []struct {
+		name        string
+		bypassValue string
+		appEnv      string
+		want        bool
+	}{
+		{name: "off by default", bypassValue: "", appEnv: "development", want: false},
+		{name: "armed in development", bypassValue: "true", appEnv: "development", want: true},
+		{name: "armed when APP_ENV is left unset (defaults to development)", bypassValue: "true", appEnv: "", want: true},
+		{name: "armed in test", bypassValue: "true", appEnv: "test", want: true},
+		{name: "never armed in production, even if the flag is set", bypassValue: "true", appEnv: "production", want: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setRequiredTestEnvironment(t)
+			t.Setenv("LOCAL_ADMIN_BYPASS", test.bypassValue)
+			t.Setenv("APP_ENV", test.appEnv)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("load: %v", err)
+			}
+			if got := cfg.LocalDebugAuth(); got != test.want {
+				t.Fatalf("LocalDebugAuth() = %v, want %v (APP_ENV=%q LOCAL_ADMIN_BYPASS=%q)", got, test.want, test.appEnv, test.bypassValue)
+			}
+		})
+	}
+}
+
 func TestEbookUploadConfigurationValidation(t *testing.T) {
 	setRequiredTestEnvironment(t)
 	t.Setenv("EBOOK_INTERNAL_PREFIX", "../public")

@@ -37,6 +37,15 @@ services:
       - '8080:8080'
     environment:
       APP_ENV: development
+      # Opens /admin without a Google login — every request is treated as
+      # an already-authenticated administrator. Safe only here: this stack
+      # is "Local development only" (see the header comment above), and
+      # deploy/docker-compose.yml — used for both the deployed development
+      # and production environments — hardcodes APP_ENV=production, which
+      # keeps this inert even if it were set there too (config.Config.
+      # LocalDebugAuth requires both). Override to `false` in a local .env
+      # to exercise the real Google OAuth flow against this stack instead.
+      LOCAL_ADMIN_BYPASS: ${LOCAL_ADMIN_BYPASS:-true}
       APP_BASE_URL: http://localhost:5173
       HTTP_ADDRESS: :8080
       HTTP_MAX_HEADER_BYTES: ${HTTP_MAX_HEADER_BYTES:-32768}

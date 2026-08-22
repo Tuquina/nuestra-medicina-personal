@@ -50,6 +50,9 @@ func run(logger *slog.Logger) error {
 		"mercado_pago_configured", cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",
 		"email_configured", cfg.GoogleMailCredentials != "" && cfg.GoogleMailSender != "",
 	)
+	if cfg.LocalDebugAuth() {
+		logger.Warn("LOCAL ADMIN BYPASS IS ARMED — every request is treated as a logged-in administrator, no Google login required. This must never be true outside a local debug run (see config.Config.LocalDebugAuth).")
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -131,6 +134,7 @@ func run(logger *slog.Logger) error {
 			AdminWriteRequests: cfg.RateLimitAdminWrites, TrustProxyHeaders: cfg.TrustProxyHeaders,
 		},
 		MaxRequestURIBytes: cfg.MaxRequestURIBytes,
+		LocalDebugAuth:     cfg.LocalDebugAuth(),
 	})
 	server := &http.Server{
 		Addr: cfg.HTTPAddress, Handler: router, ReadTimeout: cfg.ReadTimeout,
