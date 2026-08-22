@@ -64,3 +64,48 @@ Alcance de esta iteración:
   capítulos, o generación de PDF con maquetación tipográfica más avanzada (control de
   huérfanas/viudas, ligaduras, etc.), es una decisión nueva y proporcionalmente mayor
   (probablemente sí justificaría herramientas externas) — no la resuelve este ADR.
+
+## Addendum (2026-08-21): fuente embebida, secciones no numeradas, imágenes
+
+Tres correcciones/extensiones sobre el mismo par de librerías — sin ningún
+dependencia nueva, así que no ameritan un ADR aparte:
+
+- **El PDF generado tenía las letras acentuadas rotas** (`é`/`í` salían como
+  `Ø`/`Æ`, entre otros). Causa: `ExportPDF` llamaba a `gpdf.NewDocument()` sin
+  registrar ninguna fuente TrueType, así que `gpdf` caía a su fuente core
+  "Helvetica" — ese camino escribe el texto como bytes WinAnsi pero nunca
+  declara `/Encoding /WinAnsiEncoding` en el diccionario de la fuente, con lo
+  cual el visor de PDF los interpreta con el *StandardEncoding* implícito de
+  Helvetica en su lugar, que no coincide. Se resolvió embebiendo PT Serif
+  (Google Fonts, OFL — una de las pocas familias que todavía distribuye
+  instancias estáticas Bold/Italic/BoldItalic de verdad, no sólo variable) vía
+  `gpdf.WithFont`/`WithDefaultFont`; con una fuente registrada, `gpdf` codifica
+  el texto contra el cmap propio de la fuente en vez de pasar por ese camino.
+  Ver `backend/internal/application/manuscripts/fonts.go`.
+- **No todo capítulo es "un capítulo"**: `Chapter` ahora tiene `Kind`
+  (`COVER`/`DEDICATION`/`PROLOGUE`/`INTRODUCTION`/`CHAPTER`/`EPILOGUE`/
+  `ACKNOWLEDGMENTS`/`APPENDIX`/`CUSTOM`) y `TitleMode` (`AUTO`/`CUSTOM`), y
+  `ExportPDF`/`ExportEPUB` ya no fuerzan un heading "Capítulo" cuando `Title`
+  viene vacío — una sección sin título simplemente no tiene heading. `Kind`
+  sólo cambia el renderizado en un caso (`COVER` se dibuja como portada,
+  grande y centrada, en vez del heading chico de cualquier otro tipo); el
+  resto de la clasificación vive enteramente en el editor (numeración,
+  ícono/etiqueta en la lista de secciones) — el backend sólo persiste ambos
+  campos tal cual, sin validarlos contra el enum.
+- **Imágenes**: el subconjunto de HTML soportado ahora incluye
+  `<figure data-wrap="inline|center|left|right|free" style="width:NN%">
+  <img src="data:image/png|jpeg;base64,..."></figure>` — exactamente lo que
+  inserta el toolbar de imagen del editor. En EPUB, `go-shiori/go-epub` ya
+  acepta un data URL directo como fuente de `AddImage`, así que cada imagen
+  se reescribe a una entrada real del zip (no queda como blob base64 inline
+  en el XHTML). En PDF, `gpdf`'s `ColBuilder.Image` dibuja la imagen como su
+  propia fila de ancho completo — su grid de 12 columnas no soporta que el
+  texto fluya alrededor de una imagen flotante, así que `left`/`right` sólo
+  angostan y alinean la imagen a ese lado (no hay wrap real), y `free`
+  (arrastrable en el editor, delante o detrás del texto) cae a centrado: la
+  posición absoluta de `gpdf` (`page.Absolute`) pinta siempre por encima de
+  todo el contenido en flujo de esa página sin excepción, así que no hay
+  forma de lograr "detrás del texto" con la API pública, y una imagen con
+  coordenadas fijas en un capítulo que se autopagina a varias páginas físicas
+  no tiene una página física inequívoca a la cual anclarse. El editor
+  (pantalla) y el EPUB (es sólo CSS) sí soportan las cinco variantes completas.

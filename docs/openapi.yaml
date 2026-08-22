@@ -1197,7 +1197,15 @@ components:
       properties:
         id: {type: integer}
         title: {type: string}
-        html: {type: string, maxLength: 2097152}
+        html: {type: string, maxLength: 8388608}
+        kind:
+          type: string
+          enum: [COVER, DEDICATION, PROLOGUE, INTRODUCTION, CHAPTER, EPILOGUE, ACKNOWLEDGMENTS, APPENDIX, CUSTOM]
+          description: 'What this section is in the finished book, beyond just "a chapter" — a portada, a prólogo, an epílogo, etc. An empty/omitted value is treated as CHAPTER (manuscripts saved before this field existed).'
+        titleMode:
+          type: string
+          enum: [AUTO, CUSTOM]
+          description: 'Whether `title` is the kind''s auto-generated label or text the author typed themselves — the editor uses this only to restore the right toggle state on reload; `title` itself always already holds the resolved, literal heading text. An empty/omitted value is treated as AUTO.'
     Manuscript:
       type: object
       required: [bookId, chapters]

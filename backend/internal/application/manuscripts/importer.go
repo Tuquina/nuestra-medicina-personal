@@ -39,7 +39,13 @@ func Import(filename string, content []byte) ([]manuscript.Chapter, error) {
 	if body == "" {
 		return nil, fmt.Errorf("%w: no readable text found", manuscript.ErrConversionFailed)
 	}
-	return []manuscript.Chapter{{ID: 1, Title: "Capítulo 1", HTML: body}}, nil
+	return []manuscript.Chapter{{
+		ID:        1,
+		Title:     "Capítulo 1",
+		HTML:      body,
+		Kind:      manuscript.SectionKindChapter,
+		TitleMode: manuscript.TitleModeAuto,
+	}}, nil
 }
 
 func paragraphsFromPlainText(text string) string {

@@ -219,9 +219,22 @@ una referencia responde `MEDIA_IN_USE` y no borra ni la fila ni el archivo.
 del editor de manuscrito (`book_manuscripts`, un JSONB por libro). `GET` sobre
 un libro sin manuscrito guardado responde `200` con `chapters: []`, no `404`
 — "todavía no empezado" no es un error. `PUT` reemplaza el arreglo completo
-(lo que envía el autosave del editor); un máximo de 200 capítulos y 2MB de
-HTML por capítulo evitan que un bucle de autosave descontrolado haga crecer
-la fila sin límite.
+(lo que envía el autosave del editor); un máximo de 200 capítulos y 8MB de
+HTML por capítulo (subido de 2MB ahora que un capítulo puede llevar imágenes
+embebidas en base64) evitan que un bucle de autosave descontrolado haga
+crecer la fila sin límite.
+
+Cada capítulo es `{id, title, html, kind?, titleMode?}`. `kind` clasifica qué
+es la sección más allá de "un capítulo" — `COVER`/`DEDICATION`/`PROLOGUE`/
+`INTRODUCTION`/`CHAPTER`/`EPILOGUE`/`ACKNOWLEDGMENTS`/`APPENDIX`/`CUSTOM`; un
+valor vacío se trata como `CHAPTER` (manuscritos guardados antes de este
+campo). `titleMode` (`AUTO`/`CUSTOM`) sólo le dice al editor si debe seguir
+recalculando `title` automáticamente según el tipo/posición o si es texto
+propio del autor — `title` ya viene resuelto como el texto final en ambos
+casos, así que la exportación (EPUB/PDF) nunca necesita mirar ninguno de los
+dos campos, sólo `title`. Una sección con `title` vacío no fuerza ningún
+encabezado — ni "Capítulo" ni ningún otro texto — en ninguno de los dos
+formatos exportados.
 
 `PUT /api/v1/admin/books/{identifier}/manuscript/import` (`multipart/form-data`,
 campo `file`) convierte un `.txt`/`.docx`/`.pdf` subido en un solo capítulo y lo
@@ -238,7 +251,17 @@ genera el archivo en el momento a partir de los capítulos guardados y lo
 devuelve como descarga (`Content-Disposition: attachment`) — no se persiste
 en ningún storage ni reemplaza el ebook vendible del libro; el administrador
 lo revisa y, si le sirve, lo sube manualmente por `PUT
-/api/v1/admin/books/{identifier}/ebook` (ADR 0004).
+/api/v1/admin/books/{identifier}/ebook` (ADR 0004). El PDF se genera con una
+fuente TrueType embebida (antes usaba la fuente por defecto de `gpdf`, que
+no declaraba su encoding y hacía que los visores de PDF leyeran letras
+acentuadas como glyphs equivocados — "é"/"í" salían como "Ø"/"Æ"); ver ADR
+0004 para el detalle. Las imágenes que el editor inserta (`<figure
+data-wrap="..."><img src="data:...">`) se embeben de verdad en ambos
+formatos — como entradas reales del zip en EPUB, como objetos de imagen en
+el PDF —, pero sólo `inline`/`center`/`left`/`right` se distinguen en el PDF;
+el modo "libre" (arrastrable, delante o detrás del texto) es una capacidad
+de CSS que sólo tiene sentido en el editor y en EPUB, así que en el PDF cae
+a centrado.
 
 ## Backoffice de datos
 
