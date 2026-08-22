@@ -29,6 +29,11 @@ services:
 
   api:
     environment:
+      # The base file (docker-compose.yml) defaults this to true for local
+      # convenience; E2E specifically exercises the real Google OAuth/admin
+      # session flow (see the "administration flows" spec), so it must stay
+      # off here regardless of that default.
+      LOCAL_ADMIN_BYPASS: 'false'
       # Deterministic, test-only values — never real credentials. Google's
       # values only need to be non-empty for Configured() to be true and
       # for Start() to build a real authorization URL — Start() itself

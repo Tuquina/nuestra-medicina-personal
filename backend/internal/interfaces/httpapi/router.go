@@ -12,32 +12,37 @@ type DatabaseHealth interface {
 }
 
 type Dependencies struct {
-	Logger              *slog.Logger
-	Books               BookService
-	Coupons             CouponService
-	Reviews             ReviewService
-	Newsletter          NewsletterService
-	Authentication      AuthenticationService
-	Orders              OrderService
-	Library             LibraryService
-	Pages               PageService
-	Media               MediaService
-	Manuscripts         ManuscriptService
-	Backoffice          BackofficeService
-	Settings            SettingsService
-	IntegrationStatus   IntegrationStatus
-	WebhookValidator    MercadoPagoWebhookValidator
-	Database            DatabaseHealth
-	AdminAuthorizer     AdminAuthorizer
-	BaseURL             string
-	SessionCookie       string
-	SecureCookies       bool
-	EbookInternalPrefix string
+	Logger                   *slog.Logger
+	Books                    BookService
+	Coupons                  CouponService
+	Reviews                  ReviewService
+	Newsletter               NewsletterService
+	Authentication           AuthenticationService
+	Orders                   OrderService
+	Library                  LibraryService
+	Pages                    PageService
+	Media                    MediaService
+	Manuscripts              ManuscriptService
+	Backoffice               BackofficeService
+	Settings                 SettingsService
+	IntegrationStatus        IntegrationStatus
+	WebhookValidator         MercadoPagoWebhookValidator
+	Database                 DatabaseHealth
+	AdminAuthorizer          AdminAuthorizer
+	BaseURL                  string
+	SessionCookie            string
+	SecureCookies            bool
+	EbookInternalPrefix      string
 	EbookMaxUploadBytes      int64
 	MediaMaxUploadBytes      int64
 	ManuscriptMaxUploadBytes int64
-	RateLimits          RateLimitConfig
-	MaxRequestURIBytes  int
+	RateLimits               RateLimitConfig
+	MaxRequestURIBytes       int
+	// LocalDebugAuth, when true, treats every request as an already
+	// logged-in administrator instead of checking the session cookie —
+	// see localdebugauth.go and config.Config.LocalDebugAuth for what
+	// gates this to a local debug run and nothing else.
+	LocalDebugAuth bool
 }
 
 func NewRouter(dependencies Dependencies) http.Handler {
@@ -45,7 +50,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	couponsHandler := NewCouponHandler(dependencies.Coupons, dependencies.Logger)
 	reviewsHandler := NewReviewHandler(dependencies.Reviews, dependencies.Logger)
 	newsletterHandler := NewNewsletterHandler(dependencies.Newsletter, dependencies.Logger)
-	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies)
+	authHandler := NewAuthHandler(dependencies.Authentication, dependencies.Logger, dependencies.BaseURL, dependencies.SessionCookie, dependencies.SecureCookies, dependencies.LocalDebugAuth)
 	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
 	pageHandler := NewPageHandler(dependencies.Pages, dependencies.Logger)
@@ -54,6 +59,23 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	backofficeHandler := NewBackofficeHandler(dependencies.Backoffice, dependencies.Logger)
 	settingsHandler := NewSettingsHandler(dependencies.Settings, dependencies.Logger, dependencies.IntegrationStatus)
 	rateLimiter := NewRateLimiter(dependencies.RateLimits)
+
+	// wrapAdmin/wrapUser choose once, here, between the real session check
+	// and the local-debug bypass (localdebugauth.go) — every route
+	// registration below reads identically either way.
+	wrapAdmin := func(next http.Handler) http.Handler {
+		if dependencies.LocalDebugAuth {
+			return bypassAdmin(next)
+		}
+		return requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, next)
+	}
+	wrapUser := func(next http.Handler) http.Handler {
+		if dependencies.LocalDebugAuth {
+			return bypassUser(next)
+		}
+		return requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, next)
+	}
+
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -76,19 +98,19 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
 	root.HandleFunc("GET /api/v1/me", authHandler.Me)
 	root.Handle("POST /api/v1/auth/logout", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(authHandler.Logout)))
-	userAccountDeletion := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(authHandler.DeleteAccount))
+	userAccountDeletion := wrapUser(http.HandlerFunc(authHandler.DeleteAccount))
 	root.Handle("DELETE /api/v1/me", requireSameOrigin(dependencies.BaseURL, userAccountDeletion))
-	userOrderCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, rateLimiter.Orders(http.HandlerFunc(orderHandler.Create)))
+	userOrderCreation := wrapUser(rateLimiter.Orders(http.HandlerFunc(orderHandler.Create)))
 	root.Handle("POST /api/v1/orders", requireSameOrigin(dependencies.BaseURL, userOrderCreation))
-	root.Handle("GET /api/v1/orders/{id}", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(orderHandler.Get)))
-	root.Handle("GET /api/v1/me/books", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(libraryHandler.List)))
-	protectedDownload := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, rateLimiter.Downloads(http.HandlerFunc(libraryHandler.Download)))
+	root.Handle("GET /api/v1/orders/{id}", wrapUser(http.HandlerFunc(orderHandler.Get)))
+	root.Handle("GET /api/v1/me/books", wrapUser(http.HandlerFunc(libraryHandler.List)))
+	protectedDownload := wrapUser(rateLimiter.Downloads(http.HandlerFunc(libraryHandler.Download)))
 	root.Handle("GET /api/v1/books/{id}/download", protectedDownload)
-	userReviewCreation := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(reviewsHandler.Create))
+	userReviewCreation := wrapUser(http.HandlerFunc(reviewsHandler.Create))
 	root.Handle("POST /api/v1/books/{slug}/reviews", requireSameOrigin(dependencies.BaseURL, userReviewCreation))
 	root.Handle("POST /api/v1/newsletter/subscribe", requireSameOrigin(dependencies.BaseURL, http.HandlerFunc(newsletterHandler.Subscribe)))
-	root.Handle("GET /api/v1/me/newsletter", requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(newsletterHandler.GetPreference)))
-	userNewsletterPreference := requireUser(dependencies.Logger, dependencies.Authentication, dependencies.SessionCookie, http.HandlerFunc(newsletterHandler.SetPreference))
+	root.Handle("GET /api/v1/me/newsletter", wrapUser(http.HandlerFunc(newsletterHandler.GetPreference)))
+	userNewsletterPreference := wrapUser(http.HandlerFunc(newsletterHandler.SetPreference))
 	root.Handle("PUT /api/v1/me/newsletter", requireSameOrigin(dependencies.BaseURL, userNewsletterPreference))
 	root.HandleFunc("POST /api/v1/webhooks/mercadopago", orderHandler.MercadoPagoWebhook)
 
@@ -125,7 +147,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("PUT /api/v1/admin/reviews/{id}/status", reviewsHandler.SetStatus)
 	admin.HandleFunc("DELETE /api/v1/admin/reviews/{id}", reviewsHandler.Delete)
 	adminHandler := requireSameOrigin(dependencies.BaseURL,
-		requireAdmin(dependencies.Logger, dependencies.AdminAuthorizer, dependencies.SessionCookie, rateLimiter.AdminWrites(admin)))
+		wrapAdmin(rateLimiter.AdminWrites(admin)))
 	root.Handle("/api/v1/admin/", adminHandler)
 
 	var handler http.Handler = limitRequestTarget(dependencies.MaxRequestURIBytes, root)

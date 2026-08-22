@@ -28,17 +28,18 @@ type AuthenticationService interface {
 }
 
 type AuthHandler struct {
-	service       AuthenticationService
-	logger        *slog.Logger
-	baseURL       string
-	sessionCookie string
-	secureCookies bool
+	service        AuthenticationService
+	logger         *slog.Logger
+	baseURL        string
+	sessionCookie  string
+	secureCookies  bool
+	localDebugAuth bool
 }
 
-func NewAuthHandler(service AuthenticationService, logger *slog.Logger, baseURL, sessionCookie string, secureCookies bool) *AuthHandler {
+func NewAuthHandler(service AuthenticationService, logger *slog.Logger, baseURL, sessionCookie string, secureCookies, localDebugAuth bool) *AuthHandler {
 	return &AuthHandler{
 		service: service, logger: logger, baseURL: strings.TrimRight(baseURL, "/"),
-		sessionCookie: sessionCookie, secureCookies: secureCookies,
+		sessionCookie: sessionCookie, secureCookies: secureCookies, localDebugAuth: localDebugAuth,
 	}
 }
 
@@ -83,6 +84,19 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	// The frontend's own auth guards (RequireAuth/RequireAdmin) decide
+	// whether to render /admin from this response, not just the API
+	// requests it goes on to make — so the bypass has to apply here too,
+	// or the admin panel would never actually get past its own login
+	// check even though every request behind it would already succeed.
+	if h.localDebugAuth {
+		user := localDebugUser()
+		writeJSON(w, http.StatusOK, userResponse{
+			ID: user.ID, Email: user.Email, DisplayName: user.DisplayName,
+			PictureURL: user.PictureURL, IsAdmin: user.IsAdmin,
+		})
+		return
+	}
 	user, err := h.service.CurrentUser(r.Context(), cookieValue(r, h.sessionCookie))
 	if err != nil {
 		h.handleError(w, r, "get current user", err, false)

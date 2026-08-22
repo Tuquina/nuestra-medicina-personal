@@ -188,6 +188,67 @@ func TestAdminRoutesRequireSessionAndAdmin(t *testing.T) {
 	}
 }
 
+// TestLocalDebugAuthBypassesSessionEverywhere is the direct check for the
+// local-debug admin bypass: with it armed, every session-gated route (not
+// only /api/v1/admin/*) must succeed with *no* cookie at all — that's the
+// whole point, opening the admin panel without a live Google OAuth login —
+// and /api/v1/me must report an administrator, since that's what the
+// frontend's own route guards act on before ever issuing a request behind
+// requireAdmin/requireUser.
+func TestLocalDebugAuthBypassesSessionEverywhere(t *testing.T) {
+	t.Parallel()
+	router := NewRouter(Dependencies{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Books: bookServiceStub{},
+		Authentication: &authServiceStub{}, Database: healthStub{}, AdminAuthorizer: authorizerStub{err: auth.ErrUnauthorized},
+		BaseURL: "http://localhost:5173", SessionCookie: "nmp_session",
+		Library: libraryServiceStub{}, EbookInternalPrefix: "/_protected/ebooks", EbookMaxUploadBytes: 50 << 20,
+		LocalDebugAuth: true,
+	})
+
+	for _, request := range []*http.Request{
+		httptest.NewRequest(http.MethodGet, "/api/v1/admin/books", nil),
+		httptest.NewRequest(http.MethodGet, "/api/v1/me/books", nil),
+	} {
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("%s: expected 200 with the bypass armed and no cookie, got %d: %s", request.URL.Path, recorder.Code, recorder.Body.String())
+		}
+	}
+
+	meRecorder := httptest.NewRecorder()
+	router.ServeHTTP(meRecorder, httptest.NewRequest(http.MethodGet, "/api/v1/me", nil))
+	var me struct {
+		IsAdmin bool `json:"isAdmin"`
+	}
+	if err := json.Unmarshal(meRecorder.Body.Bytes(), &me); err != nil {
+		t.Fatalf("decode /api/v1/me response: %v (%s)", err, meRecorder.Body.String())
+	}
+	if !me.IsAdmin {
+		t.Fatalf("expected /api/v1/me to report an administrator with the bypass armed, got: %s", meRecorder.Body.String())
+	}
+}
+
+// TestLocalDebugAuthNeverArmsInProduction is the belt-and-suspenders half
+// of config.Config.LocalDebugAuth: even if LOCAL_ADMIN_BYPASS ended up set
+// on a real deploy by mistake, Dependencies.LocalDebugAuth=false (what
+// main.go would compute for Environment=="production" regardless of that
+// var) must still enforce the real session check.
+func TestLocalDebugAuthNeverArmsInProduction(t *testing.T) {
+	t.Parallel()
+	router := NewRouter(Dependencies{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Books: bookServiceStub{},
+		Authentication: &authServiceStub{}, Database: healthStub{}, AdminAuthorizer: authorizerStub{},
+		BaseURL: "http://localhost:5173", SessionCookie: "nmp_session",
+		LocalDebugAuth: false, // what main.go computes once Environment == "production"
+	})
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/admin/books", nil))
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 with no cookie and the bypass off, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestAdminWritesRequireSameOrigin(t *testing.T) {
 	t.Parallel()
 	recorder := httptest.NewRecorder()

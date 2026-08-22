@@ -1524,6 +1524,19 @@ POST /api/v1/auth/logout
 GET  /api/v1/me
 ```
 
+**Local debug bypass**: with `LOCAL_ADMIN_BYPASS=true` (the local
+`docker-compose.yml` sets this by default — "Local development only", see
+its header comment) every request is treated as an already logged-in
+administrator, so `/admin` opens without a live Google OAuth app
+configured. This requires `APP_ENV != "production"` as well
+(`config.Config.LocalDebugAuth`); both the deployed development and
+production stacks hardcode `APP_ENV=production` in
+`deploy/docker-compose.yml`, so the bypass can never arm anywhere reachable
+over the network, and the E2E stack (`e2e/docker-compose.e2e.yml`)
+explicitly forces it off to keep exercising the real login flow. See
+`backend/internal/interfaces/httpapi/localdebugauth.go` for the entire
+implementation — it is deliberately confined to that one file.
+
 ## Usuario
 
 ```text

@@ -11,10 +11,10 @@ import (
 )
 
 type Config struct {
-	Environment               string
-	BaseURL                   string
-	HTTPAddress               string
-	DatabaseURL               string
+	Environment string
+	BaseURL     string
+	HTTPAddress string
+	DatabaseURL string
 	// AdminEmails holds every Google account email granted admin access --
 	// parsed from ADMIN_EMAILS, comma-separated, lowercased for
 	// case-insensitive comparison against Google's own "email" claim
@@ -22,18 +22,18 @@ type Config struct {
 	// email instead of the Google "sub" (subject identifier) means an
 	// admin can be granted access before ever logging in -- the comparison
 	// happens fresh on every request, against whatever's in users.email.
-	AdminEmails               []string
-	GoogleClientID            string
-	GoogleSecret              string
-	GoogleRedirect            string
-	MercadoPagoToken          string
-	MercadoPagoWebhookSecret  string
-	MercadoPagoPublicBaseURL  string
+	AdminEmails              []string
+	GoogleClientID           string
+	GoogleSecret             string
+	GoogleRedirect           string
+	MercadoPagoToken         string
+	MercadoPagoWebhookSecret string
+	MercadoPagoPublicBaseURL string
 	// MercadoPagoAPIBaseURL overrides which host the client talks to for
 	// preference creation/payment verification. Empty in production (the
 	// client defaults to the real Mercado Pago API) — only E2E tests set
 	// this, to point at a fake server instead.
-	MercadoPagoAPIBaseURL string
+	MercadoPagoAPIBaseURL     string
 	EbookStoragePath          string
 	EbookInternalPrefix       string
 	EbookMaxUploadBytes       int64
@@ -63,6 +63,10 @@ type Config struct {
 	TrustProxyHeaders         bool
 	MaxHeaderBytes            int
 	MaxRequestURIBytes        int
+	// LocalAdminBypass is the raw LOCAL_ADMIN_BYPASS value — read this
+	// through LocalDebugAuth() below, never directly, since that method
+	// also enforces Environment != "production".
+	LocalAdminBypass bool
 }
 
 func Load() (Config, error) {
@@ -72,6 +76,7 @@ func Load() (Config, error) {
 	rateLimitDownloads, rateLimitDownloadsErr := strictIntOrDefault("RATE_LIMIT_DOWNLOAD_REQUESTS", 30)
 	rateLimitAdmin, rateLimitAdminErr := strictIntOrDefault("RATE_LIMIT_ADMIN_WRITE_REQUESTS", 60)
 	trustProxyHeaders, trustProxyErr := strictBoolOrDefault("TRUST_PROXY_HEADERS", false)
+	localAdminBypass, localAdminBypassErr := strictBoolOrDefault("LOCAL_ADMIN_BYPASS", false)
 	maxHeaderBytes, maxHeaderBytesErr := strictIntOrDefault("HTTP_MAX_HEADER_BYTES", 32<<10)
 	maxRequestURIBytes, maxRequestURIErr := strictIntOrDefault("HTTP_MAX_REQUEST_URI_BYTES", 8<<10)
 	cfg := Config{
@@ -116,11 +121,12 @@ func Load() (Config, error) {
 		TrustProxyHeaders:         trustProxyHeaders,
 		MaxHeaderBytes:            maxHeaderBytes,
 		MaxRequestURIBytes:        maxRequestURIBytes,
+		LocalAdminBypass:          localAdminBypass,
 	}
 
 	validationErrors := compactErrors([]error{
 		rateLimitWindowErr, rateLimitAuthErr, rateLimitOrdersErr, rateLimitDownloadsErr,
-		rateLimitAdminErr, trustProxyErr, maxHeaderBytesErr, maxRequestURIErr,
+		rateLimitAdminErr, trustProxyErr, maxHeaderBytesErr, maxRequestURIErr, localAdminBypassErr,
 	})
 	if cfg.DatabaseURL == "" {
 		validationErrors = append(validationErrors, errors.New("DATABASE_URL is required"))
@@ -225,6 +231,32 @@ func Load() (Config, error) {
 
 func (c Config) SecureCookies() bool {
 	return c.Environment != "development" && c.Environment != "test"
+}
+
+// LocalDebugAuth reports whether every request to /api/v1/admin/* (and
+// every other session-gated route) should be treated as an already
+// logged-in administrator, skipping Google OAuth entirely — so a session
+// cookie, and therefore a live Google OAuth app, is not a precondition for
+// opening the admin panel on a laptop for debugging or a visual check.
+//
+// Deliberately gated on *two* independent things, not just one flag:
+//
+//  1. LOCAL_ADMIN_BYPASS=true, which nothing sets by default — root
+//     docker-compose.yml (local dev only, see its own "Local development
+//     only" header comment) sets it for convenience; a plain `go run
+//     ./cmd/api` with no env file does not.
+//  2. Environment != "production" — belt and suspenders. Both the deployed
+//     development *and* production stacks hardcode APP_ENV=production in
+//     deploy/docker-compose.yml, so even if LOCAL_ADMIN_BYPASS ever ended
+//     up set on a real deploy by mistake, this still keeps it inert there.
+//
+// AGENTS.md is explicit that every /api/v1/admin/* route must check
+// authorization server-side, never relying on a hidden frontend route as
+// the only guard — this bypass does not relax that rule, it just swaps
+// which identity the server-side check resolves to, and only when both
+// conditions above hold.
+func (c Config) LocalDebugAuth() bool {
+	return c.LocalAdminBypass && c.Environment != "production"
 }
 
 func envOrDefault(key, fallback string) string {

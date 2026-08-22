@@ -47,7 +47,12 @@ architecture.md §3 — that belongs under `deploy/` once the backend exists.
 - **Every DB schema change is a migration** under `migrations/`. Never
   hand-edit a production schema.
 - **Every `/api/v1/admin/*` route must check authorization server-side.**
-  Never rely on hiding a frontend route/component as the only guard.
+  Never rely on hiding a frontend route/component as the only guard. The
+  one exception is the local debug bypass (`LOCAL_ADMIN_BYPASS`, see
+  `docs/architecture.md`'s Auth section and
+  `backend/internal/interfaces/httpapi/localdebugauth.go`) — it still
+  checks server-side, it just always resolves to a synthetic admin
+  identity, and only when `APP_ENV != "production"` too.
 - **Never expose eBook files via a public URL.** Downloads go through
   `GET /api/v1/books/{id}/download`, which validates the purchase, then
   streams via Nginx `X-Accel-Redirect` (architecture.md §28).
