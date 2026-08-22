@@ -6,8 +6,10 @@ import (
 )
 
 const (
-	MaxChapters     = 200
-	MaxChapterBytes = 2 << 20 // 2 MiB of HTML per chapter
+	MaxChapters = 200
+	// 8 MiB of HTML per chapter — up from the original 2 MiB now that a
+	// chapter can carry a few embedded (base64) images, not just text.
+	MaxChapterBytes = 8 << 20
 )
 
 var (
@@ -16,10 +18,56 @@ var (
 	ErrConversionFailed  = errors.New("manuscript file could not be converted")
 )
 
+// SectionKind classifies what a chapter *is* in the finished book, beyond
+// just "a chapter" — a portada, a prólogo, an epílogo, etc. It only ever
+// changes how the editor labels/numbers the section and, for SectionKindCover,
+// how ExportPDF styles its heading; the actual heading text rendered in both
+// exports always comes from Chapter.Title, which the frontend already
+// resolves to either the kind's default label or the author's own custom
+// title before saving. An empty/unrecognized Kind is treated as
+// SectionKindChapter throughout, so manuscripts saved before this field
+// existed keep behaving exactly as before.
+type SectionKind string
+
+const (
+	SectionKindCover           SectionKind = "COVER"
+	SectionKindDedication      SectionKind = "DEDICATION"
+	SectionKindPrologue        SectionKind = "PROLOGUE"
+	SectionKindIntroduction    SectionKind = "INTRODUCTION"
+	SectionKindChapter         SectionKind = "CHAPTER"
+	SectionKindEpilogue        SectionKind = "EPILOGUE"
+	SectionKindAcknowledgments SectionKind = "ACKNOWLEDGMENTS"
+	SectionKindAppendix        SectionKind = "APPENDIX"
+	SectionKindCustom          SectionKind = "CUSTOM"
+)
+
+// TitleMode records whether Chapter.Title is the kind's auto-generated
+// label (e.g. "Capítulo 3") or text the author typed themselves — purely
+// so the editor can restore the right toggle state after reloading; both
+// exports only ever read the already-resolved Title.
+type TitleMode string
+
+const (
+	TitleModeAuto   TitleMode = "AUTO"
+	TitleModeCustom TitleMode = "CUSTOM"
+)
+
 type Chapter struct {
-	ID    int    `json:"id"`
-	Title string `json:"title"`
-	HTML  string `json:"html"`
+	ID        int         `json:"id"`
+	Title     string      `json:"title"`
+	HTML      string      `json:"html"`
+	Kind      SectionKind `json:"kind,omitempty"`
+	TitleMode TitleMode   `json:"titleMode,omitempty"`
+}
+
+// EffectiveKind returns Kind, defaulting an empty value to
+// SectionKindChapter — the zero value for every chapter saved before this
+// field existed.
+func (c Chapter) EffectiveKind() SectionKind {
+	if c.Kind == "" {
+		return SectionKindChapter
+	}
+	return c.Kind
 }
 
 type Manuscript struct {
@@ -42,7 +90,7 @@ func (m Manuscript) Validate() error {
 	}
 	for _, chapter := range m.Chapters {
 		if len(chapter.HTML) > MaxChapterBytes {
-			fields["chapters"] = "each chapter must be at most 2MB of HTML"
+			fields["chapters"] = "each chapter must be at most 8MB of HTML"
 			break
 		}
 	}

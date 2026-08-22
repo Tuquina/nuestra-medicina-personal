@@ -122,6 +122,10 @@
   color: var(--color-admin-text-muted);
   cursor: pointer;
   font-family: var(--font-sans);
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  width: 100%;
 }
 
 .chapterItemActive {
@@ -130,21 +134,211 @@
   font-weight: 600;
 }
 
-.addChapter {
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 8px 10px;
-  color: var(--color-deep-blue);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
+.chapterItemGlyph {
+  flex-shrink: 0;
+  color: var(--color-admin-text-faint);
+  font-family: var(--font-serif);
+}
+
+.chapterItemLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.chapterItemUntitled {
+  font-style: italic;
+  color: var(--color-admin-text-faint);
+}
+
+.addSectionRow {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.addSectionSelect {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 12px;
+  background: white;
   font-family: var(--font-sans);
+  color: oklch(32% 0.02 255);
+}
+
+.addSectionButton {
+  flex-shrink: 0;
+  width: 30px;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-deep-blue);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .editorCol {
   flex: 1;
   min-width: 460px;
+}
+
+/* ---- Section settings (kind + title) ---- */
+
+.sectionSettings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.sectionSettingsLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-admin-text-muted);
+  flex-shrink: 0;
+}
+
+.sectionKindSelect {
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+  background: white;
+  font-family: var(--font-sans);
+  color: oklch(32% 0.02 255);
+}
+
+.sectionTitleModeToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-admin-text-muted);
+  flex-shrink: 0;
+}
+
+.sectionTitleInput {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: var(--font-serif);
+  color: var(--color-ink);
+  background: white;
+}
+
+.sectionSettingsSpacer {
+  flex: 1;
+}
+
+.sectionIconButton {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: oklch(32% 0.02 255);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sectionIconButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.sectionIconButtonDanger {
+  color: var(--color-status-danger-icon);
+  border-color: color-mix(in oklch, var(--color-status-danger-icon) 40%, var(--color-surface-border-strong));
+}
+
+/* ---- Image toolbar (shown while an inline image is selected) ---- */
+
+.imageToolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-deep-blue);
+  border-radius: 8px;
+  background: oklch(97% 0.015 232);
+}
+
+.imageToolbarLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-deep-blue);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.imageWrapButton {
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  background: white;
+  color: oklch(32% 0.02 255);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.imageWrapButtonActive {
+  background: var(--color-deep-blue);
+  border-color: var(--color-deep-blue);
+  color: white;
+}
+
+.imageWidthLabel {
+  font-size: 11.5px;
+  color: var(--color-admin-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.imageWidthRange {
+  width: 90px;
+}
+
+.imageToolbarSpacer {
+  flex: 1;
+}
+
+.imageRemoveButton {
+  border: 1px solid var(--color-status-danger-icon);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  background: white;
+  color: var(--color-status-danger-icon);
+  cursor: pointer;
+  font-family: var(--font-sans);
 }
 
 .toolbar {
@@ -425,8 +619,88 @@
   font-size: 16px;
   line-height: 1.8;
   color: oklch(28% 0.02 255);
+  position: relative;
 }
 
 .previewChapterEmpty {
   color: oklch(60% 0.02 90);
+}
+
+/* ---- Inline images (editor canvas + preview modal) ----
+   manuscriptImages.ts writes these class names literally into chapter
+   HTML (and backend/.../manuscripts/exporter.go reads them back for
+   PDF/EPUB), so they're left unscoped via :global() instead of going
+   through the styles.xxx map like everything else in this file. */
+
+/* Deliberately unconditional (not :not(.ms-image--free)) — the
+   .ms-image--free rule below repeats both properties with the same (0,1,0)
+   specificity, and simply comes later in this file, which is what actually
+   overrides these for a free image; :not() + :global() nested together
+   is unnecessary risk for the same result. */
+.editable > *,
+.previewChapterBody > * {
+  position: relative;
+  z-index: 1;
+}
+
+:global(.ms-image) {
+  display: block;
+  margin: 0 0 16px;
+  max-width: 100%;
+}
+
+:global(.ms-image) img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 3px;
+}
+
+:global(.ms-image--inline) {
+  display: inline-block;
+  vertical-align: text-bottom;
+  margin: 0 12px 8px 0;
+}
+
+:global(.ms-image--center) {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+:global(.ms-image--left) {
+  float: left;
+  clear: left;
+  margin: 4px 16px 10px 0;
+}
+
+:global(.ms-image--right) {
+  float: right;
+  clear: right;
+  margin: 4px 0 10px 16px;
+}
+
+/* Draggable, absolutely-positioned relative to the page it's on. Paint
+   order (not just z-index) is what puts it behind running text: every
+   *other* direct child above is explicitly position:relative — a real
+   stacking context — so a z-index:0 free image genuinely paints under
+   them, and z-index:2 (the [data-front="true"] case) genuinely paints
+   over them. */
+:global(.ms-image--free) {
+  position: absolute;
+  z-index: 0;
+  margin: 0;
+  cursor: move;
+}
+
+:global(.ms-image--free[data-front='true']) {
+  z-index: 2;
+}
+
+:global(.ms-image--free) img {
+  box-shadow: 0 2px 10px color-mix(in oklch, var(--color-ink) 20%, transparent);
+}
+
+:global(.ms-image--selected) {
+  outline: 2px solid var(--color-deep-blue);
+  outline-offset: 2px;
 }

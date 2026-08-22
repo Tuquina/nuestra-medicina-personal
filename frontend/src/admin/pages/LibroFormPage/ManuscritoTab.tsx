@@ -1,15 +1,42 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { Button } from '../../../shared/components/Button/Button';
+import { Switch } from '../../../shared/components/Switch/Switch';
 import { apiRequest, ApiError } from '../../../shared/api/client';
 import { adminBookManuscriptUrl, adminBookManuscriptImportUrl, adminBookManuscriptExportUrl } from '../../../shared/config/api';
 import { PageBreakOverlay } from './PageBreakOverlay';
 import { DEFAULT_PAGE_SIZE_ID, PAGE_MARGIN_MM, PAGE_SIZES, findPageSize, pageContentHeightPx } from './pageSizes';
+import {
+  SECTION_KINDS,
+  autoTitleFor,
+  effectiveKind,
+  effectiveTitleMode,
+  sectionKindMeta,
+  type SectionKind,
+  type TitleMode,
+} from './manuscriptSections';
+import {
+  IMAGE_WRAP_OPTIONS,
+  applyWidthPct,
+  applyWrap,
+  closestImageFigure,
+  figureMarkup,
+  isInFront,
+  markSelected,
+  readImageFileAsDataURL,
+  setFreePosition,
+  setFront,
+  widthPctOf,
+  wrapOf,
+  type ImageWrap,
+} from './manuscriptImages';
 import styles from './ManuscritoTab.module.css';
 
 interface Chapter {
   id: number;
   title: string;
   html: string;
+  kind?: SectionKind;
+  titleMode?: TitleMode;
 }
 
 interface ManuscriptResponse {
@@ -28,6 +55,38 @@ function wordCountOf(html: string): number {
     .filter(Boolean).length;
 }
 
+/** Normalizes chapters loaded from the server (or freshly imported) to
+ * always carry a resolved kind/titleMode — manuscripts saved before these
+ * fields existed simply come back as CHAPTER/AUTO, which is exactly what
+ * their title text already looked like under the old editor. */
+function normalizeChapters(list: Chapter[]): Chapter[] {
+  return list.map((chapter) => ({
+    ...chapter,
+    kind: effectiveKind(chapter.kind),
+    titleMode: effectiveTitleMode(chapter.titleMode),
+  }));
+}
+
+/** Recomputes `title` for every section whose titleMode is AUTO — kind and
+ * position (relative to other sections of the same kind) are the only
+ * inputs, so this must re-run after any add/remove/reorder/kind change,
+ * not just when the section's own fields change. Sections with a custom
+ * title are left untouched. */
+function withResolvedTitles(list: Chapter[], bookTitle: string): Chapter[] {
+  return list.map((chapter, index) =>
+    effectiveTitleMode(chapter.titleMode) === 'CUSTOM'
+      ? chapter
+      : { ...chapter, title: autoTitleFor(list, index, bookTitle) },
+  );
+}
+
+/** manuscriptImages.ts marks the currently-selected figure with this class
+ * purely for the on-screen outline — strip it before it ever reaches saved
+ * state, so a stray selection outline never gets autosaved/exported. */
+function stripSelectionMarker(html: string): string {
+  return html.replace(/\s?ms-image--selected/g, '');
+}
+
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 /**
@@ -38,6 +97,14 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
  * source design uses, kept uncontrolled like any contentEditable region
  * has to be in React: chapter HTML lives in state, but the live DOM is
  * only synced from it when switching chapters, not on every keystroke.
+ *
+ * A "chapter" is really a *section* — it can be a portada, a prólogo, a
+ * capítulo, an epílogo, etc. (see manuscriptSections.ts) with either an
+ * auto-generated label or a title the author typed themselves; only
+ * SectionKind CHAPTER participates in "Capítulo N" numbering. Inline
+ * images (manuscriptImages.ts) insert as a <figure data-wrap="..."> the
+ * author can set to flow inline, centered, floated to a side, or freely
+ * positioned/draggable in front of or behind the text.
  *
  * Chapters persist for real via `GET/PUT /api/v1/admin/books/{id}/manuscript`
  * (autosaved, debounced). Uploading a file converts it server-side
@@ -77,16 +144,21 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   const [manuscriptStarted, setManuscriptStarted] = useState(false);
   const [converting, setConverting] = useState(false);
   const [uploadNotice, setUploadNotice] = useState('');
-  const [chapters, setChapters] = useState<Chapter[]>([{ id: 1, title: 'Capítulo 1', html: '' }]);
+  const [imageNotice, setImageNotice] = useState('');
+  const [chapters, setChapters] = useState<Chapter[]>([{ id: 1, title: 'Capítulo 1', html: '', kind: 'CHAPTER', titleMode: 'AUTO' }]);
   const [activeChapter, setActiveChapter] = useState(0);
+  const [newSectionKind, setNewSectionKind] = useState<SectionKind>('CHAPTER');
   const [exporting, setExporting] = useState<'EPUB' | 'PDF' | null>(null);
   const [exportMessage, setExportMessage] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [pageSizeId, setPageSizeId] = useState(DEFAULT_PAGE_SIZE_ID);
   const [contentHeightPx, setContentHeightPx] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [selectedImage, setSelectedImage] = useState<HTMLElement | null>(null);
+  const [imageVersion, setImageVersion] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   // Sentinel (no real chapter index) so the very first hydration — server
   // load or "start blank" — always performs one DOM sync, even though
@@ -97,8 +169,18 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   // Tracks a debounced save that hasn't been sent yet, so an unmount mid-debounce
   // (switching tabs right after typing) can flush it instead of losing it.
   const pendingChaptersRef = useRef<Chapter[] | null>(null);
+  // Always-increasing, never reused — chapter ids used to be derived from
+  // array length/position, which collides after a delete+add (e.g. delete
+  // #2 of [1,2,3] then add: length-based id lands back on 3, an id already
+  // in use). Filenames the PDF/EPUB export embeds images under lean on ids
+  // being unique, so this matters for real now, not just cosmetically.
+  const nextIdRef = useRef(2);
 
   const pageSize = findPageSize(pageSizeId);
+
+  const updateChapters = (updater: (prev: Chapter[]) => Chapter[]) => {
+    setChapters((prev) => withResolvedTitles(updater(prev), bookTitle));
+  };
 
   const persistChapters = (value: Chapter[]) => {
     pendingChaptersRef.current = null;
@@ -120,8 +202,10 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     apiRequest<ManuscriptResponse>(adminBookManuscriptUrl(bookId), { signal: controller.signal })
       .then((response) => {
         if (response.chapters.length > 0) {
+          const normalized = normalizeChapters(response.chapters);
+          nextIdRef.current = Math.max(1, ...normalized.map((c) => c.id)) + 1;
           skipNextAutosaveRef.current = true;
-          setChapters(response.chapters);
+          setChapters(normalized);
           setManuscriptStarted(true);
         }
       })
@@ -184,6 +268,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     if (previousChapterRef.current !== activeChapter && editorRef.current) {
       editorRef.current.innerHTML = chapters[activeChapter]?.html ?? '';
       previousChapterRef.current = activeChapter;
+      setSelectedImage(null);
     }
   }, [activeChapter, chapters]);
 
@@ -211,10 +296,12 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
         method: 'PUT',
         body,
       });
+      const normalized = normalizeChapters(response.chapters);
+      nextIdRef.current = Math.max(1, ...normalized.map((c) => c.id)) + 1;
       // The backend already persisted this import — hydrate local state
       // without re-triggering the autosave effect for a no-op re-save.
       skipNextAutosaveRef.current = true;
-      setChapters(response.chapters);
+      setChapters(normalized);
       setActiveChapter(0);
       setManuscriptStarted(true);
     } catch (error: unknown) {
@@ -237,22 +324,106 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
     setManuscriptStarted(true);
   };
 
-  const addChapter = () => {
-    setChapters((prev) => {
-      const n = prev.length + 1;
-      return [...prev, { id: n, title: `Capítulo ${n}`, html: '' }];
+  const addSection = (kind: SectionKind) => {
+    const id = nextIdRef.current++;
+    const insertAt = chapters.length;
+    updateChapters((prev) => [...prev, { id, title: '', html: '', kind, titleMode: 'AUTO' }]);
+    setActiveChapter(insertAt);
+  };
+
+  const moveSection = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= chapters.length) return;
+    updateChapters((prev) => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
     });
-    setActiveChapter(chapters.length);
+    setActiveChapter(target);
+  };
+
+  const deleteSection = (index: number) => {
+    if (chapters.length <= 1) return;
+    updateChapters((prev) => prev.filter((_, i) => i !== index));
+    setActiveChapter((current) => {
+      if (current === index) return Math.max(0, index - 1);
+      if (current > index) return current - 1;
+      return current;
+    });
+  };
+
+  const changeSectionKind = (index: number, kind: SectionKind) => {
+    updateChapters((prev) => prev.map((c, i) => (i === index ? { ...c, kind } : c)));
+  };
+
+  const changeTitleMode = (index: number, mode: TitleMode) => {
+    updateChapters((prev) => prev.map((c, i) => (i === index ? { ...c, titleMode: mode } : c)));
+  };
+
+  const changeCustomTitle = (index: number, title: string) => {
+    updateChapters((prev) => prev.map((c, i) => (i === index ? { ...c, title } : c)));
   };
 
   const onEditorInput = () => {
-    const html = editorRef.current?.innerHTML ?? '';
+    const html = stripSelectionMarker(editorRef.current?.innerHTML ?? '');
     setChapters((prev) => prev.map((c, i) => (i === activeChapter ? { ...c, html } : c)));
   };
 
   const exec = (command: string, value?: string) => {
     editorRef.current?.focus();
     document.execCommand(command, false, value);
+    onEditorInput();
+  };
+
+  const onEditorMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const figure = closestImageFigure(event.target);
+    if (selectedImage && selectedImage !== figure) markSelected(selectedImage, false);
+    if (figure) markSelected(figure, true);
+    setSelectedImage(figure);
+    if (!figure || wrapOf(figure) !== 'free') return;
+    const container = editorRef.current;
+    if (!container) return;
+    event.preventDefault();
+    const rect = container.getBoundingClientRect();
+    const onMove = (moveEvent: MouseEvent) => {
+      const leftPct = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+      const topPct = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+      setFreePosition(figure, leftPct, topPct);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      onEditorInput();
+      setImageVersion((v) => v + 1);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  const insertImage = async (file: File) => {
+    setImageNotice('');
+    try {
+      const dataUrl = await readImageFileAsDataURL(file);
+      editorRef.current?.focus();
+      document.execCommand('insertHTML', false, figureMarkup(dataUrl));
+      onEditorInput();
+    } catch (error) {
+      setImageNotice(error instanceof Error ? error.message : 'No pudimos insertar la imagen.');
+    }
+  };
+
+  const withSelectedImage = (fn: (figure: HTMLElement) => void) => {
+    if (!selectedImage) return;
+    fn(selectedImage);
+    onEditorInput();
+    setImageVersion((v) => v + 1);
+  };
+
+  const removeSelectedImage = () => {
+    if (!selectedImage) return;
+    selectedImage.remove();
+    setSelectedImage(null);
+    onEditorInput();
   };
 
   const generate = async (kind: 'EPUB' | 'PDF') => {
@@ -355,13 +526,17 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   }
 
   const active = chapters[activeChapter];
+  const activeIndex = activeChapter;
+  const activeKind = effectiveKind(active?.kind);
+  const activeTitleMode = effectiveTitleMode(active?.titleMode);
   const contentPerPage = pageContentHeightPx(pageSize);
   const pageCount = Math.max(1, Math.ceil(contentHeightPx / contentPerPage));
+  const selectedWrap = selectedImage ? wrapOf(selectedImage) : null;
 
   return (
     <>
       <div className={styles.editorLayout}>
-        {/* CHAPTER LIST */}
+        {/* SECTION LIST */}
         <div className={styles.chapterList}>
           <div className={styles.pageSizeBlock}>
             <label htmlFor="pageSize" className={styles.chapterListTitle} style={{ margin: 0 }}>
@@ -380,28 +555,124 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
               ))}
             </select>
             <p className={styles.pageCountHint}>
-              {pageCount} hoja{pageCount === 1 ? '' : 's'} en este capítulo
+              {pageCount} hoja{pageCount === 1 ? '' : 's'} en esta sección
             </p>
           </div>
 
-          <p className={styles.chapterListTitle}>Capítulos</p>
-          {chapters.map((chapter, index) => (
-            <button
-              key={chapter.id}
-              type="button"
-              onClick={() => setActiveChapter(index)}
-              className={[styles.chapterItem, index === activeChapter ? styles.chapterItemActive : ''].join(' ')}
+          <p className={styles.chapterListTitle}>Secciones</p>
+          {chapters.map((chapter, index) => {
+            const meta = sectionKindMeta(chapter.kind);
+            return (
+              <button
+                key={chapter.id}
+                type="button"
+                onClick={() => setActiveChapter(index)}
+                className={[styles.chapterItem, index === activeChapter ? styles.chapterItemActive : ''].join(' ')}
+                title={meta.label}
+              >
+                <span className={styles.chapterItemGlyph} aria-hidden="true">
+                  {meta.glyph}
+                </span>
+                <span
+                  className={[styles.chapterItemLabel, chapter.title ? '' : styles.chapterItemUntitled].join(' ')}
+                >
+                  {chapter.title || 'Sin título'}
+                </span>
+              </button>
+            );
+          })}
+          <div className={styles.addSectionRow}>
+            <select
+              className={styles.addSectionSelect}
+              value={newSectionKind}
+              onChange={(e) => setNewSectionKind(e.target.value as SectionKind)}
+              aria-label="Tipo de nueva sección"
             >
-              {chapter.title}
+              {SECTION_KINDS.map((entry) => (
+                <option key={entry.kind} value={entry.kind}>
+                  {entry.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={styles.addSectionButton}
+              onClick={() => addSection(newSectionKind)}
+              aria-label="Agregar sección"
+              title="Agregar sección"
+            >
+              +
             </button>
-          ))}
-          <button type="button" className={styles.addChapter} onClick={addChapter}>
-            + Agregar capítulo
-          </button>
+          </div>
         </div>
 
         {/* EDITOR */}
         <div className={styles.editorCol}>
+          <div className={styles.sectionSettings}>
+            <span className={styles.sectionSettingsLabel}>Sección</span>
+            <select
+              className={styles.sectionKindSelect}
+              value={activeKind}
+              onChange={(e) => changeSectionKind(activeIndex, e.target.value as SectionKind)}
+              aria-label="Tipo de sección"
+            >
+              {SECTION_KINDS.map((entry) => (
+                <option key={entry.kind} value={entry.kind}>
+                  {entry.label}
+                </option>
+              ))}
+            </select>
+            <label className={styles.sectionTitleModeToggle}>
+              <Switch
+                checked={activeTitleMode === 'CUSTOM'}
+                onChange={(checked) => changeTitleMode(activeIndex, checked ? 'CUSTOM' : 'AUTO')}
+                label="Título personalizado"
+              />
+              Título personalizado
+            </label>
+            {activeTitleMode === 'CUSTOM' ? (
+              <input
+                type="text"
+                className={styles.sectionTitleInput}
+                value={active?.title ?? ''}
+                onChange={(e) => changeCustomTitle(activeIndex, e.target.value)}
+                placeholder="Escribí el título de esta sección…"
+              />
+            ) : (
+              <span className={styles.sectionSettingsSpacer} />
+            )}
+            <button
+              type="button"
+              className={styles.sectionIconButton}
+              onClick={() => moveSection(activeIndex, -1)}
+              disabled={activeIndex === 0}
+              aria-label="Mover antes"
+              title="Mover antes"
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              className={styles.sectionIconButton}
+              onClick={() => moveSection(activeIndex, 1)}
+              disabled={activeIndex === chapters.length - 1}
+              aria-label="Mover después"
+              title="Mover después"
+            >
+              ▼
+            </button>
+            <button
+              type="button"
+              className={[styles.sectionIconButton, styles.sectionIconButtonDanger].join(' ')}
+              onClick={() => deleteSection(activeIndex)}
+              disabled={chapters.length <= 1}
+              aria-label="Eliminar sección"
+              title="Eliminar sección"
+            >
+              ✕
+            </button>
+          </div>
+
           <div className={styles.toolbar}>
             <select className={styles.toolbarSelect} onChange={(e) => exec('formatBlock', e.target.value)} defaultValue="P">
               <option value="P">Texto normal</option>
@@ -482,11 +753,81 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
               "
             </button>
 
+            <div className={styles.toolbarDivider} />
+
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void insertImage(file);
+                e.target.value = '';
+              }}
+              style={{ display: 'none' }}
+            />
+            <button
+              type="button"
+              className={styles.toolbarButton}
+              onClick={() => imageInputRef.current?.click()}
+              aria-label="Insertar imagen"
+              title="Insertar imagen"
+            >
+              🖼
+            </button>
+
             <div className={styles.toolbarSpacer} />
             <Button variant="primary" onClick={() => setShowPreview(true)}>
               Vista previa
             </Button>
           </div>
+
+          {imageNotice && <p className={styles.startCardHint}>{imageNotice}</p>}
+
+          {selectedImage && selectedWrap && (
+            // Keyed on imageVersion so a mutation applied straight to the
+            // DOM (applyWrap/applyWidthPct/setFront all mutate selectedImage
+            // in place, not through React state) is guaranteed to be
+            // re-read on the next render instead of showing stale values.
+            <div key={imageVersion} className={styles.imageToolbar}>
+              <span className={styles.imageToolbarLabel}>Imagen</span>
+              {IMAGE_WRAP_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={[styles.imageWrapButton, selectedWrap === option.value ? styles.imageWrapButtonActive : ''].join(' ')}
+                  onClick={() => withSelectedImage((figure) => applyWrap(figure, option.value as ImageWrap))}
+                >
+                  {option.label}
+                </button>
+              ))}
+              <label className={styles.imageWidthLabel}>
+                Tamaño
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={5}
+                  className={styles.imageWidthRange}
+                  value={widthPctOf(selectedImage)}
+                  onChange={(e) => withSelectedImage((figure) => applyWidthPct(figure, Number(e.target.value)))}
+                />
+              </label>
+              {selectedWrap === 'free' && (
+                <button
+                  type="button"
+                  className={styles.imageWrapButton}
+                  onClick={() => withSelectedImage((figure) => setFront(figure, !isInFront(figure)))}
+                >
+                  {isInFront(selectedImage) ? 'Delante del texto' : 'Detrás del texto'}
+                </button>
+              )}
+              <span className={styles.imageToolbarSpacer} />
+              <button type="button" className={styles.imageRemoveButton} onClick={removeSelectedImage}>
+                Quitar imagen
+              </button>
+            </div>
+          )}
 
           <div className={styles.canvas}>
             <div className={styles.editableWrapper} style={{ width: `${pageSize.widthMm}mm`, maxWidth: '100%' }}>
@@ -494,6 +835,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
                 ref={editorRef}
                 contentEditable
                 onInput={onEditorInput}
+                onMouseDown={onEditorMouseDown}
                 className={styles.editable}
                 style={{ width: `${pageSize.widthMm}mm`, maxWidth: '100%', padding: `${PAGE_MARGIN_MM}mm` }}
                 suppressContentEditableWarning
@@ -503,7 +845,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
           </div>
           <p className={styles.wordCount}>
             {saveStatusText[saveState]} · {wordCountOf(active?.html ?? '')} palabras · {pageCount} hoja
-            {pageCount === 1 ? '' : 's'} ({pageSize.label.split(' (')[0]}) en este capítulo.
+            {pageCount === 1 ? '' : 's'} ({pageSize.label.split(' (')[0]}) en esta sección.
           </p>
         </div>
 
@@ -524,7 +866,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
           </Button>
           {exportMessage && <p className={styles.exportMessage}>{exportMessage}</p>}
           <p className={styles.exportHint}>
-            Los capítulos ya se guardan automáticamente. El EPUB/PDF generado se descarga para que lo revises antes
+            Las secciones ya se guardan automáticamente. El EPUB/PDF generado se descarga para que lo revises antes
             de subirlo como archivo vendible en "Archivo y portada".
           </p>
         </div>
@@ -546,13 +888,13 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
             <h1 className={styles.previewTitle}>{bookTitle}</h1>
             {chapters.map((chapter) => (
               <div key={chapter.id} className={styles.previewChapter}>
-                <h2 className={styles.previewChapterTitle}>{chapter.title}</h2>
+                {chapter.title && <h2 className={styles.previewChapterTitle}>{chapter.title}</h2>}
                 {chapter.html ? (
                   // eslint-disable-next-line react/no-danger -- the author's own content, this same editing session
                   <div className={styles.previewChapterBody} dangerouslySetInnerHTML={{ __html: chapter.html }} />
                 ) : (
                   <p className={[styles.previewChapterBody, styles.previewChapterEmpty].join(' ')}>
-                    (Este capítulo todavía no tiene contenido.)
+                    (Esta sección todavía no tiene contenido.)
                   </p>
                 )}
               </div>
