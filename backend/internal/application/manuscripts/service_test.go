@@ -61,7 +61,7 @@ func TestSaveResolvesIdentifierToBookIDAndStampsUpdatedAt(t *testing.T) {
 	now := time.Date(2026, 8, 21, 9, 0, 0, 0, time.UTC)
 	service.now = func() time.Time { return now }
 
-	saved, err := service.Save(context.Background(), "book-slug", []manuscript.Chapter{{ID: 1, Title: "Cap 1", HTML: "<p>hola</p>"}})
+	saved, err := service.Save(context.Background(), "book-slug", []manuscript.Chapter{{ID: 1, Title: "Cap 1", HTML: "<p>hola</p>"}}, "a4")
 	if err != nil {
 		t.Fatalf("save: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestSaveRejectsOversizedChapter(t *testing.T) {
 	t.Parallel()
 	service := NewService(&repositoryStub{}, booksStub{value: book.Book{ID: "book-id"}})
 	huge := strings.Repeat("a", manuscript.MaxChapterBytes+1)
-	if _, err := service.Save(context.Background(), "book-slug", []manuscript.Chapter{{ID: 1, HTML: huge}}); err == nil {
+	if _, err := service.Save(context.Background(), "book-slug", []manuscript.Chapter{{ID: 1, HTML: huge}}, "a4"); err == nil {
 		t.Fatal("expected validation error for an oversized chapter")
 	}
 }

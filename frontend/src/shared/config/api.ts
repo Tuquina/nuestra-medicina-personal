@@ -74,8 +74,10 @@ export function adminBookManuscriptUrl(identifier: string): string {
   return `${adminBookUrl(identifier)}/manuscript`;
 }
 
-export function adminBookManuscriptImportUrl(identifier: string): string {
-  return `${adminBookManuscriptUrl(identifier)}/import`;
+/** `mode=append` adds the imported sections after the existing ones
+ * instead of replacing the whole manuscript. */
+export function adminBookManuscriptImportUrl(identifier: string, mode: 'replace' | 'append' = 'replace'): string {
+  return `${adminBookManuscriptUrl(identifier)}/import?mode=${mode}`;
 }
 
 export function adminBookManuscriptExportUrl(identifier: string, format: 'epub' | 'pdf'): string {

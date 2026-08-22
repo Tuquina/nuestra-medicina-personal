@@ -236,32 +236,67 @@ dos campos, sólo `title`. Una sección con `title` vacío no fuerza ningún
 encabezado — ni "Capítulo" ni ningún otro texto — en ninguno de los dos
 formatos exportados.
 
+El manuscrito además guarda `pageSize` (`a4`/`carta`/`oficio`/`legal`/
+`pocket`): el editor ya simula ese papel en pantalla (ancho, márgenes, saltos
+de página) y la exportación a PDF genera exactamente esas páginas físicas, así
+que es parte del manuscrito y no una preferencia local del navegador. Un valor
+vacío o desconocido se resuelve a `a4` en vez de rechazar el guardado.
+
 `PUT /api/v1/admin/books/{identifier}/manuscript/import` (`multipart/form-data`,
-campo `file`) convierte un `.txt`/`.docx`/`.pdf` subido en un solo capítulo y lo
-persiste de inmediato — mismo efecto que guardar desde el editor. La extensión
-y la firma de bytes se validan antes de intentar convertir (`PK\x03\x04` para
-DOCX, `%PDF-` para PDF); un archivo con extensión válida pero contenido
-corrupto responde `422 MANUSCRIPT_CONVERSION_FAILED`, una extensión no
-soportada responde `415 MANUSCRIPT_UNSUPPORTED_FORMAT`. Ver ADR 0004 para el
-alcance exacto de fidelidad (párrafos, encabezados H1-H3 y negrita/itálica
-para DOCX; sólo párrafos de texto plano para PDF).
+campo `file`) convierte un `.txt`/`.docx`/`.pdf`/`.epub` subido en secciones y
+las persiste de inmediato — mismo efecto que guardar desde el editor. Con
+`?mode=append` se agregan al final del manuscrito existente en vez de
+reemplazarlo (el default sigue siendo `replace`). La extensión y la firma de
+bytes se validan antes de intentar convertir (`PK\x03\x04` para DOCX y EPUB,
+`%PDF-` para PDF); un archivo con extensión válida pero contenido corrupto
+responde `422 MANUSCRIPT_CONVERSION_FAILED`, una extensión no soportada
+responde `415 MANUSCRIPT_UNSUPPORTED_FORMAT`.
+
+Un `.epub` se separa en secciones por su propio spine (la estructura que el
+libro ya declara sobre sí mismo) e incrusta como data URL las imágenes que
+referencia dentro del archivo. Los formatos planos se separan por los
+encabezados que use el documento (`h1`, o `h2` si no hay ninguno), y el texto
+del encabezado pasa a ser el título de la sección en vez de repetirse en el
+cuerpo; un documento sin encabezados sigue importándose como un solo capítulo.
+**Todo HTML importado se sanitiza en el servidor** antes de persistirse
+(`manuscripts/sanitize.go`): el editor carga un capítulo asignándolo a
+`innerHTML`, así que cualquier `<script>`/`onerror=`/`javascript:` que venga
+dentro de un EPUB arbitrario se ejecutaría en el navegador del administrador
+si no se filtrara ahí. Ver ADR 0004 para el alcance exacto de fidelidad.
 
 `GET /api/v1/admin/books/{identifier}/manuscript/export?format=epub|pdf`
 genera el archivo en el momento a partir de los capítulos guardados y lo
 devuelve como descarga (`Content-Disposition: attachment`) — no se persiste
 en ningún storage ni reemplaza el ebook vendible del libro; el administrador
 lo revisa y, si le sirve, lo sube manualmente por `PUT
-/api/v1/admin/books/{identifier}/ebook` (ADR 0004). El PDF se genera con una
-fuente TrueType embebida (antes usaba la fuente por defecto de `gpdf`, que
-no declaraba su encoding y hacía que los visores de PDF leyeran letras
-acentuadas como glyphs equivocados — "é"/"í" salían como "Ø"/"Æ"); ver ADR
-0004 para el detalle. Las imágenes que el editor inserta (`<figure
-data-wrap="..."><img src="data:...">`) se embeben de verdad en ambos
-formatos — como entradas reales del zip en EPUB, como objetos de imagen en
-el PDF —, pero sólo `inline`/`center`/`left`/`right` se distinguen en el PDF;
-el modo "libre" (arrastrable, delante o detrás del texto) es una capacidad
-de CSS que sólo tiene sentido en el editor y en EPUB, así que en el PDF cae
-a centrado.
+/api/v1/admin/books/{identifier}/ebook` (ADR 0004).
+
+El PDF reproduce lo que el editor muestra en pantalla, no una aproximación:
+usa el papel elegido (`pageSize`) con márgenes de una pulgada, el mismo
+cuerpo de texto (los 17px del editor son 12,75pt físicos reales, porque CSS
+define el píxel como 1/96 de pulgada fijo) y los márgenes por defecto del
+navegador para cada tipo de bloque, incluido el colapso de márgenes entre
+bloques adyacentes. Conserva la alineación de cada párrafo (izquierda,
+centro, derecha, justificado), el formato *dentro* de un párrafo — una
+palabra en negrita, en itálica, subrayada o de otro color en medio de una
+oración sobrevive como su propio fragmento — y las listas con su sangría y
+numeración. Se genera con una fuente TrueType embebida (antes usaba la
+fuente por defecto de `gpdf`, que no declaraba su encoding y hacía que los
+visores leyeran letras acentuadas como glyphs equivocados — "é"/"í" salían
+como "Ø"/"Æ").
+
+El EPUB lleva su propia hoja de estilos con esa misma tipografía, y su XHTML
+se re-serializa con los elementos vacíos autocerrados (`<br />`): `go-epub`
+inserta el cuerpo como innerxml sin validarlo, así que un `<br>` sin cerrar
+—de cualquier salto de línea— producía un EPUB cuyo XHTML no era XML
+bien formado.
+
+Las imágenes que el editor inserta (`<figure data-wrap="..."><img
+src="data:...">`) se embeben de verdad en ambos formatos — como entradas
+reales del zip en EPUB, como objetos de imagen en el PDF —, pero sólo
+`inline`/`center`/`left`/`right` se distinguen en el PDF; el modo "libre"
+(arrastrable, delante o detrás del texto) es una capacidad de CSS que sólo
+tiene sentido en el editor y en EPUB, así que en el PDF cae a centrado.
 
 ## Backoffice de datos
 

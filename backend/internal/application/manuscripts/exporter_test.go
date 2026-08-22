@@ -17,6 +17,30 @@ import (
 const testPNGDataURL = "data:image/png;base64," +
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 
+// extractPDFText reads a generated PDF back with the same library the
+// manuscript *importer* uses, and normalizes whitespace before returning
+// it. The normalization matters: text is laid out run-by-run so that
+// justification and mixed inline styles are possible, which means the
+// extractor sees one positioned text object per word and separates them
+// with newlines. The words and their characters are what these tests are
+// about — not how the extractor happens to rejoin them.
+func extractPDFText(t *testing.T, data []byte) string {
+	t.Helper()
+	reader, err := pdf.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		t.Fatalf("read generated pdf back: %v", err)
+	}
+	textReader, err := reader.GetPlainText()
+	if err != nil {
+		t.Fatalf("extract plain text: %v", err)
+	}
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(textReader); err != nil {
+		t.Fatalf("read extracted text: %v", err)
+	}
+	return strings.Join(strings.Fields(buf.String()), " ")
+}
+
 func testChapters() []manuscript.Chapter {
 	return []manuscript.Chapter{
 		{ID: 1, Title: "Introducción", HTML: "<h1>Bienvenida</h1><p>Un párrafo de bienvenida al libro.</p>"},
@@ -76,7 +100,7 @@ func TestExportRejectsUnknownFormatThroughService(t *testing.T) {
 
 func TestExportPDFProducesAWellFormedDocument(t *testing.T) {
 	t.Parallel()
-	data, err := ExportPDF("Mi libro de prueba", "Autora de prueba", testChapters())
+	data, err := ExportPDF("Mi libro de prueba", "Autora de prueba", testChapters(), manuscript.DefaultPageSizeID)
 	if err != nil {
 		t.Fatalf("export pdf: %v", err)
 	}
@@ -103,24 +127,12 @@ func TestExportPDFPreservesAccentedCharacters(t *testing.T) {
 		Title: "Introducción",
 		HTML:  "<h1>Múltiples canciones</h1><p>El murciélago cantó su canción bajo la luna, año tras año.</p>",
 	}}
-	data, err := ExportPDF("Título con acentos: áéíóú ñ ¿por qué?", "Autoría", chapters)
+	data, err := ExportPDF("Título con acentos: áéíóú ñ ¿por qué?", "Autoría", chapters, manuscript.DefaultPageSizeID)
 	if err != nil {
 		t.Fatalf("export pdf: %v", err)
 	}
 
-	reader, err := pdf.NewReader(bytes.NewReader(data), int64(len(data)))
-	if err != nil {
-		t.Fatalf("read generated pdf back: %v", err)
-	}
-	textReader, err := reader.GetPlainText()
-	if err != nil {
-		t.Fatalf("extract plain text: %v", err)
-	}
-	var buf bytes.Buffer
-	if _, err := buf.ReadFrom(textReader); err != nil {
-		t.Fatalf("read extracted text: %v", err)
-	}
-	extracted := buf.String()
+	extracted := extractPDFText(t, data)
 
 	for _, want := range []string{"Introducción", "Múltiples canciones", "murciélago", "canción", "año"} {
 		if !strings.Contains(extracted, want) {
@@ -149,20 +161,20 @@ func TestExportPDFKeepsParagraphsAndHeadingsAsSeparateBlocks(t *testing.T) {
 		Title: "Capítulo 1",
 		HTML:  "<h2>Encabezado</h2><p>Primer párrafo.</p><p>Segundo párrafo.</p>",
 	}}
-	blocks, err := blocksFromChapterHTML(chapters[0].HTML)
+	blocks, err := parseChapterBlocks(chapters[0].HTML)
 	if err != nil {
 		t.Fatalf("parse chapter html: %v", err)
 	}
 	if len(blocks) != 3 {
 		t.Fatalf("expected 3 separate blocks (heading + 2 paragraphs), got %d: %#v", len(blocks), blocks)
 	}
-	if blocks[0].kind != "h2" || blocks[0].text != "Encabezado" {
+	if blocks[0].kind != kindH2 || blockText(blocks[0]) != "Encabezado" {
 		t.Fatalf("expected block 0 to be the heading alone, got %#v", blocks[0])
 	}
-	if blocks[1].text != "Primer párrafo." {
+	if blockText(blocks[1]) != "Primer párrafo." {
 		t.Fatalf("expected block 1 to be the first paragraph alone, got %#v", blocks[1])
 	}
-	if blocks[2].text != "Segundo párrafo." {
+	if blockText(blocks[2]) != "Segundo párrafo." {
 		t.Fatalf("expected block 2 to be the second paragraph alone, got %#v", blocks[2])
 	}
 }
@@ -174,28 +186,75 @@ func TestExportPDFKeepsParagraphsAndHeadingsAsSeparateBlocks(t *testing.T) {
 func TestExportPDFOmitsHeadingForAnUntitledSection(t *testing.T) {
 	t.Parallel()
 	chapters := []manuscript.Chapter{{ID: 1, Title: "", Kind: manuscript.SectionKindCustom, HTML: "<p>Contenido sin título de sección.</p>"}}
-	data, err := ExportPDF("Libro de prueba", "", chapters)
+	data, err := ExportPDF("Libro de prueba", "", chapters, manuscript.DefaultPageSizeID)
 	if err != nil {
 		t.Fatalf("export pdf: %v", err)
 	}
-	reader, err := pdf.NewReader(bytes.NewReader(data), int64(len(data)))
+	extracted := extractPDFText(t, data)
+	if strings.Contains(extracted, "Capítulo") {
+		t.Fatalf("expected no forced 'Capítulo' heading for an untitled section, got: %q", extracted)
+	}
+	if !strings.Contains(extracted, "Contenido sin título de sección") {
+		t.Fatalf("expected the section's own body text, got: %q", extracted)
+	}
+}
+
+// The editor lets the author pick the paper they are writing on and
+// simulates it on screen; the export ignoring that choice and always
+// emitting A4 was a direct "the PDF doesn't match what I see" bug.
+func TestExportPDFUsesTheChosenPageSize(t *testing.T) {
+	t.Parallel()
+	chapters := []manuscript.Chapter{{ID: 1, Title: "Capítulo 1", HTML: "<p>Contenido.</p>"}}
+
+	pocket, err := ExportPDF("Libro", "Autora", chapters, "pocket")
 	if err != nil {
-		t.Fatalf("read generated pdf back: %v", err)
+		t.Fatalf("export pocket: %v", err)
 	}
-	textReader, err := reader.GetPlainText()
+	a4, err := ExportPDF("Libro", "Autora", chapters, "a4")
 	if err != nil {
-		t.Fatalf("extract plain text: %v", err)
+		t.Fatalf("export a4: %v", err)
 	}
-	var buf bytes.Buffer
-	if _, err := buf.ReadFrom(textReader); err != nil {
-		t.Fatalf("read extracted text: %v", err)
+
+	pocketBox := mediaBoxOf(t, pocket)
+	a4Box := mediaBoxOf(t, a4)
+	if pocketBox == a4Box {
+		t.Fatalf("expected different page geometry per size, both were %q", a4Box)
 	}
-	if strings.Contains(buf.String(), "Capítulo") {
-		t.Fatalf("expected no forced 'Capítulo' heading for an untitled section, got: %q", buf.String())
+	// 127mm x 203mm at 2.83465pt/mm -> roughly 360 x 575pt.
+	if !strings.Contains(pocketBox, "360") || !strings.Contains(pocketBox, "575") {
+		t.Fatalf("expected the pocket book's MediaBox to be ~360x575pt, got %q", pocketBox)
 	}
-	if !strings.Contains(buf.String(), "Contenido sin título de sección") {
-		t.Fatalf("expected the section's own body text, got: %q", buf.String())
+}
+
+// An unknown or empty page size must fall back to the default rather than
+// producing a zero-sized page.
+func TestExportPDFFallsBackToTheDefaultPageSize(t *testing.T) {
+	t.Parallel()
+	chapters := []manuscript.Chapter{{ID: 1, Title: "Capítulo 1", HTML: "<p>Contenido.</p>"}}
+	for _, id := range []string{"", "no-existe"} {
+		data, err := ExportPDF("Libro", "Autora", chapters, id)
+		if err != nil {
+			t.Fatalf("export %q: %v", id, err)
+		}
+		if !bytes.HasPrefix(data, []byte("%PDF-")) {
+			t.Fatalf("export %q: expected a well-formed PDF", id)
+		}
 	}
+}
+
+// mediaBoxOf pulls the first /MediaBox array out of a generated PDF, which
+// is where the physical page dimensions live.
+func mediaBoxOf(t *testing.T, data []byte) string {
+	t.Helper()
+	index := bytes.Index(data, []byte("/MediaBox"))
+	if index < 0 {
+		t.Fatal("generated PDF declares no /MediaBox")
+	}
+	end := bytes.IndexByte(data[index:], ']')
+	if end < 0 {
+		t.Fatal("generated PDF has a malformed /MediaBox")
+	}
+	return string(data[index : index+end+1])
 }
 
 // TestExportPDFEmbedsAnImageWithoutFailing covers the new <figure data-wrap
@@ -210,7 +269,7 @@ func TestExportPDFEmbedsAnImageWithoutFailing(t *testing.T) {
 			`<figure class="ms-image" data-wrap="center" style="width:50%"><img src="` + testPNGDataURL + `" alt=""></figure>` +
 			`<p>Después de la imagen.</p>`,
 	}}
-	data, err := ExportPDF("Libro con imagen", "Autora", chapters)
+	data, err := ExportPDF("Libro con imagen", "Autora", chapters, manuscript.DefaultPageSizeID)
 	if err != nil {
 		t.Fatalf("export pdf: %v", err)
 	}

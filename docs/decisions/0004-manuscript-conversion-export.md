@@ -109,3 +109,60 @@ dependencia nueva, así que no ameritan un ADR aparte:
   coordenadas fijas en un capítulo que se autopagina a varias páginas físicas
   no tiene una página física inequívoca a la cual anclarse. El editor
   (pantalla) y el EPUB (es sólo CSS) sí soportan las cinco variantes completas.
+
+## Addendum 2 (2026-08-22): fidelidad real del PDF, EPUB con estilos, import de EPUB
+
+El PDF seguía sin parecerse a lo que muestra el editor. La causa no era una
+sola: el modelo de render era "un bloque = una línea de texto sin estilo", lo
+que descartaba la alineación, todo el formato *dentro* de un párrafo, los
+tamaños relativos y el espaciado entre bloques. Se reemplazó por un modelo de
+bloques con runs (`manuscripts/htmldoc.go`), sin dependencias nuevas:
+
+- **Formato inline**: se usa `RichText`/`Span` de `gpdf` (que ya estaba
+  disponible y no se estaba usando), así una palabra en negrita, itálica,
+  subrayada, tachada o de otro color en medio de una oración sobrevive como su
+  propio fragmento en vez de aplanarse.
+- **Alineación** por bloque (izquierda/centro/derecha/justificado), heredada
+  desde un wrapper cuando `execCommand` la aplica ahí. `template` no exporta
+  una opción de justificado, pero `template.TextOption` es
+  `func(*document.Style)` y es público, así que las opciones que faltaban se
+  escriben localmente en vez de forkear la librería.
+- **Tipografía física**: el editor dibuja el manuscrito a 17px con
+  interlineado 1,85 sobre el papel elegido; CSS define el píxel como 1/96 de
+  pulgada fijo, así que esos 17px son 12,75pt reales. Usar esos números en el
+  PDF reproduce el mismo corte de línea que el autor ve, y hace que el contador
+  de "N hojas" del editor prediga la cantidad real de páginas exportadas.
+- **Espaciado**: se replican los márgenes por defecto del navegador para cada
+  tipo de bloque (h1 2em/0,67em, h2 1,5em/0,83em, p 1em/1em...) *incluido el
+  colapso de márgenes* entre bloques adyacentes, que es lo que hace que un
+  encabezado quede a la distancia correcta de su párrafo.
+- **Tamaño de página**: `pageSize` ahora se persiste con el manuscrito
+  (migración 013) y la exportación lo usa. Antes el PDF salía siempre en A4
+  aunque el autor estuviera escribiendo en formato bolsillo.
+- **Portada**: si el manuscrito tiene una sección `COVER`, no se genera además
+  la portada automática — el libro abría con dos portadas compitiendo.
+
+En EPUB se agregó una hoja de estilos propia (sin ella el lector aplica sus
+defaults y se pierden, entre otras cosas, los modos de ajuste de imagen, que
+son puro CSS) y se corrigió un bug real de validez: `go-epub` inserta el cuerpo
+de cada sección como `innerxml` sin validarlo, así que un `<br>` sin cerrar —de
+cualquier salto de línea— producía un EPUB cuyo XHTML no era XML bien formado.
+Ahora el cuerpo se re-serializa con los elementos vacíos autocerrados.
+
+Import: se agregó `.epub` (se separa por su propio spine e incrusta las
+imágenes del archivo como data URLs), separación automática por encabezados
+para los formatos planos, y `?mode=append` para sumar a un manuscrito en curso
+en vez de reemplazarlo — importar destruía silenciosamente todo lo ya escrito.
+Con esto **todo HTML importado se sanitiza en el servidor**
+(`manuscripts/sanitize.go`), y eso no es opcional: el editor carga un capítulo
+asignándolo a `innerHTML`, de modo que cualquier `<script>`, `onerror=` o
+`javascript:` dentro de un EPUB arbitrario se ejecutaría en el navegador del
+administrador. Un `.docx`/`.pdf` era seguro por construcción (su HTML se arma
+escapando texto); un `.epub` es XHTML arbitrario de terceros y no lo es. El
+editor sanitiza además lo que se pega desde Word/Docs, por la misma razón y
+para que un pegado no traiga tipografías fijas que rompan la consistencia del
+libro exportado.
+
+Sigue fuera de alcance: números de página en el pie (la API de `gpdf` sólo
+permite un pie igual para todas las páginas, y numerar la portada se ve peor
+que no numerar), y texto fluyendo alrededor de una imagen flotante en el PDF.

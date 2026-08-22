@@ -831,6 +831,9 @@ paths:
                 chapters:
                   type: array
                   items: {$ref: '#/components/schemas/ManuscriptChapter'}
+                pageSize:
+                  type: string
+                  enum: [a4, carta, oficio, legal, pocket]
       responses:
         '200':
           description: Manuscrito guardado.
@@ -850,12 +853,19 @@ paths:
       tags: [Admin books]
       operationId: importBookManuscript
       description: >-
-        Convierte un archivo subido (.txt/.docx/.pdf) en un solo capítulo y lo
+        Convierte un archivo subido (.txt/.docx/.pdf/.epub) en secciones y lo
         persiste de inmediato. Extensión y firma de bytes se validan antes de
-        convertir (ADR 0004).
+        convertir (ADR 0004). Un .epub se separa por su propio spine; los
+        formatos planos se separan por los encabezados que use el documento.
+        El HTML resultante se sanitiza en el servidor antes de guardarse.
       security: [{sessionCookie: []}]
       parameters:
         - $ref: '#/components/parameters/Origin'
+        - name: mode
+          in: query
+          required: false
+          schema: {type: string, enum: [replace, append], default: replace}
+          description: '`append` agrega las secciones importadas al final del manuscrito existente en vez de reemplazarlo.'
       requestBody:
         required: true
         content:
@@ -867,7 +877,7 @@ paths:
                 file: {type: string, format: binary}
       responses:
         '200':
-          description: Manuscrito reemplazado por el contenido convertido.
+          description: Manuscrito reemplazado o ampliado por el contenido convertido.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Manuscript'}
@@ -1215,6 +1225,10 @@ components:
           type: array
           maxItems: 200
           items: {$ref: '#/components/schemas/ManuscriptChapter'}
+        pageSize:
+          type: string
+          enum: [a4, carta, oficio, legal, pocket]
+          description: 'Physical paper the manuscript is written against. The editor simulates it on screen and PDF export renders those exact page dimensions, so it is part of the manuscript rather than a per-device preference. An unknown or omitted value resolves to `a4`.'
         updatedAt: {type: [string, 'null'], format: date-time}
     SiteSettingsInput:
       type: object

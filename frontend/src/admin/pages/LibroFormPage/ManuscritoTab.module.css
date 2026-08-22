@@ -410,17 +410,103 @@
   font-size: 16px;
 }
 
+.toolbarButtonActive {
+  background: var(--color-deep-blue);
+  color: white;
+}
+
+.toolbarButtonActive:hover {
+  background: var(--color-deep-blue);
+}
+
+.toolbarButtonStrike {
+  text-decoration: line-through;
+}
+
+/* Alignment icons. Each of the four buttons draws its own alignment: the
+   bar stack is 16px wide, every other bar is short, and the modifier below
+   decides which edge the short bars are pulled towards. They used to be
+   four identical stacks, so every button looked like "left". */
 .alignBars {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  justify-content: center;
+  width: 16px;
 }
 
 .alignBar {
   height: 2px;
-  background: oklch(40% 0.02 90);
+  width: 100%;
+  background: currentColor;
   border-radius: 1px;
+}
+
+.alignBarShort {
+  width: 65%;
+}
+
+.alignBars_left {
+  align-items: flex-start;
+}
+
+.alignBars_center {
+  align-items: center;
+}
+
+.alignBars_right {
+  align-items: flex-end;
+}
+
+/* Justified: every line reaches both edges, so no bar is shortened. */
+.alignBars_justify .alignBarShort {
+  width: 100%;
+}
+
+/* ---- Text colour picker ---- */
+
+.colorPicker {
+  position: relative;
+  display: flex;
+}
+
+.colorGlyph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.colorGlyphBar {
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.colorMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  padding: 7px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border-strong);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px color-mix(in oklch, var(--color-ink) 14%, transparent);
+}
+
+.colorSwatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in oklch, var(--color-ink) 20%, transparent);
+  cursor: pointer;
+  padding: 0;
 }
 
 .toolbarSpacer {
@@ -542,6 +628,12 @@
   color: var(--color-admin-text-faint);
   margin: 14px 0 0;
   line-height: 1.5;
+}
+
+.exportSeparator {
+  height: 1px;
+  background: var(--color-surface-border-strong);
+  margin: 18px 0;
 }
 
 /* ---- Preview modal ---- */
