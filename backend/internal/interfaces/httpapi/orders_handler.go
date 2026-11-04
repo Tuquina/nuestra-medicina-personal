@@ -64,7 +64,7 @@ func (h *OrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 func (h *OrderHandler) MercadoPagoWebhook(w http.ResponseWriter, r *http.Request) {
 	if webhookType := r.URL.Query().Get("type"); webhookType != "" && webhookType != "payment" {
-		writeJSON(w, http.StatusNoContent, nil)
+		acknowledgeWebhook(w)
 		return
 	}
 	dataID := r.URL.Query().Get("data.id")
@@ -72,6 +72,15 @@ func (h *OrderHandler) MercadoPagoWebhook(w http.ResponseWriter, r *http.Request
 		dataID = r.URL.Query().Get("data_id")
 	}
 	if err := h.validator.Validate(r.Header.Get("X-Signature"), r.Header.Get("X-Request-ID"), dataID); err != nil {
+		// Logged so a wrong MERCADOPAGO_WEBHOOK_SECRET (or a webhook never
+		// set up in Mercado Pago's "Tus integraciones" panel) shows up in the
+		// API logs, not only as a 401 in Mercado Pago's notification panel.
+		// Never logs the signature or the secret themselves.
+		h.logger.Warn("mercado pago webhook signature rejected",
+			"request_id", requestID(r.Context()), "payment_id", dataID,
+			"signature_present", r.Header.Get("X-Signature") != "",
+			"provider_request_id_present", r.Header.Get("X-Request-ID") != "",
+		)
 		writeError(w, http.StatusUnauthorized, "INVALID_WEBHOOK_SIGNATURE", "Webhook signature is invalid", nil)
 		return
 	}
@@ -81,7 +90,7 @@ func (h *OrderHandler) MercadoPagoWebhook(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		if errors.Is(err, order.ErrNotFound) || errors.Is(err, order.ErrPaymentMismatch) {
 			h.logger.Warn("verified payment does not match a local order", "request_id", requestID(r.Context()), "payment_id", dataID, "error", err)
-			writeJSON(w, http.StatusNoContent, nil)
+			acknowledgeWebhook(w)
 			return
 		}
 		h.handleError(w, r, "process mercado pago webhook", err, "payment_id", dataID)
@@ -91,7 +100,14 @@ func (h *OrderHandler) MercadoPagoWebhook(w http.ResponseWriter, r *http.Request
 		"request_id", requestID(r.Context()), "payment_id", dataID,
 		"order_id", processed.ID, "order_status", processed.Status,
 	)
-	writeJSON(w, http.StatusNoContent, nil)
+	acknowledgeWebhook(w)
+}
+
+// acknowledgeWebhook answers 200 OK: Mercado Pago's webhook docs ask for
+// "HTTP 200 (OK) o 201 (Created)" and keep retrying anything else, so a 204
+// risks being treated as an undelivered notification.
+func acknowledgeWebhook(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *OrderHandler) handleError(w http.ResponseWriter, r *http.Request, operation string, err error, attributes ...any) {

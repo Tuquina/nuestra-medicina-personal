@@ -64,6 +64,10 @@ func TestWebhookLogCorrelatesProviderPaymentAndOrder(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	handler.MercadoPagoWebhook(recorder, request)
 
+	// Mercado Pago only counts 200/201 as delivered; anything else is retried.
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected webhook to be acknowledged with 200, got %d", recorder.Code)
+	}
 	entry := decodeLogEntry(t, output.Bytes())
 	if entry["payment_id"] != "payment-1" || entry["order_id"] != "order-1" || entry["order_status"] != "PAID" {
 		t.Fatalf("payment log correlation is incomplete: %#v", entry)

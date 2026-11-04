@@ -359,7 +359,7 @@ paths:
         - {name: X-Signature, in: header, required: true, schema: {type: string}}
         - {name: X-Request-ID, in: header, required: true, schema: {type: string}}
       responses:
-        '204': {description: Notificación procesada o pago ajeno ignorado de forma segura.}
+        '200': {description: Notificación procesada o pago ajeno ignorado de forma segura (Mercado Pago exige 200/201).}
         '401':
           description: Firma ausente, inválida o vencida.
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}

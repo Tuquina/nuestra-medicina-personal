@@ -115,6 +115,30 @@ En **cada** Environment, cargar:
 | `MERCADOPAGO_PUBLIC_BASE_URL` | Vacío hasta configurar Mercado Pago; después, `https://` + el mismo valor que `APP_DOMAIN` |
 | `BACKUP_PATH` | Ruta absoluta en el VPS, distinta por ambiente (ej. `/home/deploy/backups-dev`) |
 
+### Mercado Pago en `development` (modo prueba)
+
+1. En Mercado Pago Developers → Tus integraciones → tu aplicación →
+   **Credenciales de prueba**, copiar el *Access Token* (empieza con
+   `TEST-`) al secret `MERCADOPAGO_ACCESS_TOKEN` del Environment
+   `development`. El backend detecta el prefijo `TEST-` y, sólo en ese
+   caso, manda al comprador al checkout sandbox (`sandbox_init_point`) con
+   un email de pagador sintético `@testuser.com`.
+2. En la misma aplicación → **Webhooks** → Configurar notificaciones →
+   pestaña *Modo de prueba*: URL
+   `https://<APP_DOMAIN de dev>/api/v1/webhooks/mercadopago`, evento
+   **Pagos**. Guardar, revelar la **clave secreta** y cargarla en
+   `MERCADOPAGO_WEBHOOK_SECRET`.
+3. `MERCADOPAGO_PUBLIC_BASE_URL` = `https://` + `APP_DOMAIN`.
+4. Volver a correr *Deploy · development* (Actions → Run workflow) para que
+   tome los valores nuevos.
+5. Probar en una ventana de incógnito sin sesión de Mercado Pago iniciada
+   con tu cuenta real: comprar un libro y pagar con una tarjeta de prueba
+   (titular `APRO` para aprobado, `OTHE` para rechazado). Si el checkout
+   pide login, usar un usuario **comprador** de prueba (Cuentas de prueba).
+6. Si la orden queda `PENDING`, buscar en los logs de la API
+   `mercado pago webhook signature rejected` (clave secreta incorrecta) o
+   `mercado pago webhook processed` (llegó bien).
+
 ### Usuario `deploy` dedicado en el VPS (una sola vez)
 
 Un usuario aparte de tu cuenta personal, para que una clave de CI filtrada no

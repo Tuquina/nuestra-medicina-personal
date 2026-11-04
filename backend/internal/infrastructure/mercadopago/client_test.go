@@ -144,6 +144,49 @@ func TestCreatePreferenceKeepsRealPayerEmailForProductionCredentials(t *testing.
 	}
 }
 
+// TestCreatePreferenceChoosesCheckoutURLByCredentialType guards which
+// checkout a buyer is sent to: TEST- credentials must open the sandbox
+// checkout (init_point rejects a sandbox seller), production credentials
+// must keep opening the real one.
+func TestCreatePreferenceChoosesCheckoutURLByCredentialType(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, token, response, want string
+	}{
+		{"test token uses sandbox", "TEST-abc123",
+			`{"id":"pref-1","init_point":"https://real.example/checkout","sandbox_init_point":"https://sandbox.example/checkout"}`,
+			"https://sandbox.example/checkout"},
+		{"production token uses init_point", "APP_USR-real-token",
+			`{"id":"pref-1","init_point":"https://real.example/checkout","sandbox_init_point":"https://sandbox.example/checkout"}`,
+			"https://real.example/checkout"},
+		{"test token without sandbox URL falls back", "TEST-abc123",
+			`{"id":"pref-1","init_point":"https://real.example/checkout"}`,
+			"https://real.example/checkout"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, tc.response)
+			}))
+			defer server.Close()
+			client := NewClient(tc.token, "https://store.example", server.URL)
+			client.httpClient = server.Client()
+			preference, err := client.CreatePreference(context.Background(), order.PreferenceRequest{
+				OrderID: "order-1", BookID: "book-1", BookSlug: "un-libro", Title: "Un libro",
+				AmountMinorUnits: 1000, Currency: "ARS", PayerEmail: "buyer@example.com",
+			})
+			if err != nil {
+				t.Fatalf("create preference: %v", err)
+			}
+			if preference.CheckoutURL != tc.want {
+				t.Fatalf("expected checkout URL %q, got %q", tc.want, preference.CheckoutURL)
+			}
+		})
+	}
+}
+
 // TestNewClientHonorsAPIURLOverride is the E2E seam itself: given a custom
 // apiURL (what MERCADOPAGO_API_BASE_URL ultimately feeds into main.go),
 // every call goes to it instead of the real API — this is what lets a fake
