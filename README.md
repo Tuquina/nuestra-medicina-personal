@@ -46,44 +46,37 @@ esté en la variable `ADMIN_EMAILS` del ambiente correspondiente.
 | Mercado Pago | ✅ Modo prueba configurado (falta una compra de prueba end-to-end) | ❌ Sin credenciales en el Environment `production` |
 | Emails (Gmail API) | ❌ Sin configurar | ❌ Sin configurar |
 | CI (tests, lint, E2E) | ✅ En verde en `develop` | — |
+| Deploys | ✅ Automático en cada merge a `develop` | ⚠️ Con aprobación manual, todavía sin primer deploy |
 
-### Pendientes para salir a producción
+### Salir a producción
 
-1. **Llevar `develop` a `main`.** `main` está muy atrasada (último commit del
-   20/08/2026, PR #1): no tiene ni el workflow `deploy-prod.yml`, por eso prod
-   nunca se desplegó. Abrir un PR `develop → main`, mergearlo y aprobar el
-   deploy en Actions (el Environment `production` pide aprobación manual).
-2. **Mercado Pago en prod.** En el Environment `production` cargar los secrets
-   `MERCADOPAGO_ACCESS_TOKEN` (credencial **de producción**, `APP_USR-…`) y
-   `MERCADOPAGO_WEBHOOK_SECRET`, y la variable
-   `MERCADOPAGO_PUBLIC_BASE_URL=https://nuestramedicinapersonal.com.ar`. En el
-   panel de Mercado Pago → Webhooks → *Modo productivo*: URL
-   `https://nuestramedicinapersonal.com.ar/api/v1/webhooks/mercadopago`,
-   evento **Pagos**. Sin esto el sitio funciona, pero el checkout responde
-   "pagos no configurados".
-3. **Compra de prueba en DEV.** Antes de cobrar de verdad, hacer una compra
-   completa en DEV (pasos en [`deploy/README.md`](deploy/README.md#mercado-pago-en-development-modo-prueba)).
-4. **Google OAuth.** En Google Cloud Console, el Client ID debe tener como
-   *Authorized redirect URIs* las dos URLs
-   `https://dev.nuestramedicinapersonal.com.ar/api/v1/auth/google/callback` y
-   `https://nuestramedicinapersonal.com.ar/api/v1/auth/google/callback`. Si la
-   pantalla de consentimiento está en modo *Testing*, sólo pueden entrar los
-   usuarios de prueba cargados: publicarla antes de abrir la tienda.
-5. **Emails transaccionales (Gmail API).** Hoy no se envía ningún email
-   (confirmación de compra, pago pendiente, reembolso). Los emails quedan
-   encolados en la base y se envían solos cuando se configure. Requiere Google
-   Workspace con un buzón remitente y una service account con delegación de
-   dominio (pasos en [`deploy/README.md`](deploy/README.md#google-workspace-y-gmail-api));
-   luego cargar `GOOGLE_MAIL_CREDENTIALS_JSON` (secret) y `GOOGLE_MAIL_SENDER`
-   (variable) en cada Environment. Configurar también SPF, DKIM y DMARC.
-6. **DNS de `www`.** `www.nuestramedicinapersonal.com.ar` no resuelve. Si se
-   quiere, crear el registro y agregarlo a `deploy/proxy/Caddyfile`
-   (redirigiendo al dominio principal).
-7. **Backups fuera del VPS.** El backup existe (`deploy/README.md` → *Backup y
-   restauración*) pero hay que programarlo y copiar los archivos fuera del
-   VPS; `BACKUP_RETENTION_DAYS=0` no borra nada hasta que eso exista.
-8. **Contenido real.** Cargar libros, PDFs/EPUBs, portadas, textos legales
-   (términos y privacidad) y datos de contacto desde el panel admin.
+La guía paso a paso, con las variables exactas que faltan cargar, está en
+**[`docs/go-live.md`](docs/go-live.md)**. Resumen:
+
+0. ✅ Repo público (resuelto). **Debe seguir público**: con repo privado en
+   GitHub Free los deploys pierden los secrets y el VPS no puede hacer
+   `git fetch` (detalle en el paso 0 de la guía).
+1. Compra de prueba completa en DEV.
+2. Mercado Pago: activar credenciales de producción y configurar el webhook
+   en *Modo productivo*.
+3. Cargar en el Environment `production`: `MERCADOPAGO_ACCESS_TOKEN`,
+   `MERCADOPAGO_WEBHOOK_SECRET` (secrets) y `MERCADOPAGO_PUBLIC_BASE_URL`
+   (variable).
+4. Google: redirect URI de prod y pantalla de consentimiento publicada.
+5. PR `develop → main` y aprobar el deploy.
+6. Verificar prod. 7. Cargar contenido. 8. Después: Gmail, `www`, backups.
+
+## Diagramas
+
+Archivos Excalidraw en [`docs/diagrams/`](docs/diagrams/) (abrir en
+https://excalidraw.com → menú → *Open*):
+
+| Diagrama | Muestra |
+|---|---|
+| [`infraestructura.excalidraw`](docs/diagrams/infraestructura.excalidraw) | VPS, Caddy, stacks prod/dev e integraciones externas |
+| [`deploy-pipeline.excalidraw`](docs/diagrams/deploy-pipeline.excalidraw) | Ramas, CI y qué hace cada deploy |
+| [`flujo-de-compra.excalidraw`](docs/diagrams/flujo-de-compra.excalidraw) | Checkout, webhook de Mercado Pago y biblioteca |
+| [`go-live-checklist.excalidraw`](docs/diagrams/go-live-checklist.excalidraw) | Los pasos para salir a producción |
 
 Pendientes de producto menores (no bloquean): revisar estados vacíos y de
 error en toda la app; números de página en el PDF exportado del manuscrito
