@@ -16,7 +16,9 @@ manualmente desde GitHub Actions.
   [`deploy-prod.yml`](../.github/workflows/deploy-prod.yml), que hace lo mismo
   para `nmp-prod`, pero el job queda pausado esperando aprobación manual en el
   Environment de GitHub `production` (Settings → Environments →
-  `production` → "Required reviewers").
+  `production` → "Required reviewers"). Esto, los secrets de los
+  Environments y la protección de ramas requieren un repo público o GitHub
+  Pro/Team (ver el paso 0 de [`go-live.md`](go-live.md)).
 - Ambos workflows de despliegue son un mismo workflow reutilizable
   ([`deploy.yml`](../.github/workflows/deploy.yml)) parametrizado por
   ambiente — ver [deploy/README.md](../deploy/README.md) para el checklist

@@ -87,6 +87,12 @@ ver `.github/workflows/deploy.yml` y `deploy/operations/deploy.sh`.
 
 ### Configuración por ambiente (Environments)
 
+> **Plan de GitHub:** los Environments (sus secrets y la aprobación manual)
+> sólo funcionan en repos **públicos** o con **GitHub Pro/Team**. En un repo
+> privado con GitHub Free, GitHub ignora los secrets de los Environments y el
+> deploy arma un `.env` vacío. Ver el paso 0 de
+> [`docs/go-live.md`](../docs/go-live.md).
+
 Crear dos Environments (Settings → Environments → New environment):
 `development` y `production`. En `production`, agregar un "Required reviewer"
 (vos mismo alcanza) para que el deploy quede pausado hasta que lo apruebes.
