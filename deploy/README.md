@@ -87,8 +87,9 @@ ver `.github/workflows/deploy.yml` y `deploy/operations/deploy.sh`.
 
 ### Configuración por ambiente (Environments)
 
-> **Plan de GitHub:** los Environments (sus secrets y la aprobación manual)
-> sólo funcionan en repos **públicos** o con **GitHub Pro/Team**. En un repo
+> **Plan de GitHub:** los secrets de los Environments funcionan en repos
+> **públicos** o con **GitHub Pro/Team**; la aprobación manual (*required
+> reviewers*) en repos privados sólo existe en GitHub Enterprise. En un repo
 > privado con GitHub Free, GitHub ignora los secrets de los Environments y el
 > deploy arma un `.env` vacío. Además el VPS clona el repo por HTTPS sin
 > credenciales, así que `git fetch` falla si el repo es privado. **Mantener el

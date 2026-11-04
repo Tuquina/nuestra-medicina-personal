@@ -42,9 +42,14 @@ ser privado** sin preparar antes estas dos cosas:
    `git fetch` en el VPS; con el repo privado falla con *"could not read
    Username for 'https://github.com'"* y el deploy se corta.
 
-Si algún día se quiere privado: pasar a **GitHub Pro** (USD 4/mes), agregar
-una *deploy key* de sólo lectura en el VPS (cambiando el remoto a SSH) y
-volver a crear la protección de ramas.
+Si algún día se quiere privado: **GitHub Pro** (USD 4/mes) devuelve los
+secrets de los Environments y la protección de ramas, pero **no** la
+aprobación manual de producción: los *required reviewers* en repos privados
+sólo existen en GitHub Enterprise. Con Pro, un push a `main` desplegaría
+directo, así que habría que agregar otra traba (por ejemplo, que
+`deploy-prod.yml` sólo corra a mano con *workflow_dispatch*). También hay que
+agregar una *deploy key* de sólo lectura en el VPS (cambiando el remoto a SSH)
+y volver a crear la protección de ramas.
 
 El código no contiene secretos (se revisó todo el historial de git): viven en
 los Environments de GitHub y en el VPS.
