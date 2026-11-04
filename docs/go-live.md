@@ -23,44 +23,36 @@ Diagramas (abrir en https://excalidraw.com → menú → *Open*):
 | Rama `main` | ❌ Atrasada: no tiene `deploy-prod.yml` ni nada desde el 20/08 |
 | Mercado Pago en PROD | ❌ Faltan credenciales y webhook |
 | Gmail (emails de compra) | ❌ No configurado en ningún ambiente (opcional para lanzar) |
-| Repo privado en plan GitHub Free | ⚠️ Rompe los deploys: ver paso 0 |
+| Repositorio | ✅ Público (necesario para los deploys: ver paso 0) |
 
 ---
 
-## Paso 0 — Resolver el repo privado (bloqueante)
+## Paso 0 — Mantener el repositorio público ✅
 
-**Qué pasa:** con el plan **GitHub Free**, un repositorio privado no puede usar
-*Environments*. GitHub lo documenta así: al pasar un repo de público a
-privado, *"any configured protection rules or environment secrets will be
-ignored"*. En este proyecto eso significa:
+**Resuelto el 4/11/2026.** Queda documentado porque el repo **no debe volver a
+ser privado** sin preparar antes estas dos cosas:
 
-- Los deploys (DEV y PROD) arman el `.env` del servidor **sin secrets**
-  (contraseña de Postgres, Google, Mercado Pago vacíos): el sitio desplegado
-  deja de funcionar en el próximo deploy.
-- Se pierde la **aprobación manual** del deploy a producción: un push a
-  `main` desplegaría directo.
-- Se pierde la **protección de ramas** de `develop` y `main` (la API de GitHub
-  ya responde *"Upgrade to GitHub Pro or make this repository public"*).
+1. **GitHub Free no da Environments en repos privados.** GitHub lo documenta
+   así: al pasar un repo a privado, *"any configured protection rules or
+   environment secrets will be ignored"*. Los deploys armarían el `.env` del
+   servidor sin secrets y se perdería la aprobación manual de producción.
+   Además, GitHub **borra la protección de ramas** de `develop` y `main` y
+   no la restaura al volver a público: hay que crearla de nuevo.
+2. **El VPS clona el repo por HTTPS sin credenciales.** `deploy.sh` hace
+   `git fetch` en el VPS; con el repo privado falla con *"could not read
+   Username for 'https://github.com'"* y el deploy se corta.
 
-Además, desde que el repo es privado los workflows quedaron **en cola sin
-arrancar**. Revisar en https://github.com/settings/billing que Actions tenga
-minutos disponibles y un método de pago o límite de gasto que lo permita.
+Si algún día se quiere privado: pasar a **GitHub Pro** (USD 4/mes), agregar
+una *deploy key* de sólo lectura en el VPS (cambiando el remoto a SSH) y
+volver a crear la protección de ramas.
 
-**Elegir una opción:**
-
-| Opción | Costo | Qué hay que hacer |
-|---|---|---|
-| **A. GitHub Pro** (recomendada si el repo debe ser privado) | USD 4/mes | https://github.com/settings/billing/plans → *Upgrade to Pro*. Todo vuelve a funcionar sin tocar código: secrets, aprobación manual y protección de ramas. |
-| B. Volver a público | Gratis | Settings → General → *Danger Zone* → *Change visibility* → Public. El código no contiene secretos: viven en GitHub y en el VPS. Todo vuelve a funcionar como antes. |
-| C. Seguir privado y gratis | Gratis | Cambiar el workflow para usar secrets **del repositorio** con prefijo (`DEV_…` / `PROD_…`). Se pierde la aprobación manual de prod y la protección de ramas. Requiere un PR de código. |
+El código no contiene secretos (se revisó todo el historial de git): viven en
+los Environments de GitHub y en el VPS.
 
 **Comprobar:** Actions → *Deploy · development* → *Run workflow* sobre
 `develop`. Debe terminar en verde y
 https://dev.nuestramedicinapersonal.com.ar/health/ready debe responder
 `{"status":"ok"}`.
-
-> Mientras no se resuelva el paso 0, **no mergear nada a `develop`**: cada
-> merge dispara un deploy a DEV que lo dejaría sin secrets.
 
 ---
 
@@ -125,7 +117,7 @@ Nunca pegar estos valores en el repo, en issues ni en chats: sólo en GitHub
 
 Dónde: GitHub → repo → **Settings → Environments → `production`**. Ahí hay dos
 listas: *Environment secrets* (valores ocultos) y *Environment variables*
-(visibles). Requiere el paso 0 resuelto.
+(visibles).
 
 ### Lo que falta cargar
 
@@ -186,9 +178,9 @@ Settings → Secrets and variables → Actions:
 
 ### Aprobación manual del deploy
 
-Settings → Environments → `production` → **Required reviewers** → agregarte.
-Así un push a `main` queda en pausa hasta que lo apruebes. Hoy **no está
-configurado** (y con el plan Free en repo privado no se puede: paso 0).
+Settings → Environments → `production` → **Required reviewers**: ya está
+configurado con `Tuquina`. Un push a `main` queda en pausa hasta que lo
+apruebes desde Actions (*Review deployments*).
 
 ---
 

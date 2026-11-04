@@ -46,16 +46,16 @@ esté en la variable `ADMIN_EMAILS` del ambiente correspondiente.
 | Mercado Pago | ✅ Modo prueba configurado (falta una compra de prueba end-to-end) | ❌ Sin credenciales en el Environment `production` |
 | Emails (Gmail API) | ❌ Sin configurar | ❌ Sin configurar |
 | CI (tests, lint, E2E) | ✅ En verde en `develop` | — |
-| Deploys | ⚠️ Repo privado en GitHub Free: GitHub ignora los secrets de los Environments | ⚠️ Ídem |
+| Deploys | ✅ Automático en cada merge a `develop` | ⚠️ Con aprobación manual, todavía sin primer deploy |
 
 ### Salir a producción
 
 La guía paso a paso, con las variables exactas que faltan cargar, está en
 **[`docs/go-live.md`](docs/go-live.md)**. Resumen:
 
-0. **Bloqueante:** resolver el repo privado (GitHub Pro o volver a público).
-   Hasta entonces no mergear a `develop`, porque el deploy dejaría DEV sin
-   secrets.
+0. ✅ Repo público (resuelto). **Debe seguir público**: con repo privado en
+   GitHub Free los deploys pierden los secrets y el VPS no puede hacer
+   `git fetch` (detalle en el paso 0 de la guía).
 1. Compra de prueba completa en DEV.
 2. Mercado Pago: activar credenciales de producción y configurar el webhook
    en *Modo productivo*.
