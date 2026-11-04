@@ -55,7 +55,7 @@ test.describe('compra feliz', () => {
         currency: order.currency,
       });
       const webhookResponse = await sendWebhook(request, paymentId);
-      expect(webhookResponse.status()).toBe(204);
+      expect(webhookResponse.status()).toBe(200);
 
       await page.getByRole('button', { name: 'Volver a verificar' }).click();
       await expect(page.getByRole('heading', { name: '¡Tu compra fue confirmada!' })).toBeVisible();

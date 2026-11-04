@@ -83,7 +83,14 @@ func (c *Client) CreatePreference(ctx context.Context, input order.PreferenceReq
 	if err := c.doJSON(ctx, http.MethodPost, "/checkout/preferences", input.OrderID, payload, &response); err != nil {
 		return order.Preference{}, err
 	}
+	// A preference created with TEST- credentials must be paid through
+	// sandbox_init_point: its init_point opens the real checkout, which
+	// rejects a sandbox seller ("Una de las partes con la que intentás hacer
+	// el pago es de prueba"). Production tokens always use init_point.
 	checkoutURL := response.InitPoint
+	if c.isTestCredential() && response.SandboxInitPoint != "" {
+		checkoutURL = response.SandboxInitPoint
+	}
 	if checkoutURL == "" {
 		checkoutURL = response.SandboxInitPoint
 	}

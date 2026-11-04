@@ -51,11 +51,11 @@ test.describe('webhook de Mercado Pago', () => {
     // No order was ever created with this external reference — mirrors a
     // payment for an order Mercado Pago knows about but this environment
     // doesn't (order.ErrNotFound), which the handler intentionally answers
-    // with 204 rather than leaking anything about which orders do exist.
+    // with 200 rather than leaking anything about which orders do exist.
     const paymentId = nextFakePaymentId();
     await registerFakePayment(paymentId, { status: 'approved', externalReference: '00000000-0000-4000-8000-000000000000', amountMinorUnits: 1, currency: 'ARS' });
     const response = await sendWebhook(request, paymentId);
-    expect(response.status()).toBe(204);
+    expect(response.status()).toBe(200);
   });
 
   test('un pago con un monto distinto al de la orden se ignora y no la marca paga', async ({ context, request }) => {
@@ -71,7 +71,7 @@ test.describe('webhook de Mercado Pago', () => {
     });
     const response = await sendWebhook(request, paymentId);
 
-    expect(response.status()).toBe(204); // order.ErrPaymentMismatch, same silent-204 handling as ErrNotFound
+    expect(response.status()).toBe(200); // order.ErrPaymentMismatch, same silent-200 handling as ErrNotFound
     expect(await getOrderStatus(order.id)).toBe('PENDING');
   });
 
@@ -83,7 +83,7 @@ test.describe('webhook de Mercado Pago', () => {
 
     await registerFakePayment(paymentId, { status: 'pending', externalReference: order.id, amountMinorUnits: order.totalMinorUnits, currency: order.currency });
     const firstResponse = await sendWebhook(request, paymentId);
-    expect(firstResponse.status()).toBe(204);
+    expect(firstResponse.status()).toBe(200);
     expect(await getOrderStatus(order.id)).toBe('PENDING');
     expect(await countPayments(order.id)).toBe(1);
 
@@ -95,8 +95,8 @@ test.describe('webhook de Mercado Pago', () => {
     await registerFakePayment(paymentId, { status: 'approved', externalReference: order.id, amountMinorUnits: order.totalMinorUnits, currency: order.currency });
     const secondResponse = await sendWebhook(request, paymentId);
     const thirdResponse = await sendWebhook(request, paymentId);
-    expect(secondResponse.status()).toBe(204);
-    expect(thirdResponse.status()).toBe(204);
+    expect(secondResponse.status()).toBe(200);
+    expect(thirdResponse.status()).toBe(200);
     expect(await getOrderStatus(order.id)).toBe('PAID');
     expect(await countPayments(order.id)).toBe(1);
   });
