@@ -38,7 +38,7 @@ Pago real en modo test antes de tocar producción; no reemplaza al CI.
 
 El CI ejecuta en paralelo:
 
-1. tests unitarios, `go vet`, migraciones, integración PostgreSQL y un ciclo
+1. formato (`gofmt`), tests unitarios, `go vet`, migraciones, integración PostgreSQL y un ciclo
    completo de backup/restauración;
 2. instalación reproducible, lint y build del frontend;
 3. validación de OpenAPI y de ambos archivos Compose;
