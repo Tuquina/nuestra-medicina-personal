@@ -1,0 +1,45 @@
+.panel {
+  margin-bottom: 28px;
+}
+
+.paper {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  padding: clamp(20px, 4vw, 36px);
+}
+
+.plain {
+  padding: 8px 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 23px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.hint {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-ink-muted);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
