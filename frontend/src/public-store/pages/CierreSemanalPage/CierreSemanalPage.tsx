@@ -89,7 +89,7 @@ function closuresAsText(closures: Closure[]): string {
 /** `/herramientas/cierre-semanal` */
 export function CierreSemanalPage() {
   const [week] = useState<WeekRange>(() => weekRangeOf(new Date()));
-  const [store, setStore] = useLocalStorageState<RitualStore>(
+  const [store, setStore, { persisted }] = useLocalStorageState<RitualStore>(
     STORAGE_KEY,
     { draft: { ...emptyFields(), weekKey: week.startKey }, closures: [] },
     isRitualStore,
@@ -145,7 +145,13 @@ export function CierreSemanalPage() {
 
   const confirmDelete = () => {
     if (pendingDelete) {
-      setStore((previous) => ({ ...previous, closures: previous.closures.filter((c) => c.weekKey !== pendingDelete) }));
+      setStore((previous) => ({
+        closures: previous.closures.filter((c) => c.weekKey !== pendingDelete),
+        // The in-progress draft of that same week holds the same text: delete it too,
+        // otherwise the "deleted" closure would reappear when walking the ritual again.
+        draft:
+          previous.draft.weekKey === pendingDelete ? { ...emptyFields(), weekKey: previous.draft.weekKey } : previous.draft,
+      }));
     }
     setPendingDelete(null);
   };
@@ -153,6 +159,7 @@ export function CierreSemanalPage() {
   return (
     <ToolLayout
       tool="cierre-semanal"
+      persisted={persisted}
       title="Ritual de cierre semanal"
       intro="Un recorrido breve para despedir la semana con calma: respirar, mirar lo vivido, agradecer, soltar lo que pesa y elegir con qué intención empezar la próxima."
     >
@@ -275,9 +282,11 @@ export function CierreSemanalPage() {
                 </Button>
               </div>
               <p className={styles.savedNote} aria-live="polite">
-                {savedThisWeek
-                  ? `Guardado en este navegador · ${new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(savedThisWeek.savedAt))}`
-                  : ''}
+                {!savedThisWeek
+                  ? ''
+                  : persisted
+                    ? `Guardado en este navegador · ${new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(savedThisWeek.savedAt))}`
+                    : 'No se pudo guardar en este navegador: descargalo para no perderlo.'}
               </p>
             </div>
           )}
