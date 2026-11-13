@@ -32,6 +32,8 @@ var (
 	ErrTooManyEntries = errors.New("too many entries for this tool")
 	// ErrNotFound means the person has no such entry or no data key yet.
 	ErrNotFound = errors.New("tool entry not found")
+	// ErrStaleRevision means a newer revision of the entry is already stored.
+	ErrStaleRevision = errors.New("a newer revision of this tool entry is already stored")
 )
 
 // kindsByTool is the allow-list of tools and the kinds of entry each one

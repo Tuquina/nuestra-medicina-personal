@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -53,13 +54,18 @@ func TestToolEntriesAreEncryptedPaginatedAndDeletedWithTheAccount(t *testing.T) 
 	// Save five days, then replace one, and confirm only ciphertext is stored.
 	for day := 1; day <= 5; day++ {
 		ref := toolentry.Ref{Tool: "escritura-diaria", Kind: "day", Key: fmt.Sprintf("2026-11-%02d", day)}
-		if _, err := service.Put(ctx, userID, ref, json.RawMessage(fmt.Sprintf(`{"text":"secreto %d"}`, day))); err != nil {
+		if _, err := service.Put(ctx, userID, ref, json.RawMessage(fmt.Sprintf(`{"text":"secreto %d"}`, day)), 1); err != nil {
 			t.Fatalf("put day %d: %v", day, err)
 		}
 	}
-	first, err := service.Put(ctx, userID, toolentry.Ref{Tool: "escritura-diaria", Kind: "day", Key: "2026-11-03"}, json.RawMessage(`{"text":"editado"}`))
+	edited := toolentry.Ref{Tool: "escritura-diaria", Kind: "day", Key: "2026-11-03"}
+	first, err := service.Put(ctx, userID, edited, json.RawMessage(`{"text":"editado"}`), 3)
 	if err != nil {
 		t.Fatal(err)
+	}
+	// An older revision arriving late must not replace the newer writing.
+	if _, err := service.Put(ctx, userID, edited, json.RawMessage(`{"text":"viejo"}`), 2); !errors.Is(err, toolentry.ErrStaleRevision) {
+		t.Fatalf("expected ErrStaleRevision for an older revision, got %v", err)
 	}
 	var leaked int
 	if err := pool.QueryRow(ctx,

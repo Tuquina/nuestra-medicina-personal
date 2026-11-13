@@ -20,6 +20,10 @@ CREATE TABLE tool_entries (
     entry_key TEXT COLLATE "C" NOT NULL CHECK (entry_key ~ '^[A-Za-z0-9_-]{1,64}$'),
     ciphertext BYTEA NOT NULL CHECK (octet_length(ciphertext) BETWEEN 29 AND 262144),
     format_version SMALLINT NOT NULL DEFAULT 1 CHECK (format_version > 0),
+    -- Client-supplied, increasing per edit: a write carrying an older revision
+    -- than the stored one is rejected, so out-of-order requests never
+    -- replace newer writing.
+    revision BIGINT NOT NULL DEFAULT 0 CHECK (revision >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     -- Also the index behind per-user listing and cursor pagination ("C"

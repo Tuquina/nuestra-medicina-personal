@@ -16,7 +16,7 @@ import (
 type ToolEntriesService interface {
 	Enabled() bool
 	List(ctx context.Context, userID, tool string, after *toolentry.Cursor, limit int) (toolentries.Page, error)
-	Put(ctx context.Context, userID string, ref toolentry.Ref, data json.RawMessage) (toolentry.Entry, error)
+	Put(ctx context.Context, userID string, ref toolentry.Ref, data json.RawMessage, revision int64) (toolentry.Entry, error)
 	Delete(ctx context.Context, userID string, ref toolentry.Ref) error
 	DeleteAll(ctx context.Context, userID, tool, kind string) error
 }
@@ -94,12 +94,14 @@ func (h *ToolEntriesHandler) Put(w http.ResponseWriter, r *http.Request) {
 	}
 	var input struct {
 		Data json.RawMessage `json:"data"`
+		// Revision increases with every edit of the entry; stale writes get 409.
+		Revision int64 `json:"revision"`
 	}
 	if decodeJSON(r, &input) != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Request body is not valid JSON", nil)
 		return
 	}
-	entry, err := h.service.Put(r.Context(), userID(r.Context()), refFromPath(r), input.Data)
+	entry, err := h.service.Put(r.Context(), userID(r.Context()), refFromPath(r), input.Data, input.Revision)
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -149,6 +151,8 @@ func (h *ToolEntriesHandler) fail(w http.ResponseWriter, r *http.Request, err er
 	switch {
 	case errors.As(err, &validation):
 		writeError(w, http.StatusUnprocessableEntity, "TOOL_ENTRY_VALIDATION_FAILED", "Tool entry request is invalid", validation.Fields)
+	case errors.Is(err, toolentry.ErrStaleRevision):
+		writeError(w, http.StatusConflict, "TOOL_ENTRY_STALE", "A newer version of this entry is already saved", nil)
 	case errors.Is(err, toolentry.ErrTooManyEntries):
 		writeError(w, http.StatusConflict, "TOOL_ENTRY_LIMIT_REACHED", "This tool has reached its entry limit", nil)
 	case errors.Is(err, toolentry.ErrStorageUnavailable):

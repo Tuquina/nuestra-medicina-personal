@@ -360,9 +360,12 @@ cuenta, cifrado ([ADR 0006](decisions/0006-encrypted-personal-tool-entries.md)):
 
 - `GET /api/v1/me/tools/{tool}/entries?cursor=&limit=` lista una página
   (ordenada por `kind` y `key`; `nextCursor` es `null` en la última).
-- `PUT /api/v1/me/tools/{tool}/entries/{kind}/{key}` con `{ "data": {…} }`
+- `PUT /api/v1/me/tools/{tool}/entries/{kind}/{key}` con `{ "data": {…}, "revision": n }`
   crea o reemplaza una entrada (máximo 128 KiB por entrada y 5000 por
-  herramienta).
+  herramienta). `revision` crece con cada edición: si llega una revisión más
+  vieja que la guardada (un autoguardado lento, un envío al cerrar la página) se
+  rechaza con 409 `TOOL_ENTRY_STALE`, así el orden de llegada nunca pisa lo más
+  nuevo.
 - `DELETE …/{kind}/{key}` borra una entrada; `DELETE
   /api/v1/me/tools/{tool}/entries[?kind=]` borra todas (o las de un tipo).
 

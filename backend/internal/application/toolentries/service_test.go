@@ -85,6 +85,9 @@ func (r *memoryRepository) HasEntry(_ context.Context, userID string, ref toolen
 }
 
 func (r *memoryRepository) UpsertEntry(_ context.Context, entry StoredEntry) (StoredEntry, error) {
+	if existing, ok := r.entries[entryID(entry.UserID, entry.Ref)]; ok && existing.Revision > entry.Revision {
+		return StoredEntry{}, toolentry.ErrStaleRevision
+	}
 	id := entryID(entry.UserID, entry.Ref)
 	if existing, ok := r.entries[id]; ok {
 		entry.CreatedAt = existing.CreatedAt
@@ -129,7 +132,10 @@ func TestDisabledServiceRefusesEveryOperation(t *testing.T) {
 	}
 	checks := []error{
 		func() error { _, err := service.List(ctx, "u", "preguntas", nil, 0); return err }(),
-		func() error { _, err := service.Put(ctx, "u", dayRef("2026-11-13"), json.RawMessage(`{}`)); return err }(),
+		func() error {
+			_, err := service.Put(ctx, "u", dayRef("2026-11-13"), json.RawMessage(`{}`), 0)
+			return err
+		}(),
 		service.Delete(ctx, "u", dayRef("2026-11-13")),
 		service.DeleteAll(ctx, "u", "preguntas", ""),
 	}
@@ -145,7 +151,7 @@ func TestPutStoresOnlyCiphertextAndListDecrypts(t *testing.T) {
 	ctx := context.Background()
 	data := json.RawMessage(`{"text":"hoy me siento en calma","mood":"Calma"}`)
 
-	saved, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), data)
+	saved, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), data, 1)
 	if err != nil {
 		t.Fatalf("put: %v", err)
 	}
@@ -173,7 +179,7 @@ func TestPutStoresOnlyCiphertextAndListDecrypts(t *testing.T) {
 func TestEntriesAreIsolatedPerUser(t *testing.T) {
 	service, repository := newTestService(t)
 	ctx := context.Background()
-	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"privado"}`)); err != nil {
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"privado"}`), 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -183,7 +189,7 @@ func TestEntriesAreIsolatedPerUser(t *testing.T) {
 	}
 
 	// Even if a row were copied into another account, it must not decrypt there.
-	if _, err := service.Put(ctx, "user-b", dayRef("2026-11-01"), json.RawMessage(`{"text":"mío"}`)); err != nil {
+	if _, err := service.Put(ctx, "user-b", dayRef("2026-11-01"), json.RawMessage(`{"text":"mío"}`), 0); err != nil {
 		t.Fatal(err)
 	}
 	stolen := repository.entries[entryID("user-a", dayRef("2026-11-13"))]
@@ -197,11 +203,11 @@ func TestEntriesAreIsolatedPerUser(t *testing.T) {
 func TestPutReplacesAndKeepsCreatedAt(t *testing.T) {
 	service, _ := newTestService(t)
 	ctx := context.Background()
-	first, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"uno"}`))
+	first, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"uno"}`), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"dos"}`))
+	second, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"dos"}`), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +224,7 @@ func TestListPaginatesWithACursor(t *testing.T) {
 	service, _ := newTestService(t)
 	ctx := context.Background()
 	for day := 1; day <= 5; day++ {
-		if _, err := service.Put(ctx, "user-a", dayRef(fmt.Sprintf("2026-11-%02d", day)), json.RawMessage(`{}`)); err != nil {
+		if _, err := service.Put(ctx, "user-a", dayRef(fmt.Sprintf("2026-11-%02d", day)), json.RawMessage(`{}`), 1); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -246,15 +252,15 @@ func TestListPaginatesWithACursor(t *testing.T) {
 func TestPutEnforcesThePerToolCapOnlyForNewEntries(t *testing.T) {
 	service, repository := newTestService(t)
 	ctx := context.Background()
-	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{}`)); err != nil {
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{}`), 0); err != nil {
 		t.Fatal(err)
 	}
 	repository.count["user-a|escritura-diaria"] = toolentry.MaxEntriesPerTool
 
-	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-14"), json.RawMessage(`{}`)); !errors.Is(err, toolentry.ErrTooManyEntries) {
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-14"), json.RawMessage(`{}`), 0); !errors.Is(err, toolentry.ErrTooManyEntries) {
 		t.Fatalf("expected ErrTooManyEntries for a new entry, got %v", err)
 	}
-	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"editado"}`)); err != nil {
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"editado"}`), 0); err != nil {
 		t.Fatalf("expected an existing entry to stay editable at the cap: %v", err)
 	}
 }
@@ -265,11 +271,11 @@ func TestDeleteAndDeleteAll(t *testing.T) {
 	answer := toolentry.Ref{Tool: "preguntas", Kind: "answer", Key: "a1"}
 	favorites := toolentry.Ref{Tool: "preguntas", Kind: "favorites", Key: "all"}
 	for _, ref := range []toolentry.Ref{answer, favorites} {
-		if _, err := service.Put(ctx, "user-a", ref, json.RawMessage(`{}`)); err != nil {
+		if _, err := service.Put(ctx, "user-a", ref, json.RawMessage(`{}`), 0); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{}`)); err != nil {
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{}`), 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -284,7 +290,7 @@ func TestDeleteAndDeleteAll(t *testing.T) {
 		t.Fatalf("unexpected entries after delete: %+v", page.Entries)
 	}
 
-	if _, err := service.Put(ctx, "user-a", answer, json.RawMessage(`{}`)); err != nil {
+	if _, err := service.Put(ctx, "user-a", answer, json.RawMessage(`{}`), 0); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.DeleteAll(ctx, "user-a", "preguntas", "answer"); err != nil {
@@ -313,13 +319,34 @@ func TestInvalidInputIsRejected(t *testing.T) {
 	service, _ := newTestService(t)
 	ctx := context.Background()
 	var validation *toolentry.ValidationError
-	if _, err := service.Put(ctx, "user-a", toolentry.Ref{Tool: "preguntas", Kind: "day", Key: "x"}, json.RawMessage(`{}`)); !errors.As(err, &validation) {
+	if _, err := service.Put(ctx, "user-a", toolentry.Ref{Tool: "preguntas", Kind: "day", Key: "x"}, json.RawMessage(`{}`), 1); !errors.As(err, &validation) {
 		t.Fatalf("expected a validation error for a wrong kind, got %v", err)
 	}
-	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`[]`)); !errors.As(err, &validation) {
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`[]`), 0); !errors.As(err, &validation) {
 		t.Fatalf("expected a validation error for non-object data, got %v", err)
 	}
 	if _, err := service.List(ctx, "user-a", "desconocida", nil, 0); !errors.As(err, &validation) {
 		t.Fatalf("expected a validation error for an unknown tool, got %v", err)
+	}
+}
+
+func TestPutRejectsAnOlderRevision(t *testing.T) {
+	service, _ := newTestService(t)
+	ctx := context.Background()
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"nuevo"}`), 20); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"viejo"}`), 19); !errors.Is(err, toolentry.ErrStaleRevision) {
+		t.Fatalf("expected ErrStaleRevision, got %v", err)
+	}
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-13"), json.RawMessage(`{"text":"nuevo"}`), 20); err != nil {
+		t.Fatalf("retrying the same revision must be idempotent: %v", err)
+	}
+	page, _ := service.List(ctx, "user-a", "escritura-diaria", nil, 0)
+	if len(page.Entries) != 1 || string(page.Entries[0].Data) != `{"text":"nuevo"}` {
+		t.Fatalf("expected the newer writing to stay, got %+v", page.Entries)
+	}
+	if _, err := service.Put(ctx, "user-a", dayRef("2026-11-14"), json.RawMessage(`{}`), -1); err == nil {
+		t.Fatal("expected a negative revision to be rejected")
 	}
 }

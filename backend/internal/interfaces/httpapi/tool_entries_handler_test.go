@@ -21,6 +21,8 @@ type toolEntriesServiceStub struct {
 	lastRef   toolentry.Ref
 	lastData  string
 	lastAfter *toolentry.Cursor
+	// storedRevision makes Put reject older revisions, like the real service.
+	storedRevision int64
 }
 
 func (s *toolEntriesServiceStub) Enabled() bool { return s.enabled }
@@ -40,7 +42,10 @@ func (s *toolEntriesServiceStub) List(_ context.Context, userID, tool string, af
 	}, nil
 }
 
-func (s *toolEntriesServiceStub) Put(_ context.Context, userID string, ref toolentry.Ref, data json.RawMessage) (toolentry.Entry, error) {
+func (s *toolEntriesServiceStub) Put(_ context.Context, userID string, ref toolentry.Ref, data json.RawMessage, revision int64) (toolentry.Entry, error) {
+	if revision < s.storedRevision {
+		return toolentry.Entry{}, toolentry.ErrStaleRevision
+	}
 	s.lastUser, s.lastRef, s.lastData = userID, ref, string(data)
 	if err := ref.Validate(); err != nil {
 		return toolentry.Entry{}, err
@@ -179,5 +184,15 @@ func TestToolEntriesUnavailableWithoutKeyOrUnderLocalDebug(t *testing.T) {
 		if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "PERSONAL_STORAGE_UNAVAILABLE") {
 			t.Fatalf("%s: expected 503 PERSONAL_STORAGE_UNAVAILABLE, got %d %s", name, recorder.Code, recorder.Body.String())
 		}
+	}
+}
+
+func TestToolEntriesStaleRevisionIsAConflict(t *testing.T) {
+	t.Parallel()
+	router := toolEntriesRouter(&toolEntriesServiceStub{enabled: true, storedRevision: 10}, false)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, toolRequest(http.MethodPut, "/api/v1/me/tools/escritura-diaria/entries/day/2026-11-13", `{"data":{"text":"viejo"},"revision":9}`, true, true))
+	if recorder.Code != http.StatusConflict || !strings.Contains(recorder.Body.String(), "TOOL_ENTRY_STALE") {
+		t.Fatalf("expected 409 TOOL_ENTRY_STALE for an older revision, got %d %s", recorder.Code, recorder.Body.String())
 	}
 }

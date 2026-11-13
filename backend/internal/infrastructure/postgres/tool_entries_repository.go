@@ -11,7 +11,7 @@ import (
 	"github.com/nuestra-medicina-personal/backend/internal/domain/toolentry"
 )
 
-const toolEntryColumns = `id::text, user_id::text, tool, kind, entry_key, ciphertext, format_version, created_at, updated_at`
+const toolEntryColumns = `id::text, user_id::text, tool, kind, entry_key, ciphertext, format_version, revision, created_at, updated_at`
 
 // ToolEntriesRepository persists encrypted tool entries and wrapped data
 // keys (migration 015, ADR 0006). It never sees plaintext.
@@ -100,16 +100,23 @@ func (r *ToolEntriesRepository) HasEntry(ctx context.Context, userID string, ref
 
 func (r *ToolEntriesRepository) UpsertEntry(ctx context.Context, entry toolentries.StoredEntry) (toolentries.StoredEntry, error) {
 	row := r.pool.QueryRow(ctx, `
-		INSERT INTO tool_entries (id, user_id, tool, kind, entry_key, ciphertext, format_version, created_at, updated_at)
-		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO tool_entries (id, user_id, tool, kind, entry_key, ciphertext, format_version, revision, created_at, updated_at)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT ON CONSTRAINT tool_entries_user_entry_key DO UPDATE SET
 			ciphertext = EXCLUDED.ciphertext,
 			format_version = EXCLUDED.format_version,
+			revision = EXCLUDED.revision,
 			updated_at = EXCLUDED.updated_at
+		-- Equal revisions are allowed so a retried request is idempotent.
+		WHERE tool_entries.revision <= EXCLUDED.revision
 		RETURNING `+toolEntryColumns,
-		entry.ID, entry.UserID, entry.Tool, entry.Kind, entry.Key, entry.Ciphertext, entry.FormatVersion, entry.CreatedAt, entry.UpdatedAt,
+		entry.ID, entry.UserID, entry.Tool, entry.Kind, entry.Key, entry.Ciphertext, entry.FormatVersion, entry.Revision, entry.CreatedAt, entry.UpdatedAt,
 	)
 	stored, err := scanToolEntry(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// The conflict's WHERE skipped the update: a newer revision is stored.
+		return toolentries.StoredEntry{}, toolentry.ErrStaleRevision
+	}
 	if err != nil {
 		return toolentries.StoredEntry{}, fmt.Errorf("upsert tool entry: %w", err)
 	}
@@ -137,7 +144,7 @@ func (r *ToolEntriesRepository) DeleteTool(ctx context.Context, userID, tool, ki
 func scanToolEntry(row pgx.Row) (toolentries.StoredEntry, error) {
 	var entry toolentries.StoredEntry
 	err := row.Scan(&entry.ID, &entry.UserID, &entry.Tool, &entry.Kind, &entry.Key,
-		&entry.Ciphertext, &entry.FormatVersion, &entry.CreatedAt, &entry.UpdatedAt)
+		&entry.Ciphertext, &entry.FormatVersion, &entry.Revision, &entry.CreatedAt, &entry.UpdatedAt)
 	if err != nil {
 		return toolentries.StoredEntry{}, fmt.Errorf("scan tool entry: %w", err)
 	}

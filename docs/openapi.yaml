@@ -355,13 +355,14 @@ paths:
               required: [data]
               properties:
                 data: {type: object, description: 'Contenido de la entrada (máximo 128 KiB).'}
+                revision: {type: integer, format: int64, minimum: 0, description: 'Crece con cada edición de la entrada. Una revisión menor que la guardada se rechaza con 409 TOOL_ENTRY_STALE; repetir la misma es idempotente.'}
       responses:
         '200':
           description: Entrada guardada.
           content: {application/json: {schema: {$ref: '#/components/schemas/ToolEntry'}}}
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
         '409':
-          description: La herramienta alcanzó el máximo de entradas (`TOOL_ENTRY_LIMIT_REACHED`).
+          description: Ya hay guardada una revisión más nueva (`TOOL_ENTRY_STALE`) o la herramienta alcanzó el máximo de entradas (`TOOL_ENTRY_LIMIT_REACHED`).
           content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
         '422': {$ref: '#/components/responses/ToolEntryValidationFailed'}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}

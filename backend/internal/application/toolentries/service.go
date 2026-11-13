@@ -31,8 +31,10 @@ type StoredEntry struct {
 	toolentry.Ref
 	Ciphertext    []byte
 	FormatVersion int16
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	// Revision orders writes to the same entry; see migration 015.
+	Revision  int64
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Repository interface {
@@ -47,7 +49,9 @@ type Repository interface {
 	CountEntries(ctx context.Context, userID, tool string) (int, error)
 	HasEntry(ctx context.Context, userID string, ref toolentry.Ref) (bool, error)
 	// UpsertEntry inserts or replaces the entry at entry.Ref, keeping the
-	// original CreatedAt on replace, and returns what was stored.
+	// original CreatedAt on replace, and returns what was stored. A replace
+	// whose Revision is lower than the stored one fails with
+	// toolentry.ErrStaleRevision and leaves the row untouched.
 	UpsertEntry(ctx context.Context, entry StoredEntry) (StoredEntry, error)
 	DeleteEntry(ctx context.Context, userID string, ref toolentry.Ref) error
 	// DeleteTool removes the user's entries of one tool; kind narrows it when not empty.
@@ -130,12 +134,17 @@ func (s *Service) List(ctx context.Context, userID, tool string, after *toolentr
 }
 
 // Put creates or replaces one entry, encrypting data with the user's key.
-func (s *Service) Put(ctx context.Context, userID string, ref toolentry.Ref, data json.RawMessage) (toolentry.Entry, error) {
+// revision must increase with every edit of the entry; an older one than the
+// stored revision fails with toolentry.ErrStaleRevision and changes nothing.
+func (s *Service) Put(ctx context.Context, userID string, ref toolentry.Ref, data json.RawMessage, revision int64) (toolentry.Entry, error) {
 	if !s.Enabled() {
 		return toolentry.Entry{}, toolentry.ErrStorageUnavailable
 	}
 	if err := ref.Validate(); err != nil {
 		return toolentry.Entry{}, err
+	}
+	if revision < 0 {
+		return toolentry.Entry{}, &toolentry.ValidationError{Fields: map[string]string{"revision": "must not be negative"}}
 	}
 	if err := toolentry.ValidateData(data); err != nil {
 		return toolentry.Entry{}, err
@@ -159,7 +168,7 @@ func (s *Service) Put(ctx context.Context, userID string, ref toolentry.Ref, dat
 	now := s.now().UTC()
 	stored, err := s.repository.UpsertEntry(ctx, StoredEntry{
 		ID: id, UserID: userID, Ref: ref, Ciphertext: ciphertext,
-		FormatVersion: FormatVersion, CreatedAt: now, UpdatedAt: now,
+		FormatVersion: FormatVersion, Revision: revision, CreatedAt: now, UpdatedAt: now,
 	})
 	if err != nil {
 		return toolentry.Entry{}, fmt.Errorf("save tool entry: %w", err)
