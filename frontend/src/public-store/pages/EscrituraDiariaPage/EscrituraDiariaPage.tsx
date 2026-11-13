@@ -70,7 +70,7 @@ function journalAsText(entries: JournalEntry[]): string {
 /** `/herramientas/escritura-diaria` */
 export function EscrituraDiariaPage() {
   const [today] = useState(() => localDateKey(new Date()));
-  const [journal, setJournal] = useLocalStorageState<Journal>(STORAGE_KEY, {}, isJournal);
+  const [journal, setJournal, { persisted }] = useLocalStorageState<Journal>(STORAGE_KEY, {}, isJournal);
   const [selectedDate, setSelectedDate] = useState(today);
   const [pendingDelete, setPendingDelete] = useState<string | 'all' | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -124,6 +124,7 @@ export function EscrituraDiariaPage() {
   return (
     <ToolLayout
       tool="escritura-diaria"
+      persisted={persisted}
       title="Registro de escritura diaria"
       intro="Unos minutos para vos. Escribí sin corregir y sin juzgar: lo que aparezca está bien. Podés volver cada día y ver el camino recorrido."
     >
@@ -178,7 +179,11 @@ export function EscrituraDiariaPage() {
               {words} {words === 1 ? 'palabra' : 'palabras'}
             </span>
             <span aria-live="polite">
-              {entry.updatedAt ? `Guardado en este navegador a las ${savedTimeLabel(entry.updatedAt)}` : ''}
+              {!entry.updatedAt
+                ? ''
+                : persisted
+                  ? `Guardado en este navegador a las ${savedTimeLabel(entry.updatedAt)}`
+                  : 'Sin guardar: descargalo antes de cerrar la página'}
             </span>
           </div>
         </ToolPanel>

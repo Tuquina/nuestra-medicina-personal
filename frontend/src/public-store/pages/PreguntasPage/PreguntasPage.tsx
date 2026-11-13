@@ -70,7 +70,11 @@ function answersAsText(answers: SavedAnswer[]): string {
 /** `/herramientas/preguntas` */
 export function PreguntasPage() {
   const [today] = useState(() => localDateKey(new Date()));
-  const [store, setStore] = useLocalStorageState<ReflectionStore>(STORAGE_KEY, EMPTY_STORE, isReflectionStore);
+  const [store, setStore, { persisted }] = useLocalStorageState<ReflectionStore>(
+    STORAGE_KEY,
+    EMPTY_STORE,
+    isReflectionStore,
+  );
   const [theme, setTheme] = useState<string>(ALL_THEMES);
   const [questionId, setQuestionId] = useState(
     () => REFLECTION_QUESTIONS[dayNumber(localDateKey(new Date())) % REFLECTION_QUESTIONS.length].id,
@@ -145,6 +149,7 @@ export function PreguntasPage() {
   return (
     <ToolLayout
       tool="preguntas"
+      persisted={persisted}
       title="Preguntas para reflexionar"
       intro="Una pregunta a la vez, para mirar hacia adentro con calma. No hay respuestas correctas: podés solo pensarla, escribir unas líneas o guardarla para otro momento."
     >
@@ -190,7 +195,11 @@ export function PreguntasPage() {
         />
         <div className={styles.answerFooter}>
           <span className={styles.savedNote} aria-live="polite">
-            {justSaved ? 'Guardada en tus respuestas.' : ''}
+            {!justSaved
+              ? ''
+              : persisted
+                ? 'Guardada en tus respuestas.'
+                : 'Agregada a tus respuestas, pero sin guardar: descargalas antes de cerrar la página.'}
           </span>
           <Button variant="secondary" onClick={saveAnswer} disabled={!draft.trim()}>
             Guardar respuesta

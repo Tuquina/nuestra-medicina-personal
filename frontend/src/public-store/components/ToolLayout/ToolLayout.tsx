@@ -14,6 +14,8 @@ interface ToolLayoutProps {
   tool: ToolSlug;
   title: string;
   intro: string;
+  /** False when the browser refuses to store data: shows an "unsaved" warning. */
+  persisted?: boolean;
   children: ReactNode;
 }
 
@@ -22,7 +24,7 @@ interface ToolLayoutProps {
  * illustration, a privacy note (everything stays in this browser), the
  * tool itself, a gentle care note and links to the other tools.
  */
-export function ToolLayout({ tool, title, intro, children }: ToolLayoutProps) {
+export function ToolLayout({ tool, title, intro, persisted = true, children }: ToolLayoutProps) {
   useDocumentTitle(`${title} · Herramientas · Nuestra Medicina Personal`);
   const otherTools = TOOL_OPTIONS.filter((option) => option.slug !== tool);
 
@@ -49,7 +51,15 @@ export function ToolLayout({ tool, title, intro, children }: ToolLayoutProps) {
         </div>
       </header>
 
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        {!persisted && (
+          <p className={styles.unsaved} role="alert">
+            Este navegador no nos deja guardar (puede estar en modo privado, con los datos del sitio bloqueados o sin
+            espacio). Lo que escribas se va a perder al cerrar la página: descargalo antes de irte.
+          </p>
+        )}
+        {children}
+      </main>
 
       <aside className={styles.care} aria-label="Una nota de cuidado">
         <p>
