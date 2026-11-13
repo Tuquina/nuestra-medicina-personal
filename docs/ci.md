@@ -19,7 +19,7 @@ manualmente desde GitHub Actions.
   `production` → "Required reviewers"). Los secrets de los Environments y la
   protección de ramas requieren un repo público o GitHub Pro/Team, y la
   aprobación manual en un repo privado requiere GitHub Enterprise; por eso el
-  repo debe seguir público (ver el paso 0 de [`go-live.md`](go-live.md)).
+  repo debe seguir público.
 - Ambos workflows de despliegue son un mismo workflow reutilizable
   ([`deploy.yml`](../.github/workflows/deploy.yml)) parametrizado por
   ambiente — ver [deploy/README.md](../deploy/README.md) para el checklist
