@@ -4,7 +4,8 @@ import { useAuth } from '../../shared/auth/useAuth';
 import { meToolEntriesUrl } from '../../shared/config/api';
 import { useLocalStorageState } from '../../shared/hooks/useLocalStorageState';
 import type { ToolSlug } from '../../shared/cms/collectionContent';
-import { createAccountWriter, putEntry, type SavedEntry } from './accountWriter';
+import { createAccountWriter, isStaleWrite, nextRevision, putEntry, type SavedEntry } from './accountWriter';
+import { deviceStorageKey, migrateLegacyDeviceEntries } from './legacyDeviceEntries';
 
 /**
  * Where a Herramientas tool keeps what the person writes:
@@ -112,8 +113,10 @@ export function useToolEntries(tool: ToolSlug): ToolEntriesStore {
   const auth = useAuth();
   const authUserId = auth.status === 'authenticated' ? auth.user.id : null;
 
+  // Must run before the device store reads `.v2`: converts the first version's data once.
+  useState(() => migrateLegacyDeviceEntries(tool));
   const [device, setDevice, { persisted: devicePersisted }] = useLocalStorageState<EntryMap>(
-    `nmp.herramientas.${tool}.v2`,
+    deviceStorageKey(tool),
     {},
     isEntryMap,
   );
@@ -132,10 +135,12 @@ export function useToolEntries(tool: ToolSlug): ToolEntriesStore {
         onSaving: () => setSaveStatus('saving'),
         onSaved: (saved, idle) => {
           // Only refresh the timestamp: the local data may already be newer.
-          setAccountEntries((entries) => {
-            const current = entries[saved.kind]?.[saved.key];
-            return current ? withEntry(entries, saved.kind, saved.key, { ...current, updatedAt: saved.updatedAt }) : entries;
-          });
+          if (saved) {
+            setAccountEntries((entries) => {
+              const current = entries[saved.kind]?.[saved.key];
+              return current ? withEntry(entries, saved.kind, saved.key, { ...current, updatedAt: saved.updatedAt }) : entries;
+            });
+          }
           if (idle) setSaveStatus('saved');
         },
         onError: () => setSaveStatus('error'),
@@ -231,8 +236,13 @@ export function useToolEntries(tool: ToolSlug): ToolEntriesStore {
           const existing = accountEntries[kind]?.[key];
           // Keep whichever version is newer.
           if (existing && existing.updatedAt >= entry.updatedAt) continue;
-          const saved = await putEntry(tool, kind, key, entry.data);
-          setAccountEntries((entries) => withEntry(entries, kind, key, { data: entry.data, updatedAt: saved.updatedAt }));
+          try {
+            const saved = await putEntry(tool, kind, key, entry.data, nextRevision());
+            setAccountEntries((entries) => withEntry(entries, kind, key, { data: entry.data, updatedAt: saved.updatedAt }));
+          } catch (error) {
+            // Edited in the account meanwhile: the account's newer version wins.
+            if (!isStaleWrite(error)) throw error;
+          }
         }
       }
       setDevice({});
