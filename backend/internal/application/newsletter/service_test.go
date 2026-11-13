@@ -106,4 +106,3 @@ func TestGetPreferenceReflectsStoredStatus(t *testing.T) {
 		t.Fatal("expected true for a subscribed user")
 	}
 }
-
