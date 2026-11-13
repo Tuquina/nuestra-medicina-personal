@@ -229,6 +229,18 @@ type collectionCard struct {
 	Title        string `json:"title"`
 	Description  string `json:"description"`
 	ImageCaption string `json:"imageCaption"`
+	// Tool optionally links the card to one of the interactive tools the
+	// frontend ships (see collectionTools). Empty means "coming soon".
+	Tool string `json:"tool,omitempty"`
+}
+
+// collectionTools lists the interactive tools a collection card may link
+// to. They are implemented in the frontend; the backend only checks that
+// the CMS references a tool that exists.
+var collectionTools = map[string]bool{
+	"escritura-diaria": true,
+	"preguntas":        true,
+	"cierre-semanal":   true,
 }
 
 type contactProps struct {
@@ -504,6 +516,9 @@ func validateCollection(props collectionProps) error {
 		}
 		if err := optionalText("card imageCaption", card.ImageCaption, 300); err != nil {
 			return err
+		}
+		if card.Tool != "" && !collectionTools[card.Tool] {
+			return fmt.Errorf("card tool %q is not supported", card.Tool)
 		}
 	}
 	return nil
