@@ -60,4 +60,56 @@ test.describe('Herramientas', () => {
     expect(stored).toContain('Una caminata al atardecer');
     expect(stored).not.toContain('El apuro de siempre');
   });
+
+  test('deleting a weekly closure also deletes its retained draft', async ({ page }) => {
+    await page.goto('/herramientas/cierre-semanal');
+    await page.getByRole('button', { name: 'Empezar', exact: true }).click();
+    await page.getByRole('button', { name: 'Siguiente' }).click();
+    await page.getByLabel('Momento 1').fill('Un recuerdo para borrar');
+    await page.getByRole('button', { name: /^7\s*Cerrar$/ }).click();
+    await page.getByRole('button', { name: 'Guardar mi cierre' }).click();
+
+    const previous = page.getByRole('region', { name: 'Tus cierres anteriores' });
+    await previous.locator('summary').first().click();
+    await previous.getByRole('button', { name: 'Borrar este cierre' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();
+
+    await page.reload();
+    const stored = await page.evaluate(() => window.localStorage.getItem('nmp.herramientas.cierre-semanal.v1') ?? '');
+    expect(stored).not.toContain('Un recuerdo para borrar');
+    await page.getByRole('button', { name: /^3\s*Mirar la semana$/ }).click();
+    await expect(page.getByLabel('Momento 1')).toHaveValue('');
+  });
+
+  test('warns instead of confirming a save when the browser blocks storage', async ({ page }) => {
+    await page.addInitScript(() => {
+      Storage.prototype.setItem = () => {
+        throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      };
+    });
+    await page.goto('/herramientas/escritura-diaria');
+    await page.getByLabel('Tu escritura').fill('Esto no se puede guardar.');
+
+    await expect(page.getByRole('alert')).toContainText('no nos deja guardar');
+    await expect(page.getByText('Sin guardar: descargalo antes de cerrar la página')).toBeVisible();
+    await expect(page.getByText(/Guardado en este navegador/)).toHaveCount(0);
+  });
+
+  test('two open tabs do not overwrite each other', async ({ context }) => {
+    const first = await context.newPage();
+    const second = await context.newPage();
+    await first.goto('/herramientas/preguntas');
+    await second.goto('/herramientas/preguntas');
+
+    await first.getByLabel('Tu respuesta a la pregunta').fill('Respuesta de la primera pestaña');
+    await first.getByRole('button', { name: 'Guardar respuesta' }).click();
+    // The second tab learns about it through the storage event before saving its own.
+    await expect(second.getByText('Respuesta de la primera pestaña')).toBeVisible();
+    await second.getByLabel('Tu respuesta a la pregunta').fill('Respuesta de la segunda pestaña');
+    await second.getByRole('button', { name: 'Guardar respuesta' }).click();
+
+    await first.reload();
+    await expect(first.getByText('Respuesta de la primera pestaña')).toBeVisible();
+    await expect(first.getByText('Respuesta de la segunda pestaña')).toBeVisible();
+  });
 });
