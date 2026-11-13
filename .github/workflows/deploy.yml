@@ -91,6 +91,7 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
           MERCADOPAGO_WEBHOOK_SECRET: ${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
+          PERSONAL_DATA_KEY: ${{ secrets.PERSONAL_DATA_KEY }}
           GOOGLE_MAIL_CREDENTIALS_JSON: ${{ secrets.GOOGLE_MAIL_CREDENTIALS_JSON }}
         run: |
           set -euo pipefail
@@ -122,6 +123,7 @@ jobs:
             echo "MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN}"
             echo "MERCADOPAGO_WEBHOOK_SECRET=${MERCADOPAGO_WEBHOOK_SECRET}"
             echo "MERCADOPAGO_PUBLIC_BASE_URL=${{ vars.MERCADOPAGO_PUBLIC_BASE_URL }}"
+            echo "PERSONAL_DATA_KEY=${PERSONAL_DATA_KEY}"
           } > deploy.env
           # Never printed/logged -- written straight to a gitignored local
           # file, uploaded next step, then the runner itself is destroyed.
