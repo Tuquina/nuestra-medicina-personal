@@ -593,7 +593,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
   if (loadError) {
     return (
       <div className={styles.converting}>
-        <p style={{ marginBottom: 12 }}>No pudimos cargar el manuscrito guardado. Podría haber contenido sin mostrar.</p>
+        <p className={styles.loadErrorMessage}>No pudimos cargar el manuscrito guardado. Podría haber contenido sin mostrar.</p>
         <Button variant="secondary" onClick={() => setLoadAttempt((n) => n + 1)}>
           Reintentar
         </Button>
@@ -622,7 +622,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
               if (file) void handleFileUpload(file);
               e.target.value = '';
             }}
-            style={{ display: 'none' }}
+            className={styles.hiddenInput}
           />
           <Button variant="primary" onClick={() => fileInputRef.current?.click()}>
             Elegir archivo
@@ -656,7 +656,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
         {/* SECTION LIST */}
         <div className={styles.chapterList}>
           <div className={styles.pageSizeBlock}>
-            <label htmlFor="pageSize" className={styles.chapterListTitle} style={{ margin: 0 }}>
+            <label htmlFor="pageSize" className={`${styles.chapterListTitle} ${styles.pageSizeLabel}`}>
               Tamaño de hoja
             </label>
             <select
@@ -1037,7 +1037,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
                 if (file) void insertImage(file);
                 e.target.value = '';
               }}
-              style={{ display: 'none' }}
+              className={styles.hiddenInput}
             />
             <button
               type="button"
@@ -1142,7 +1142,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
           <Button
             variant="secondary"
             fullWidth
-            style={{ marginBottom: 8 }}
+            className={styles.exportButtonSpaced}
             onClick={() => generate('EPUB')}
             disabled={exporting !== null}
           >
@@ -1168,7 +1168,7 @@ function ManuscritoEditor({ bookId, bookTitle }: { bookId: string; bookTitle: st
               if (file) void handleFileUpload(file, 'append');
               e.target.value = '';
             }}
-            style={{ display: 'none' }}
+            className={styles.hiddenInput}
           />
           <Button
             variant="secondary"
