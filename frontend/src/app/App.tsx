@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../shared/auth/AuthContext';
 import { RequireAuth } from '../shared/auth/RequireAuth';
@@ -38,6 +39,17 @@ import { PreguntasFrecuentesPage } from '../public-store/pages/PreguntasFrecuent
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 import { CatalogProvider } from '../public-store/catalog/CatalogProvider';
 
+// Interactive tools are loaded on demand so the rest of the site doesn't ship their code.
+const EscrituraDiariaPage = lazy(() =>
+  import('../public-store/pages/EscrituraDiariaPage/EscrituraDiariaPage').then((m) => ({ default: m.EscrituraDiariaPage })),
+);
+const PreguntasPage = lazy(() =>
+  import('../public-store/pages/PreguntasPage/PreguntasPage').then((m) => ({ default: m.PreguntasPage })),
+);
+const CierreSemanalPage = lazy(() =>
+  import('../public-store/pages/CierreSemanalPage/CierreSemanalPage').then((m) => ({ default: m.CierreSemanalPage })),
+);
+
 /**
  * Top-level route table. See docs/frontend-plan.md for what's implemented
  * vs. still pending, and the order new routes should land in.
@@ -60,6 +72,9 @@ export function App() {
           <Route path="/libros/:slug" element={<BookLandingPage />} />
           <Route path="/meditaciones" element={<MeditacionesPage />} />
           <Route path="/herramientas" element={<HerramientasPage />} />
+          <Route path="/herramientas/escritura-diaria" element={<Suspense fallback={null}><EscrituraDiariaPage /></Suspense>} />
+          <Route path="/herramientas/preguntas" element={<Suspense fallback={null}><PreguntasPage /></Suspense>} />
+          <Route path="/herramientas/cierre-semanal" element={<Suspense fallback={null}><CierreSemanalPage /></Suspense>} />
           <Route path="/checkout/:slug" element={<CheckoutPage />} />
 
           <Route element={<RequireAuth />}>
