@@ -78,6 +78,12 @@
   --color-newsletter-bg-start: oklch(38% 0.08 250);
   --color-newsletter-bg-end: oklch(20% 0.055 258);
 
+  /* ---- Color: illustration accents (Herramientas scenes — plants, sunset) ---- */
+  --color-illustration-sage: oklch(80% 0.06 150);
+  --color-illustration-sage-deep: oklch(64% 0.07 155);
+  --color-illustration-rose: oklch(84% 0.065 25);
+  --color-illustration-dusk: oklch(60% 0.06 300);
+
   /* ---- Typography ---- */
   --font-serif: 'Newsreader', Georgia, serif;
   --font-sans: 'Public Sans', system-ui, sans-serif;

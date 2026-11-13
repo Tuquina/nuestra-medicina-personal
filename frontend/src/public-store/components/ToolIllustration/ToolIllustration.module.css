@@ -1,0 +1,179 @@
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Gradient stops */
+.stopCream {
+  stop-color: var(--color-bg-gradient-start);
+}
+
+.stopSand {
+  stop-color: var(--color-tools-gradient-end);
+}
+
+.stopSkySoft {
+  stop-color: var(--color-sky-soft);
+}
+
+.stopSky {
+  stop-color: var(--color-sky);
+}
+
+.stopSkyPale {
+  stop-color: var(--color-sky-pale);
+}
+
+.stopAmberLight {
+  stop-color: var(--color-accent-amber-light);
+}
+
+.stopAmberSoft {
+  stop-color: var(--color-accent-amber-soft);
+}
+
+.stopRose {
+  stop-color: var(--color-illustration-rose);
+}
+
+/* Light */
+.glow {
+  fill: var(--color-accent-amber-light);
+  opacity: 0.55;
+}
+
+.sunSoft {
+  fill: var(--color-accent-amber-soft);
+}
+
+.sun {
+  fill: var(--color-accent-amber);
+}
+
+.lightBeam {
+  fill: var(--color-accent-amber-light);
+  opacity: 0.4;
+}
+
+.speck {
+  fill: var(--color-surface);
+  opacity: 0.85;
+}
+
+.cloud {
+  fill: var(--color-surface);
+  opacity: 0.6;
+}
+
+.shimmer {
+  fill: none;
+  stroke: var(--color-accent-amber-light);
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+
+/* Notebook */
+.shadow {
+  fill: color-mix(in oklch, var(--color-ink) 9%, transparent);
+}
+
+.paper {
+  fill: var(--color-surface);
+  stroke: var(--color-surface-border-strong);
+  stroke-width: 1.5;
+}
+
+.spine {
+  fill: color-mix(in oklch, var(--color-ink) 8%, transparent);
+}
+
+.ruled {
+  fill: none;
+  stroke: var(--color-sky-pale);
+  stroke-width: 1.5;
+}
+
+.handwriting {
+  fill: none;
+  stroke: color-mix(in oklch, var(--color-deep-blue) 55%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.pencil {
+  fill: var(--color-accent-amber);
+}
+
+.ferrule {
+  fill: var(--color-accent-amber-deep);
+}
+
+.pencilTip {
+  fill: var(--color-tools-gradient-start);
+}
+
+.lead {
+  fill: var(--color-ink);
+}
+
+/* Plants */
+.stem {
+  fill: none;
+  stroke: var(--color-illustration-sage-deep);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.leaf {
+  fill: var(--color-illustration-sage);
+}
+
+.leafDeep {
+  fill: var(--color-illustration-sage-deep);
+}
+
+.pot {
+  fill: var(--color-accent-gold);
+}
+
+/* Window */
+.floor {
+  fill: var(--color-tools-gradient-start);
+}
+
+.windowFrame {
+  fill: none;
+  stroke: var(--color-surface);
+  stroke-width: 9;
+  stroke-linejoin: round;
+}
+
+.mullion {
+  fill: none;
+  stroke: var(--color-surface);
+  stroke-width: 5;
+}
+
+.sill {
+  fill: var(--color-surface);
+  stroke: var(--color-surface-border);
+}
+
+/* Sunset */
+.birds {
+  fill: none;
+  stroke: color-mix(in oklch, var(--color-ink) 55%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hillBack {
+  fill: color-mix(in oklch, var(--color-illustration-dusk) 70%, var(--color-illustration-rose));
+}
+
+.hillFront {
+  fill: color-mix(in oklch, var(--color-deep-blue) 75%, var(--color-illustration-dusk));
+}
