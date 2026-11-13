@@ -179,6 +179,26 @@ functionality the design doesn't specify. No new component primitives
 were needed here — everything reused `StatusBadge`'s tone tokens and the
 existing color/spacing system.
 
+Added while implementing the Herramientas tools (no mockup — built on the
+Herramientas page's warm palette, aiming for something calm and
+unhurried rather than "app-like"):
+
+| Token | Value | Use |
+|---|---|---|
+| `--color-illustration-sage` / `-sage-deep` | `oklch(80% 0.06 150)` / `oklch(64% 0.07 155)` | Leaves and stems in the tool illustrations |
+| `--color-illustration-rose` | `oklch(84% 0.065 25)` | Sunset sky, breathing circle halo, closing summary wash |
+| `--color-illustration-dusk` | `oklch(60% 0.06 300)` | Distant hills in the sunset scene |
+
+The tool illustrations (`public-store/components/ToolIllustration`) are
+inline SVG scenes colored entirely through CSS Module classes (`fill`,
+`stroke`, `stop-color` reading tokens), so they stay on-palette and need
+no image assets. New public-store pieces: `ToolLayout` (tool page shell
+with privacy and care notes), `ToolPanel` (titled "paper" or plain
+section), `ToolCard` (a collection card that opens a tool) and
+`ChoiceChips` (pill toggles with `aria-pressed`). Motion is slow and
+optional: every animation (breathing circle, question fade-in, "soltar"
+fade-out, card hover) has a `prefers-reduced-motion` fallback.
+
 ### Known but not yet formalized
 
 A broader survey of the mockup bundle (`grep -o 'oklch([^)]*)'` across all
