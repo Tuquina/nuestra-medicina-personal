@@ -300,3 +300,17 @@ export async function cleanup(ids: {
     client.release();
   }
 }
+
+/**
+ * What the database actually holds for a user's Herramientas entries
+ * (ADR 0006): the raw ciphertext bytes, so tests can assert that no
+ * plaintext ever reaches Postgres. tool_entries/user_data_keys rows go away
+ * with the user (ON DELETE CASCADE), so `cleanup({ userIds })` covers them.
+ */
+export async function storedToolEntries(userId: string): Promise<{ tool: string; kind: string; ciphertext: Buffer }[]> {
+  const result = await db().query<{ tool: string; kind: string; ciphertext: Buffer }>(
+    `SELECT tool, kind, ciphertext FROM tool_entries WHERE user_id = $1::uuid ORDER BY tool, kind, entry_key`,
+    [userId],
+  );
+  return result.rows;
+}
