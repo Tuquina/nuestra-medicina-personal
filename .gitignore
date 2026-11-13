@@ -1,7 +1,14 @@
+# Environment files (keep only the documented examples)
 .env
 .env.*
 !.env.example
+
+# Build and test output
 backend/coverage.out
 backend/bin/
 frontend/dist/
 *.log
+
+# Local-only notes and tooling state (never published)
+.local/
+.claude/

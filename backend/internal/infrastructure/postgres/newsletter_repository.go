@@ -14,7 +14,9 @@ const newsletterColumns = `id::text, user_id::text, email, status, source, subsc
 
 type NewsletterRepository struct{ pool *pgxpool.Pool }
 
-func NewNewsletterRepository(pool *pgxpool.Pool) *NewsletterRepository { return &NewsletterRepository{pool: pool} }
+func NewNewsletterRepository(pool *pgxpool.Pool) *NewsletterRepository {
+	return &NewsletterRepository{pool: pool}
+}
 
 func (r *NewsletterRepository) Upsert(ctx context.Context, value newsletter.Subscription) (newsletter.Subscription, error) {
 	row := r.pool.QueryRow(ctx, `

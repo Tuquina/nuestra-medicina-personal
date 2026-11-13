@@ -796,3 +796,21 @@
   outline: 2px solid var(--color-deep-blue);
   outline-offset: 2px;
 }
+
+/* Static spacing/visibility helpers (formerly inline styles). */
+.loadErrorMessage {
+  margin-bottom: 12px;
+}
+
+.pageSizeLabel {
+  margin: 0;
+}
+
+.exportButtonSpaced {
+  margin-bottom: 8px;
+}
+
+/* File inputs are triggered by their visible "Elegir archivo"-style buttons. */
+.hiddenInput {
+  display: none;
+}
