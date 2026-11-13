@@ -102,6 +102,21 @@ func TestContentAcceptsNewEditorialPageBlocks(t *testing.T) {
 	}
 }
 
+func TestCollectionCardsAcceptOnlyKnownTools(t *testing.T) {
+	content := func(tool string) []byte {
+		return []byte(`{"schemaVersion":1,"sections":[{"id":"collection","type":"collection","props":{"title":"Herramientas","description":"Recursos","cards":[{"id":"c1","title":"Diario","description":"Escribir","imageCaption":"","tool":"` + tool + `"}]}}]}`)
+	}
+
+	for _, tool := range []string{"", "escritura-diaria", "preguntas", "cierre-semanal"} {
+		if _, err := DecodeContent(content(tool)); err != nil {
+			t.Fatalf("expected tool %q to be accepted: %v", tool, err)
+		}
+	}
+	if _, err := DecodeContent(content("javascript:alert(1)")); err == nil {
+		t.Fatal("expected an unknown tool to be rejected")
+	}
+}
+
 func TestNewEditorialPageTypesDoNotAcceptBookID(t *testing.T) {
 	bookID := "10000000-0000-4000-8000-000000000001"
 	for _, pageType := range []Type{TypeMeditations, TypeTools, TypeContact, TypeSupport, TypeFAQ, TypeTerms, TypePrivacy} {

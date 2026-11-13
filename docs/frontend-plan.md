@@ -29,6 +29,9 @@ verifiable steps rather than "build the whole app").
 | `Checkout.dc.html` | `/checkout/:slug` | `public-store/pages/CheckoutPage` | P1 | ✅ Done |
 | `Meditaciones.dc.html` | `/meditaciones` | `public-store/pages/MeditacionesPage` | P1 | ✅ Done |
 | `Herramientas.dc.html` | `/herramientas` | `public-store/pages/HerramientasPage` | P1 | ✅ Done |
+| — (no mockup; built on the Herramientas visual language) | `/herramientas/escritura-diaria` | `public-store/pages/EscrituraDiariaPage` | P2 | ✅ Done |
+| — | `/herramientas/preguntas` | `public-store/pages/PreguntasPage` | P2 | ✅ Done |
+| — | `/herramientas/cierre-semanal` | `public-store/pages/CierreSemanalPage` | P2 | ✅ Done |
 
 `BookLandingPage` is **one** data-driven component at `/libros/:slug`,
 not two files. The two mockups *do* diverge (one has an image+text
@@ -37,6 +40,21 @@ divergence is modeled as a discriminated union (`middleSection.type`)
 plus an optional `faqs` field in `data/bookLandings.ts`, so each book
 picks the blocks it actually has instead of forcing a shared shape or
 duplicating the whole page.
+
+**Herramientas tools.** The three Herramientas cards open real, usable
+tools instead of a "Próximamente" badge: a daily writing journal
+(prompt of the day, optional mood, silent timer, history), reflection
+questions by theme (favorites and saved answers) and a guided weekly
+closing ritual (breathing, gratitude, a "let go" step that is never
+stored, intention). They work without an account and keep everything in
+the visitor's own browser (`shared/hooks/useLocalStorageState`), with a
+plain-text download and delete options, so nothing personal reaches the
+server. Which card opens which tool is CMS content: collection cards
+carry an optional, allow-listed `tool` (validated in
+`backend/internal/domain/page`, seeded by migration 014, editable in
+`/admin/paginas/herramientas`). Shared pieces live in
+`public-store/components/` (`ToolLayout`, `ToolPanel`, `ToolCard`,
+`ToolIllustration`, `ChoiceChips`); the three routes are lazy-loaded.
 
 ## Admin backoffice
 

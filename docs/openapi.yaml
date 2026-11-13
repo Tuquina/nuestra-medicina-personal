@@ -1457,6 +1457,10 @@ components:
               title: {type: string, minLength: 1, maxLength: 200}
               description: {type: string, minLength: 1, maxLength: 1000}
               imageCaption: {type: string, maxLength: 300}
+              tool:
+                type: string
+                enum: [escritura-diaria, preguntas, cierre-semanal]
+                description: Interactive tool the card opens. Omitted means the card is shown as coming soon.
     ContactProps:
       type: object
       additionalProperties: false

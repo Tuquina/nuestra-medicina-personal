@@ -4,7 +4,14 @@ import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { useEditablePage } from '../../../shared/cms/useEditablePage';
 import { CmsEditorActions, CmsEditorLoadState } from '../../components/CmsEditorTools/CmsEditorTools';
 import type { PageContent, PageType } from '../../../shared/cms/types';
-import { COLLECTION_SECTION_TYPE, readCollectionProps, type CollectionCard, type CollectionPageProps } from '../../../shared/cms/collectionContent';
+import {
+  COLLECTION_SECTION_TYPE,
+  TOOL_OPTIONS,
+  isToolSlug,
+  readCollectionProps,
+  type CollectionCard,
+  type CollectionPageProps,
+} from '../../../shared/cms/collectionContent';
 import f from '../../../shared/components/FormField/FormField.module.css';
 import styles from '../../components/EditorForm/EditorForm.module.css';
 
@@ -13,6 +20,8 @@ interface CollectionPageEditorProps {
   slug: string;
   seed: () => PageContent;
   heading: string;
+  /** When true, each card can be linked to an interactive tool (Herramientas). */
+  allowTools?: boolean;
   /** The public route this content renders on, e.g. "/meditaciones". */
   publicPath: string;
 }
@@ -25,7 +34,14 @@ interface CollectionPageEditorProps {
  * shared/cms wiring as the Home and book-page editors: "Publicar" here
  * changes what `publicPath` actually shows.
  */
-export function CollectionPageEditor({ pageType, slug, seed, heading, publicPath }: CollectionPageEditorProps) {
+export function CollectionPageEditor({
+  pageType,
+  slug,
+  seed,
+  heading,
+  publicPath,
+  allowTools = false,
+}: CollectionPageEditorProps) {
   useDocumentTitle(`${heading} · Admin · Nuestra Medicina Personal`);
 
   const editor = useEditablePage({
@@ -77,7 +93,7 @@ export function CollectionPageEditor({ pageType, slug, seed, heading, publicPath
         </FormField>
       </div>
 
-      <CardsEditor cards={page.cards} onChange={(cards) => update({ cards })} />
+      <CardsEditor cards={page.cards} allowTools={allowTools} onChange={(cards) => update({ cards })} />
     </AdminLayout>
   );
 }
@@ -87,7 +103,15 @@ export function CollectionPageEditor({ pageType, slug, seed, heading, publicPath
  * from a click handler) and this list's `key={card.id}` mapping aren't
  * traced together by the React Compiler's purity check within one
  * component (same reasoning as `PageBuilderPage` vs. its `Canvas`). */
-function CardsEditor({ cards, onChange }: { cards: CollectionCard[]; onChange: (cards: CollectionCard[]) => void }) {
+function CardsEditor({
+  cards,
+  allowTools,
+  onChange,
+}: {
+  cards: CollectionCard[];
+  allowTools: boolean;
+  onChange: (cards: CollectionCard[]) => void;
+}) {
   const updateCard = (id: string, patch: Partial<CollectionCard>) => {
     onChange(cards.map((card) => (card.id === id ? { ...card, ...patch } : card)));
   };
@@ -104,7 +128,11 @@ function CardsEditor({ cards, onChange }: { cards: CollectionCard[]; onChange: (
   return (
     <div className={styles.section}>
       <h2 className={styles.sectionTitle}>Tarjetas</h2>
-      <p className={styles.sectionHint}>Cada una se muestra con la etiqueta "Próximamente".</p>
+      <p className={styles.sectionHint}>
+        {allowTools
+          ? 'Las tarjetas vinculadas a una herramienta la abren; el resto se muestra con la etiqueta "Próximamente".'
+          : 'Cada una se muestra con la etiqueta "Próximamente".'}
+      </p>
 
       {cards.map((card, i) => (
         <div key={card.id} className={styles.card}>
@@ -151,6 +179,24 @@ function CardsEditor({ cards, onChange }: { cards: CollectionCard[]; onChange: (
               onChange={(e) => updateCard(card.id, { imageCaption: e.target.value })}
             />
           </FormField>
+
+          {allowTools && (
+            <FormField label="Herramienta vinculada" htmlFor={`cardTool-${card.id}`}>
+              <select
+                id={`cardTool-${card.id}`}
+                className={f.control}
+                value={card.tool ?? ''}
+                onChange={(e) => updateCard(card.id, { tool: isToolSlug(e.target.value) ? e.target.value : undefined })}
+              >
+                <option value="">Ninguna (se muestra "Próximamente")</option>
+                {TOOL_OPTIONS.map((option) => (
+                  <option key={option.slug} value={option.slug}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+          )}
         </div>
       ))}
 

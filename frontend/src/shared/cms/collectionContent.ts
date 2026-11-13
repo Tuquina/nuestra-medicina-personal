@@ -11,11 +11,35 @@ import type { PageContent } from './types';
  */
 export const COLLECTION_SECTION_TYPE = 'collection';
 
+/**
+ * Interactive tools a Herramientas card can open. The tools themselves
+ * live in `public-store/pages/*` (one page each); the CMS only stores
+ * which card opens which tool. Must match `collectionTools` in
+ * backend/internal/domain/page/page.go.
+ */
+export const TOOL_OPTIONS = [
+  { slug: 'escritura-diaria', label: 'Registro de escritura diaria' },
+  { slug: 'preguntas', label: 'Preguntas para reflexionar' },
+  { slug: 'cierre-semanal', label: 'Ritual de cierre semanal' },
+] as const;
+
+export type ToolSlug = (typeof TOOL_OPTIONS)[number]['slug'];
+
+export function isToolSlug(value: unknown): value is ToolSlug {
+  return TOOL_OPTIONS.some((option) => option.slug === value);
+}
+
+export function toolPath(slug: ToolSlug): string {
+  return `/herramientas/${slug}`;
+}
+
 export interface CollectionCard {
   id: string;
   title: string;
   description: string;
   imageCaption: string;
+  /** Set on Herramientas cards that open an interactive tool; omitted means "Próximamente". */
+  tool?: ToolSlug;
 }
 
 export interface CollectionPageProps {
@@ -73,18 +97,21 @@ export function buildHerramientasSeedContent(): PageContent {
         title: 'Registro de escritura diaria',
         description: 'Una plantilla simple para escribir unos minutos cada día.',
         imageCaption: 'Foto — cuaderno abierto',
+        tool: 'escritura-diaria',
       },
       {
         id: 'card-2',
         title: 'Preguntas para reflexionar',
         description: 'Un set de preguntas para volver sobre la propia semana.',
         imageCaption: 'Foto — ventana y luz suave',
+        tool: 'preguntas',
       },
       {
         id: 'card-3',
         title: 'Ritual de cierre semanal',
         description: 'Un pequeño ritual para cerrar la semana con más calma.',
         imageCaption: 'Foto — atardecer cálido',
+        tool: 'cierre-semanal',
       },
     ],
   });

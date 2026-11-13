@@ -5,14 +5,24 @@ import { CollectionHero } from '../../../shared/components/CollectionHero/Collec
 import { ComingSoonCard } from '../../../shared/components/ComingSoonCard/ComingSoonCard';
 import { NewsletterSignup } from '../../../shared/components/NewsletterSignup/NewsletterSignup';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import type { ToolSlug } from '../../../shared/cms/collectionContent';
+import { ToolCard } from '../ToolCard/ToolCard';
 import styles from './ComingSoonCollectionPage.module.css';
 
-interface ComingSoonCardData {
+interface CollectionCardData {
   title: string;
   description: string;
   imageAccent: string;
   imageBase?: string;
   imageCaption: string;
+  /** When set, the card opens that interactive tool instead of showing "Próximamente". */
+  tool?: ToolSlug;
+}
+
+interface NewsletterCopy {
+  title: string;
+  buttonLabel: string;
+  confirmationText: string;
 }
 
 interface ComingSoonCollectionPageProps {
@@ -20,17 +30,25 @@ interface ComingSoonCollectionPageProps {
   description: string;
   eyebrowColor: string;
   glowColor: string;
-  cards: ComingSoonCardData[];
+  cards: CollectionCardData[];
+  /** Overrides the default "te avisamos cuando estén disponibles" signup copy. */
+  newsletter?: NewsletterCopy;
   /** True when rendering an admin's "Vista previa" of unpublished changes. */
   preview?: boolean;
 }
 
+const COMING_SOON_NEWSLETTER: NewsletterCopy = {
+  title: 'Te avisamos cuando estén disponibles',
+  buttonLabel: 'Avisarme',
+  confirmationText: 'Gracias — te vamos a avisar por correo.',
+};
+
 /**
  * The shared template behind `/meditaciones` and `/herramientas`: both
- * mockups are pixel-identical in structure (hero, 3-card "coming soon"
- * grid, notify-me signup, minimal footer) and differ only in copy and
- * color, per the taxonomy in architecture.md §1.1 — those collections
- * don't have real content yet, only Book does.
+ * mockups are pixel-identical in structure (hero, card grid, signup,
+ * minimal footer) and differ only in copy and color, per the taxonomy in
+ * architecture.md §1.1. Cards are "coming soon" placeholders unless they
+ * link to an interactive tool (today only Herramientas has those).
  */
 export function ComingSoonCollectionPage({
   title,
@@ -38,6 +56,7 @@ export function ComingSoonCollectionPage({
   eyebrowColor,
   glowColor,
   cards,
+  newsletter = COMING_SOON_NEWSLETTER,
   preview = false,
 }: ComingSoonCollectionPageProps) {
   useDocumentTitle(`${title} · Nuestra Medicina Personal`);
@@ -62,17 +81,17 @@ export function ComingSoonCollectionPage({
 
       <section className={styles.gridSection}>
         <div className={styles.grid}>
-          {cards.map((card) => (
-            <ComingSoonCard key={card.title} {...card} />
-          ))}
+          {cards.map(({ tool, ...card }) =>
+            tool ? (
+              <ToolCard key={card.title} title={card.title} description={card.description} tool={tool} />
+            ) : (
+              <ComingSoonCard key={card.title} {...card} />
+            ),
+          )}
         </div>
       </section>
 
-      <NewsletterSignup
-        title="Te avisamos cuando estén disponibles"
-        buttonLabel="Avisarme"
-        confirmationText="Gracias — te vamos a avisar por correo."
-      />
+      <NewsletterSignup {...newsletter} />
 
       <MinimalFooter />
     </div>
