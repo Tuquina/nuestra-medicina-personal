@@ -108,6 +108,33 @@ test.describe('Herramientas in the account (signed in)', () => {
 });
 
 test.describe('Herramientas', () => {
+  test('writing saved by the first version of the tools is still there', async ({ page }) => {
+    await page.goto('/herramientas');
+    await page.evaluate(() => {
+      const today = new Date();
+      const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      window.localStorage.setItem(
+        'nmp.herramientas.escritura-diaria.v1',
+        JSON.stringify({
+          [date]: { date, prompt: 'Una consigna', mood: 'Calma', text: 'Escrito con la versión anterior.', updatedAt: today.toISOString() },
+        }),
+      );
+      window.localStorage.setItem(
+        'nmp.herramientas.preguntas.v1',
+        JSON.stringify({ favorites: ['semana-1'], answers: [{ id: '1763000000000', questionId: 'semana-2', text: 'Respuesta vieja', date }] }),
+      );
+    });
+
+    await page.goto('/herramientas/escritura-diaria');
+    await expect(page.getByLabel('Tu escritura')).toHaveValue('Escrito con la versión anterior.');
+    await expect(page.getByRole('button', { name: 'Calma', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+    await page.goto('/herramientas/preguntas');
+    await expect(page.getByRole('region', { name: 'Tus respuestas' }).getByText('Respuesta vieja')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Preguntas guardadas' })).toBeVisible();
+    expect(await page.evaluate(() => window.localStorage.getItem('nmp.herramientas.preguntas.v1'))).toBeNull();
+  });
+
   test('the collection page links each card to its tool', async ({ page }) => {
     await page.goto('/herramientas');
     const links = page.getByRole('link', { name: /Abrir herramienta/ });
