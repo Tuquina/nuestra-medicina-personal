@@ -1,0 +1,184 @@
+.anchor {
+  scroll-margin-top: 96px;
+}
+
+.block {
+  margin-bottom: 22px;
+}
+
+.blockLabel {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+
+.prompt {
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(120deg, var(--color-tools-gradient-start), color-mix(in oklch, var(--color-tools-gradient-end) 55%, var(--color-surface)));
+}
+
+.promptLabel {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-gold-dark);
+}
+
+.promptText {
+  margin: 0 0 10px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 21px;
+  line-height: 1.4;
+  color: var(--color-ink);
+}
+
+.linkButton {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-deep-blue);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklch, var(--color-deep-blue) 35%, transparent);
+}
+
+.linkButton:hover {
+  text-decoration-color: var(--color-deep-blue);
+}
+
+/* Ruled paper: the 34px line-height and the 34px background rhythm match. */
+.paper {
+  display: block;
+  width: 100%;
+  min-height: 360px;
+  resize: vertical;
+  padding: 6px 18px 18px;
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 34px;
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 33px,
+    color-mix(in oklch, var(--color-sky-pale) 70%, transparent) 33px,
+    color-mix(in oklch, var(--color-sky-pale) 70%, transparent) 34px
+  );
+  background-attachment: local;
+  background-position: 0 6px;
+}
+
+.paper::placeholder {
+  color: var(--color-ink-subtle);
+  font-style: italic;
+}
+
+.paper:focus {
+  outline: none;
+  border-color: var(--color-accent-gold);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent-amber-light) 45%, transparent);
+}
+
+.status {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--color-ink-subtle);
+}
+
+.entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.entry,
+.entryActive {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.entryActive {
+  border-color: var(--color-accent-gold);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-accent-amber-light) 45%, transparent);
+}
+
+.entryOpen {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-family: var(--font-sans);
+  color: inherit;
+  cursor: pointer;
+}
+
+.entryOpen:hover {
+  background: var(--color-surface-hover);
+}
+
+.entryDate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.entryMood {
+  font-weight: 500;
+  font-size: 12px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--color-accent-amber-light) 45%, var(--color-surface));
+  color: var(--color-accent-gold-dark);
+}
+
+.entryExcerpt {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.entryDelete {
+  flex-shrink: 0;
+  width: 44px;
+  border: none;
+  border-left: 1px solid var(--color-surface-border);
+  background: none;
+  color: var(--color-ink-subtle);
+  cursor: pointer;
+}
+
+.entryDelete:hover {
+  color: var(--color-status-danger-icon);
+  background: var(--color-surface-hover);
+}
