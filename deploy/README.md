@@ -110,6 +110,7 @@ En **cada** Environment, cargar:
 | `MERCADOPAGO_ACCESS_TOKEN` | Test para `development`, real para `production` |
 | `MERCADOPAGO_WEBHOOK_SECRET` | Ídem |
 | `GOOGLE_MAIL_CREDENTIALS_JSON` | El JSON completo de la service account de Gmail (dejar vacío mientras Gmail no esté configurado) |
+| `PERSONAL_DATA_KEY` | Clave maestra que cifra lo que cada persona escribe en las Herramientas ([ADR 0006](../docs/decisions/0006-encrypted-personal-tool-entries.md)). Generar **una vez por ambiente** con `openssl rand -base64 32` y guardar una copia en un gestor de contraseñas: GitHub no deja volver a leer un secret, y si se pierde o se cambia, lo guardado queda ilegible. Vacía, las Herramientas guardan sólo en el navegador |
 
 **Variables:**
 
@@ -232,6 +233,10 @@ docker compose -p nmp-prod --env-file deploy/.env.prod -f deploy/docker-compose.
   --profile operations run --rm backup
 docker compose -p nmp-prod --env-file deploy/.env.prod -f deploy/docker-compose.yml start api nginx
 ```
+
+Los backups **no** incluyen `PERSONAL_DATA_KEY` (a propósito: un backup filtrado no
+revela lo que la gente escribió en las Herramientas). Para restaurar esos datos
+hace falta la misma clave del ambiente, guardada aparte.
 
 El último comando debe ejecutarse también si el backup falla, para terminar la
 ventana de mantenimiento.

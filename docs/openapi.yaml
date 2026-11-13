@@ -15,6 +15,7 @@ tags:
   - name: Books
   - name: Reviews
   - name: Newsletter
+  - name: Tools
   - name: Orders
   - name: Library
   - name: Pages
@@ -293,6 +294,91 @@ paths:
                 required: [subscribed]
                 properties: {subscribed: {type: boolean}}
         '401': {$ref: '#/components/responses/AuthenticationRequired'}
+  /api/v1/me/tools/{tool}/entries:
+    parameters:
+      - $ref: '#/components/parameters/Tool'
+    get:
+      tags: [Tools]
+      operationId: listMyToolEntries
+      summary: Lista una página de las entradas propias de una herramienta, descifradas (ADR 0006).
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: cursor
+          in: query
+          description: '`nextCursor` de la página anterior (`kind/key`).'
+          schema: {type: string}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 500, default: 200}
+      responses:
+        '200':
+          description: Entradas ordenadas por `kind` y `key`. Respuesta con `Cache-Control no-store`.
+          content: {application/json: {schema: {$ref: '#/components/schemas/ToolEntryPage'}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '422': {$ref: '#/components/responses/ToolEntryValidationFailed'}
+        '503': {$ref: '#/components/responses/PersonalStorageUnavailable'}
+    delete:
+      tags: [Tools]
+      operationId: deleteMyToolEntries
+      summary: Borra todas las entradas propias de la herramienta, o sólo las de un `kind`.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+        - name: kind
+          in: query
+          schema: {type: string}
+      responses:
+        '204': {description: Entradas borradas.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '422': {$ref: '#/components/responses/ToolEntryValidationFailed'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
+        '503': {$ref: '#/components/responses/PersonalStorageUnavailable'}
+  /api/v1/me/tools/{tool}/entries/{kind}/{key}:
+    parameters:
+      - $ref: '#/components/parameters/Tool'
+      - $ref: '#/components/parameters/ToolEntryKind'
+      - $ref: '#/components/parameters/ToolEntryKey'
+    put:
+      tags: [Tools]
+      operationId: putMyToolEntry
+      summary: Crea o reemplaza una entrada propia; se guarda cifrada con la clave del usuario.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [data]
+              properties:
+                data: {type: object, description: 'Contenido de la entrada (máximo 128 KiB).'}
+      responses:
+        '200':
+          description: Entrada guardada.
+          content: {application/json: {schema: {$ref: '#/components/schemas/ToolEntry'}}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '409':
+          description: La herramienta alcanzó el máximo de entradas (`TOOL_ENTRY_LIMIT_REACHED`).
+          content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+        '422': {$ref: '#/components/responses/ToolEntryValidationFailed'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
+        '503': {$ref: '#/components/responses/PersonalStorageUnavailable'}
+    delete:
+      tags: [Tools]
+      operationId: deleteMyToolEntry
+      summary: Borra una entrada propia. Borrar una inexistente no es un error.
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '204': {description: Entrada borrada.}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '422': {$ref: '#/components/responses/ToolEntryValidationFailed'}
+        '429': {$ref: '#/components/responses/RateLimitExceeded'}
+        '503': {$ref: '#/components/responses/PersonalStorageUnavailable'}
   /api/v1/orders:
     post:
       tags: [Orders]
@@ -927,6 +1013,22 @@ components:
       in: cookie
       name: nmp_session
   parameters:
+    Tool:
+      name: tool
+      in: path
+      required: true
+      schema: {type: string, enum: [escritura-diaria, preguntas, cierre-semanal]}
+    ToolEntryKind:
+      name: kind
+      in: path
+      required: true
+      description: 'Tipo de entrada permitido por la herramienta: `day`; `answer`, `favorites`; `closure`, `draft`.'
+      schema: {type: string}
+    ToolEntryKey:
+      name: key
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[A-Za-z0-9_-]{1,64}$'}
     BookSlug:
       name: slug
       in: path
@@ -970,6 +1072,21 @@ components:
       in: query
       schema: {type: integer, minimum: 0, default: 0}
   schemas:
+    ToolEntry:
+      type: object
+      required: [kind, key, data, createdAt, updatedAt]
+      properties:
+        kind: {type: string}
+        key: {type: string}
+        data: {type: object}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    ToolEntryPage:
+      type: object
+      required: [entries, nextCursor]
+      properties:
+        entries: {type: array, items: {$ref: '#/components/schemas/ToolEntry'}}
+        nextCursor: {type: [string, 'null']}
     Health:
       type: object
       required: [status]
@@ -1844,6 +1961,12 @@ components:
             message: {type: string}
             details: {}
   responses:
+    ToolEntryValidationFailed:
+      description: Herramienta, tipo, clave, cursor o contenido inválidos (`TOOL_ENTRY_VALIDATION_FAILED`).
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    PersonalStorageUnavailable:
+      description: El guardado en la cuenta no está configurado (`PERSONAL_STORAGE_UNAVAILABLE`); las herramientas siguen funcionando en el navegador.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
     RateLimitExceeded:
       description: La identidad superó la cuota de esta operación durante la ventana vigente.
       headers:
