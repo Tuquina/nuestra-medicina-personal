@@ -10,6 +10,7 @@ export function HerramientasEditorPage() {
       seed={buildHerramientasSeedContent}
       heading="Caja de herramientas"
       publicPath="/herramientas"
+      allowTools
     />
   );
 }

@@ -1,12 +1,12 @@
 import { useSearchParams } from 'react-router-dom';
 import { ComingSoonCollectionPage } from '../../components/ComingSoonCollectionPage/ComingSoonCollectionPage';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
-import { HERRAMIENTAS_SLUG, readCollectionProps } from '../../../shared/cms/collectionContent';
+import { HERRAMIENTAS_SLUG, isToolSlug, readCollectionProps } from '../../../shared/cms/collectionContent';
 import { CmsPageState } from '../../../shared/cms/CmsPageState';
 
 /** Decorative accents rotate by card index — editable content is just
  * title/description/caption, colors stay a design decision (same
- * approach as HomePage's Gallery). */
+ * approach as HomePage's Gallery). Only used by cards without a tool. */
 const CARD_ACCENTS = [
   { imageAccent: 'color-mix(in oklch, var(--color-accent-gold) 45%, transparent)' },
   { imageAccent: 'color-mix(in oklch, var(--color-sky) 60%, transparent)' },
@@ -14,13 +14,15 @@ const CARD_ACCENTS = [
 ];
 
 /** `/herramientas` — built from Herramientas.dc.html. Content comes from
- * the admin's "Herramientas" editor via shared/cms. */
+ * the admin's "Herramientas" editor via shared/cms; cards linked to a tool
+ * open it (see `public-store/pages/*` for each tool). */
 export function HerramientasPage() {
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
   const page = usePublishedContent('HERRAMIENTAS', HERRAMIENTAS_SLUG, preview);
   if (page.status !== 'ready') return <CmsPageState state={page} />;
   const { title, description, cards } = readCollectionProps(page.content);
+  const hasTools = cards.some((card) => isToolSlug(card.tool));
 
   return (
     <ComingSoonCollectionPage
@@ -28,7 +30,20 @@ export function HerramientasPage() {
       description={description}
       eyebrowColor="var(--color-accent-gold)"
       glowColor="var(--color-accent-amber-soft)"
-      cards={cards.map((card, i) => ({ ...card, ...CARD_ACCENTS[i % CARD_ACCENTS.length] }))}
+      cards={cards.map((card, i) => ({
+        ...card,
+        tool: isToolSlug(card.tool) ? card.tool : undefined,
+        ...CARD_ACCENTS[i % CARD_ACCENTS.length],
+      }))}
+      newsletter={
+        hasTools
+          ? {
+              title: 'Nuevas herramientas, directo a tu correo',
+              buttonLabel: 'Suscribirme',
+              confirmationText: 'Gracias — te vamos a escribir cuando sumemos algo nuevo.',
+            }
+          : undefined
+      }
       preview={preview}
     />
   );
