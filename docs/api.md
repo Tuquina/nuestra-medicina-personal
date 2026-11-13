@@ -352,3 +352,29 @@ Un usuario autenticado gestiona su propia preferencia con `GET`/`PUT
 /api/v1/me/newsletter`; si más tarde se suscribe con el mismo email desde el
 formulario público, la fila existente se vincula a su `user_id` en vez de
 duplicarse. No hay envío de campañas todavía — sólo el consentimiento.
+
+## Herramientas (entradas personales cifradas)
+
+Lo que una persona con sesión escribe en las Herramientas se guarda en su
+cuenta, cifrado ([ADR 0006](decisions/0006-encrypted-personal-tool-entries.md)):
+
+- `GET /api/v1/me/tools/{tool}/entries?cursor=&limit=` lista una página
+  (ordenada por `kind` y `key`; `nextCursor` es `null` en la última).
+- `PUT /api/v1/me/tools/{tool}/entries/{kind}/{key}` con `{ "data": {…}, "revision": n }`
+  crea o reemplaza una entrada (máximo 128 KiB por entrada y 5000 por
+  herramienta). `revision` crece con cada edición: si llega una revisión más
+  vieja que la guardada (un autoguardado lento, un envío al cerrar la página) se
+  rechaza con 409 `TOOL_ENTRY_STALE`, así el orden de llegada nunca pisa lo más
+  nuevo.
+- `DELETE …/{kind}/{key}` borra una entrada; `DELETE
+  /api/v1/me/tools/{tool}/entries[?kind=]` borra todas (o las de un tipo).
+
+Herramientas y tipos permitidos: `escritura-diaria` (`day`), `preguntas`
+(`answer`, `favorites`) y `cierre-semanal` (`closure`, `draft`). Las escrituras
+exigen `Origin` válido y tienen límite por usuario
+(`RATE_LIMIT_PERSONAL_WRITE_REQUESTS`). Las respuestas llevan `Cache-Control:
+no-store` y el contenido nunca se registra en logs. No existe ninguna ruta de
+administración que lea estas entradas. Sin `PERSONAL_DATA_KEY` (o con el bypass
+local de admin) responden 503 `PERSONAL_STORAGE_UNAVAILABLE` y el frontend
+guarda en el navegador. Borrar la cuenta elimina las entradas y la clave de
+datos del usuario.

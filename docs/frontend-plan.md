@@ -46,10 +46,11 @@ tools instead of a "Próximamente" badge: a daily writing journal
 (prompt of the day, optional mood, silent timer, history), reflection
 questions by theme (favorites and saved answers) and a guided weekly
 closing ritual (breathing, gratitude, a "let go" step that is never
-stored, intention). They work without an account and keep everything in
-the visitor's own browser (`shared/hooks/useLocalStorageState`), with a
-plain-text download and delete options, so nothing personal reaches the
-server. Which card opens which tool is CMS content: collection cards
+stored, intention). Signed in, entries are saved in the person's account,
+encrypted with their own key (ADR 0006, `public-store/hooks/useToolEntries`);
+without a session they stay in this browser, and can be moved into the
+account after signing in. Every tool offers plain-text download and delete.
+Which card opens which tool is CMS content: collection cards
 carry an optional, allow-listed `tool` (validated in
 `backend/internal/domain/page`, seeded by migration 014, editable in
 `/admin/paginas/herramientas`). Shared pieces live in

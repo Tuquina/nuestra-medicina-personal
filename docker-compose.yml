@@ -68,6 +68,10 @@ services:
       MERCADOPAGO_PUBLIC_BASE_URL: ${MERCADOPAGO_PUBLIC_BASE_URL:-}
       # E2E-only override (see e2e/README.md) — empty means "use the real API".
       MERCADOPAGO_API_BASE_URL: ${MERCADOPAGO_API_BASE_URL:-}
+      # Encrypts Herramientas entries saved to an account (ADR 0006). The
+      # default is a fixed, public dev-only key (base64 of
+      # "nmp-dev-only-key-not-for-prod!!!"): fine for local data, never for real data.
+      PERSONAL_DATA_KEY: ${PERSONAL_DATA_KEY:-bm1wLWRldi1vbmx5LWtleS1ub3QtZm9yLXByb2QhISE=}
       EBOOK_STORAGE_PATH: /data/ebooks
       EBOOK_INTERNAL_PREFIX: /_protected/ebooks
       EBOOK_MAX_UPLOAD_BYTES: ${EBOOK_MAX_UPLOAD_BYTES:-52428800}

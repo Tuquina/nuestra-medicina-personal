@@ -17,7 +17,9 @@ type RateLimitConfig struct {
 	OrderRequests      int
 	DownloadRequests   int
 	AdminWriteRequests int
-	TrustProxyHeaders  bool
+	// PersonalWriteRequests bounds autosaves of Herramientas entries per user.
+	PersonalWriteRequests int
+	TrustProxyHeaders     bool
 }
 
 type rateLimitEntry struct {
@@ -47,6 +49,10 @@ func (limiter *RateLimiter) Orders(next http.Handler) http.Handler {
 
 func (limiter *RateLimiter) Downloads(next http.Handler) http.Handler {
 	return limiter.limit("downloads", limiter.config.DownloadRequests, authenticatedIdentity, false, next)
+}
+
+func (limiter *RateLimiter) PersonalWrites(next http.Handler) http.Handler {
+	return limiter.limit("personal-writes", limiter.config.PersonalWriteRequests, authenticatedIdentity, true, next)
 }
 
 func (limiter *RateLimiter) AdminWrites(next http.Handler) http.Handler {

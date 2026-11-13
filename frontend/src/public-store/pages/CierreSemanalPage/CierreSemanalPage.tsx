@@ -3,13 +3,20 @@ import { ToolLayout } from '../../components/ToolLayout/ToolLayout';
 import { ToolPanel } from '../../components/ToolPanel/ToolPanel';
 import { Button } from '../../../shared/components/Button/Button';
 import { Dialog } from '../../../shared/components/Dialog/Dialog';
-import { useLocalStorageState } from '../../../shared/hooks/useLocalStorageState';
 import { downloadTextFile } from '../../../shared/utils/downloadText';
 import { isDateKey, localDateKey, weekRangeOf, type WeekRange } from '../../../shared/utils/localDate';
+import { useToolEntries } from '../../hooks/useToolEntries';
 import { BreathingGuide } from './BreathingGuide';
 import styles from './CierreSemanalPage.module.css';
 
-const STORAGE_KEY = 'nmp.herramientas.cierre-semanal.v1';
+/**
+ * Entries, keyed by the week's Monday: "draft" is the ritual in progress,
+ * "closure" the saved result. Saving a closure removes its draft, so the
+ * same text is never kept twice.
+ */
+const DRAFT = 'draft';
+const CLOSURE = 'closure';
+const TYPING_DEBOUNCE_MS = 800;
 
 const STEPS = ['Llegar', 'Respirar', 'Mirar la semana', 'Agradecer', 'Soltar', 'Intención', 'Cerrar'] as const;
 const LAST_STEP = STEPS.length - 1;
@@ -25,11 +32,6 @@ interface Closure extends ClosureFields {
   weekKey: string;
   weekLabel: string;
   savedAt: string;
-}
-
-interface RitualStore {
-  draft: ClosureFields & { weekKey: string };
-  closures: Closure[];
 }
 
 const emptyFields = (): ClosureFields => ({ moments: ['', '', ''], gratitude: ['', '', ''], intention: '', care: '' });
@@ -49,20 +51,8 @@ function isClosureFields(value: unknown): value is ClosureFields {
   );
 }
 
-function isRitualStore(value: unknown): value is RitualStore {
-  if (typeof value !== 'object' || value === null) return false;
-  const store = value as Record<string, unknown>;
-  const draft = store.draft as Record<string, unknown> | null;
-  return (
-    isClosureFields(draft) &&
-    isDateKey(draft?.weekKey) &&
-    Array.isArray(store.closures) &&
-    store.closures.every((raw) => {
-      if (!isClosureFields(raw)) return false;
-      const closure = raw as unknown as Record<string, unknown>;
-      return isDateKey(closure.weekKey) && typeof closure.weekLabel === 'string' && typeof closure.savedAt === 'string';
-    })
-  );
+function pickFields(fields: ClosureFields): ClosureFields {
+  return { moments: fields.moments, gratitude: fields.gratitude, intention: fields.intention, care: fields.care };
 }
 
 function filled(values: string[]): string[] {
@@ -89,25 +79,35 @@ function closuresAsText(closures: Closure[]): string {
 /** `/herramientas/cierre-semanal` */
 export function CierreSemanalPage() {
   const [week] = useState<WeekRange>(() => weekRangeOf(new Date()));
-  const [store, setStore, { persisted }] = useLocalStorageState<RitualStore>(
-    STORAGE_KEY,
-    { draft: { ...emptyFields(), weekKey: week.startKey }, closures: [] },
-    isRitualStore,
-  );
+  const store = useToolEntries('cierre-semanal');
   const [step, setStep] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const ritualRef = useRef<HTMLDivElement>(null);
 
-  // A draft from a previous week is stale: start this week's ritual fresh.
-  const draft = store.draft.weekKey === week.startKey ? store.draft : { ...emptyFields(), weekKey: week.startKey };
-  const savedThisWeek = store.closures.find((closure) => closure.weekKey === week.startKey);
+  const closures: Closure[] = Object.entries(store.entries[CLOSURE] ?? {})
+    .filter(([weekKey, stored]) => isDateKey(weekKey) && isClosureFields(stored.data))
+    .map(([weekKey, stored]) => {
+      const data = stored.data as ClosureFields & { weekLabel?: unknown };
+      return {
+        ...pickFields(data),
+        weekKey,
+        weekLabel: typeof data.weekLabel === 'string' ? data.weekLabel : weekRangeOf(new Date(`${weekKey}T12:00:00`)).label,
+        savedAt: stored.updatedAt,
+      };
+    })
+    .sort((a, b) => b.weekKey.localeCompare(a.weekKey));
+  const savedThisWeek = closures.find((closure) => closure.weekKey === week.startKey);
+
+  // This week's ritual: the draft in progress, else the saved closure, else empty.
+  const storedDraft = store.entries[DRAFT]?.[week.startKey]?.data;
+  const draft: ClosureFields = isClosureFields(storedDraft)
+    ? pickFields(storedDraft)
+    : savedThisWeek
+      ? pickFields(savedThisWeek)
+      : emptyFields();
 
   const updateDraft = (patch: Partial<ClosureFields>) =>
-    setStore((previous) => {
-      const base =
-        previous.draft.weekKey === week.startKey ? previous.draft : { ...emptyFields(), weekKey: week.startKey };
-      return { ...previous, draft: { ...base, ...patch } };
-    });
+    store.save(DRAFT, week.startKey, { ...draft, ...patch }, { debounceMs: TYPING_DEBOUNCE_MS });
 
   const updateListItem = (field: 'moments' | 'gratitude', index: number, value: string) => {
     const next = [...draft[field]];
@@ -121,37 +121,29 @@ export function CierreSemanalPage() {
   };
 
   const currentClosure: Closure = {
-    moments: draft.moments,
-    gratitude: draft.gratitude,
-    intention: draft.intention,
-    care: draft.care,
+    ...draft,
     weekKey: week.startKey,
     weekLabel: week.label,
-    savedAt: new Date(0).toISOString(),
+    savedAt: savedThisWeek?.savedAt ?? '',
   };
 
   const saveClosure = () => {
-    const closure: Closure = { ...currentClosure, savedAt: new Date().toISOString() };
-    setStore((previous) => ({
-      ...previous,
-      closures: [closure, ...previous.closures.filter((c) => c.weekKey !== closure.weekKey)],
-    }));
+    store.save(CLOSURE, week.startKey, { ...draft, weekLabel: week.label });
+    store.remove(DRAFT, week.startKey);
   };
 
   const startOver = () => {
-    setStore((previous) => ({ ...previous, draft: { ...emptyFields(), weekKey: week.startKey } }));
+    // An explicit empty draft, so a saved closure doesn't refill the ritual.
+    store.save(DRAFT, week.startKey, { ...emptyFields() });
     goTo(0);
   };
 
   const confirmDelete = () => {
     if (pendingDelete) {
-      setStore((previous) => ({
-        closures: previous.closures.filter((c) => c.weekKey !== pendingDelete),
-        // The in-progress draft of that same week holds the same text: delete it too,
-        // otherwise the "deleted" closure would reappear when walking the ritual again.
-        draft:
-          previous.draft.weekKey === pendingDelete ? { ...emptyFields(), weekKey: previous.draft.weekKey } : previous.draft,
-      }));
+      // Delete the draft of that week too: otherwise the "deleted" text
+      // would reappear when walking the ritual again.
+      store.remove(CLOSURE, pendingDelete);
+      store.remove(DRAFT, pendingDelete);
     }
     setPendingDelete(null);
   };
@@ -159,7 +151,7 @@ export function CierreSemanalPage() {
   return (
     <ToolLayout
       tool="cierre-semanal"
-      persisted={persisted}
+      store={store}
       title="Ritual de cierre semanal"
       intro="Un recorrido breve para despedir la semana con calma: respirar, mirar lo vivido, agradecer, soltar lo que pesa y elegir con qué intención empezar la próxima."
     >
@@ -284,9 +276,9 @@ export function CierreSemanalPage() {
               <p className={styles.savedNote} aria-live="polite">
                 {!savedThisWeek
                   ? ''
-                  : persisted
-                    ? `Guardado en este navegador · ${new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(savedThisWeek.savedAt))}`
-                    : 'No se pudo guardar en este navegador: descargalo para no perderlo.'}
+                  : store.saveStatus === 'error'
+                    ? 'Todavía sin guardar: descargalo para no perderlo.'
+                    : `Guardado ${store.mode === 'account' ? 'en tu cuenta' : 'en este navegador'} · ${new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(savedThisWeek.savedAt))}`}
               </p>
             </div>
           )}
@@ -308,16 +300,16 @@ export function CierreSemanalPage() {
         tone="plain"
         title="Tus cierres anteriores"
         hint={
-          store.closures.length === 0
+          closures.length === 0
             ? 'Cuando guardes tu primer cierre, lo vas a encontrar acá.'
             : 'Mirar varias semanas juntas ayuda a ver los ciclos.'
         }
         actions={
-          store.closures.length > 0 && (
+          closures.length > 0 && (
             <Button
               variant="secondary"
               onClick={() =>
-                downloadTextFile(`cierres-semanales-${localDateKey(new Date())}.txt`, closuresAsText(store.closures))
+                downloadTextFile(`cierres-semanales-${localDateKey(new Date())}.txt`, closuresAsText(closures))
               }
             >
               Descargar todos (.txt)
@@ -325,9 +317,9 @@ export function CierreSemanalPage() {
           )
         }
       >
-        {store.closures.length > 0 && (
+        {closures.length > 0 && (
           <ul className={styles.closures}>
-            {store.closures.map((closure) => (
+            {closures.map((closure) => (
               <li key={closure.weekKey} className={styles.closureItem}>
                 <details>
                   <summary className={styles.closureSummary}>

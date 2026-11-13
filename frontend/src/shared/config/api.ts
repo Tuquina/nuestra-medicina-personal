@@ -120,6 +120,20 @@ export const NEWSLETTER_SUBSCRIBE_URL = `${API_PREFIX}/newsletter/subscribe`;
 /** The signed-in user's own newsletter preference (Mi Cuenta switch). */
 export const ME_NEWSLETTER_URL = `${API_PREFIX}/me/newsletter`;
 
+/**
+ * The signed-in user's own Herramientas entries, encrypted at rest
+ * (ADR 0006). `GET` lists one page (`?cursor=&limit=`), `DELETE` clears the
+ * tool; one entry lives at `/{kind}/{key}` (`PUT` with `{ data }`, `DELETE`).
+ * Answers 503 `PERSONAL_STORAGE_UNAVAILABLE` when account storage is off.
+ */
+export function meToolEntriesUrl(tool: string): string {
+  return `${API_PREFIX}/me/tools/${encodeURIComponent(tool)}/entries`;
+}
+
+export function meToolEntryUrl(tool: string, kind: string, key: string): string {
+  return `${meToolEntriesUrl(tool)}/${encodeURIComponent(kind)}/${encodeURIComponent(key)}`;
+}
+
 export const PAGES_URL = `${API_PREFIX}/pages`;
 
 export function pageUrl(slug: string): string {

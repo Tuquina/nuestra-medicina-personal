@@ -22,7 +22,9 @@ import (
 	"github.com/nuestra-medicina-personal/backend/internal/application/pages"
 	"github.com/nuestra-medicina-personal/backend/internal/application/reviews"
 	settingsapp "github.com/nuestra-medicina-personal/backend/internal/application/settings"
+	"github.com/nuestra-medicina-personal/backend/internal/application/toolentries"
 	"github.com/nuestra-medicina-personal/backend/internal/config"
+	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/crypto"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/gmail"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/google"
 	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/mercadopago"
@@ -49,6 +51,7 @@ func run(logger *slog.Logger) error {
 		"google_configured", cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
 		"mercado_pago_configured", cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",
 		"email_configured", cfg.GoogleMailCredentials != "" && cfg.GoogleMailSender != "",
+		"personal_storage_configured", cfg.PersonalDataKey != "",
 	)
 	if cfg.LocalDebugAuth() {
 		logger.Warn("LOCAL ADMIN BYPASS IS ARMED — every request is treated as a logged-in administrator, no Google login required. This must never be true outside a local debug run (see config.Config.LocalDebugAuth).")
@@ -116,9 +119,13 @@ func run(logger *slog.Logger) error {
 	} else {
 		logger.Info("transactional email worker disabled")
 	}
+	toolEntriesService, err := newToolEntriesService(postgres.NewToolEntriesRepository(pool), cfg.PersonalDataKey)
+	if err != nil {
+		return err
+	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Newsletter: newsletterService, Authentication: authService, Orders: orderService, Library: libraryService, Manuscripts: manuscriptService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService,
+		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Newsletter: newsletterService, Authentication: authService, Orders: orderService, Library: libraryService, Manuscripts: manuscriptService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService, ToolEntries: toolEntriesService,
 		IntegrationStatus: httpapi.IntegrationStatus{
 			GoogleConfigured:      cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
 			MercadoPagoConfigured: cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",
@@ -131,7 +138,8 @@ func run(logger *slog.Logger) error {
 		RateLimits: httpapi.RateLimitConfig{
 			Window: cfg.RateLimitWindow, AuthRequests: cfg.RateLimitAuthRequests,
 			OrderRequests: cfg.RateLimitOrderRequests, DownloadRequests: cfg.RateLimitDownloadRequests,
-			AdminWriteRequests: cfg.RateLimitAdminWrites, TrustProxyHeaders: cfg.TrustProxyHeaders,
+			AdminWriteRequests: cfg.RateLimitAdminWrites, PersonalWriteRequests: cfg.RateLimitPersonalWrites,
+			TrustProxyHeaders: cfg.TrustProxyHeaders,
 		},
 		MaxRequestURIBytes: cfg.MaxRequestURIBytes,
 		LocalDebugAuth:     cfg.LocalDebugAuth(),
@@ -164,4 +172,22 @@ func run(logger *slog.Logger) error {
 		}
 		return err
 	}
+}
+
+// newToolEntriesService builds the encrypted Herramientas storage (ADR 0006).
+// Without PERSONAL_DATA_KEY it returns a disabled service, so the tools fall
+// back to browser storage instead of the API failing to start.
+func newToolEntriesService(repository *postgres.ToolEntriesRepository, encodedKey string) (*toolentries.Service, error) {
+	if encodedKey == "" {
+		return toolentries.NewService(repository, nil), nil
+	}
+	masterKey, err := crypto.ParseMasterKey(encodedKey)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := crypto.NewEnvelope(masterKey, 1)
+	if err != nil {
+		return nil, err
+	}
+	return toolentries.NewService(repository, envelope), nil
 }

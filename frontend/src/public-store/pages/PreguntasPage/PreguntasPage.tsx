@@ -4,9 +4,9 @@ import { ToolPanel } from '../../components/ToolPanel/ToolPanel';
 import { ChoiceChips } from '../../components/ChoiceChips/ChoiceChips';
 import { Button } from '../../../shared/components/Button/Button';
 import { Dialog } from '../../../shared/components/Dialog/Dialog';
-import { useLocalStorageState } from '../../../shared/hooks/useLocalStorageState';
 import { downloadTextFile } from '../../../shared/utils/downloadText';
 import { dayNumber, formatShortDate, isDateKey, localDateKey } from '../../../shared/utils/localDate';
+import { useToolEntries } from '../../hooks/useToolEntries';
 import {
   REFLECTION_QUESTIONS,
   REFLECTION_THEMES,
@@ -16,42 +16,39 @@ import {
 } from '../../data/herramientas/reflectionQuestions';
 import styles from './PreguntasPage.module.css';
 
-const STORAGE_KEY = 'nmp.herramientas.preguntas.v1';
+/** Each saved answer is one "answer" entry; favorites are a single "favorites/all" entry. */
+const ANSWER = 'answer';
+const FAVORITES = 'favorites';
+const FAVORITES_KEY = 'all';
 const ALL_THEMES = 'todas';
 const THEME_OPTIONS = [{ value: ALL_THEMES, label: 'Todas' }, ...REFLECTION_THEMES.map((t) => ({ value: t.id, label: t.label }))];
 
-interface SavedAnswer {
-  id: string;
+interface AnswerData {
   questionId: string;
   text: string;
   date: string;
 }
 
-interface ReflectionStore {
-  favorites: string[];
-  answers: SavedAnswer[];
+interface SavedAnswer extends AnswerData {
+  id: string;
+  updatedAt: string;
 }
 
-const EMPTY_STORE: ReflectionStore = { favorites: [], answers: [] };
-
-function isReflectionStore(value: unknown): value is ReflectionStore {
+function isAnswerData(value: unknown): value is AnswerData {
   if (typeof value !== 'object' || value === null) return false;
-  const store = value as Record<string, unknown>;
-  return (
-    Array.isArray(store.favorites) &&
-    store.favorites.every((id) => typeof id === 'string') &&
-    Array.isArray(store.answers) &&
-    store.answers.every((raw) => {
-      if (typeof raw !== 'object' || raw === null) return false;
-      const answer = raw as Record<string, unknown>;
-      return (
-        typeof answer.id === 'string' &&
-        typeof answer.questionId === 'string' &&
-        typeof answer.text === 'string' &&
-        isDateKey(answer.date)
-      );
-    })
-  );
+  const data = value as Record<string, unknown>;
+  return typeof data.questionId === 'string' && typeof data.text === 'string' && isDateKey(data.date);
+}
+
+function favoriteIds(value: unknown): string[] {
+  if (typeof value !== 'object' || value === null) return [];
+  const ids = (value as { ids?: unknown }).ids;
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
+}
+
+/** A key the API accepts ([A-Za-z0-9_-]{1,64}) that sorts roughly by time. */
+function newAnswerKey(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function pickDifferent(pool: readonly ReflectionQuestion[], avoid: readonly string[]): ReflectionQuestion {
@@ -70,11 +67,7 @@ function answersAsText(answers: SavedAnswer[]): string {
 /** `/herramientas/preguntas` */
 export function PreguntasPage() {
   const [today] = useState(() => localDateKey(new Date()));
-  const [store, setStore, { persisted }] = useLocalStorageState<ReflectionStore>(
-    STORAGE_KEY,
-    EMPTY_STORE,
-    isReflectionStore,
-  );
+  const store = useToolEntries('preguntas');
   const [theme, setTheme] = useState<string>(ALL_THEMES);
   const [questionId, setQuestionId] = useState(
     () => REFLECTION_QUESTIONS[dayNumber(localDateKey(new Date())) % REFLECTION_QUESTIONS.length].id,
@@ -85,8 +78,14 @@ export function PreguntasPage() {
   const [pendingDelete, setPendingDelete] = useState<string | 'all' | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const answers: SavedAnswer[] = Object.entries(store.entries[ANSWER] ?? {})
+    .filter(([, stored]) => isAnswerData(stored.data))
+    .map(([id, stored]) => ({ ...(stored.data as AnswerData), id, updatedAt: stored.updatedAt }))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const favoriteList = favoriteIds(store.entries[FAVORITES]?.[FAVORITES_KEY]?.data);
+
   const question = questionById(questionId) ?? REFLECTION_QUESTIONS[0];
-  const isFavorite = store.favorites.includes(question.id);
+  const isFavorite = favoriteList.includes(question.id);
   const pool = theme === ALL_THEMES ? REFLECTION_QUESTIONS : REFLECTION_QUESTIONS.filter((q) => q.theme === theme);
 
   const showQuestion = (next: ReflectionQuestion) => {
@@ -106,20 +105,15 @@ export function PreguntasPage() {
     showQuestion(pickDifferent(nextPool, [question.id]));
   };
 
-  const toggleFavorite = () => {
-    setStore((previous) => ({
-      ...previous,
-      favorites: previous.favorites.includes(question.id)
-        ? previous.favorites.filter((id) => id !== question.id)
-        : [question.id, ...previous.favorites],
-    }));
-  };
+  const saveFavorites = (ids: string[]) => store.save(FAVORITES, FAVORITES_KEY, { ids });
+
+  const toggleFavorite = () =>
+    saveFavorites(isFavorite ? favoriteList.filter((id) => id !== question.id) : [question.id, ...favoriteList]);
 
   const saveAnswer = () => {
     const text = draft.trim();
     if (!text) return;
-    const answer: SavedAnswer = { id: `${Date.now()}`, questionId: question.id, text, date: today };
-    setStore((previous) => ({ ...previous, answers: [answer, ...previous.answers] }));
+    store.save(ANSWER, newAnswerKey(), { questionId: question.id, text, date: today });
     setDraft('');
     setJustSaved(true);
   };
@@ -132,24 +126,23 @@ export function PreguntasPage() {
     cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const removeFavorite = (id: string) =>
-    setStore((previous) => ({ ...previous, favorites: previous.favorites.filter((favorite) => favorite !== id) }));
+  const removeFavorite = (id: string) => saveFavorites(favoriteList.filter((favorite) => favorite !== id));
 
   const confirmDelete = () => {
     if (pendingDelete === 'all') {
-      setStore((previous) => ({ ...previous, answers: [] }));
+      store.removeAll(ANSWER);
     } else if (pendingDelete) {
-      setStore((previous) => ({ ...previous, answers: previous.answers.filter((a) => a.id !== pendingDelete) }));
+      store.remove(ANSWER, pendingDelete);
     }
     setPendingDelete(null);
   };
 
-  const favorites = store.favorites.map(questionById).filter((q): q is ReflectionQuestion => q !== undefined);
+  const favorites = favoriteList.map(questionById).filter((q): q is ReflectionQuestion => q !== undefined);
 
   return (
     <ToolLayout
       tool="preguntas"
-      persisted={persisted}
+      store={store}
       title="Preguntas para reflexionar"
       intro="Una pregunta a la vez, para mirar hacia adentro con calma. No hay respuestas correctas: podés solo pensarla, escribir unas líneas o guardarla para otro momento."
     >
@@ -197,9 +190,11 @@ export function PreguntasPage() {
           <span className={styles.savedNote} aria-live="polite">
             {!justSaved
               ? ''
-              : persisted
-                ? 'Guardada en tus respuestas.'
-                : 'Agregada a tus respuestas, pero sin guardar: descargalas antes de cerrar la página.'}
+              : store.saveStatus === 'error'
+                ? 'Agregada a tus respuestas, pero todavía sin guardar.'
+                : store.mode === 'account'
+                  ? 'Guardada en tus respuestas, en tu cuenta.'
+                  : 'Guardada en tus respuestas.'}
           </span>
           <Button variant="secondary" onClick={saveAnswer} disabled={!draft.trim()}>
             Guardar respuesta
@@ -234,16 +229,16 @@ export function PreguntasPage() {
         tone="plain"
         title="Tus respuestas"
         hint={
-          store.answers.length === 0
+          answers.length === 0
             ? 'Las respuestas que guardes van a aparecer acá, con su fecha.'
             : 'Releerlas con el tiempo también es parte del camino.'
         }
         actions={
-          store.answers.length > 0 && (
+          answers.length > 0 && (
             <>
               <Button
                 variant="secondary"
-                onClick={() => downloadTextFile(`preguntas-reflexion-${today}.txt`, answersAsText(store.answers))}
+                onClick={() => downloadTextFile(`preguntas-reflexion-${today}.txt`, answersAsText(answers))}
               >
                 Descargar (.txt)
               </Button>
@@ -254,9 +249,9 @@ export function PreguntasPage() {
           )
         }
       >
-        {store.answers.length > 0 && (
+        {answers.length > 0 && (
           <ul className={styles.answersList}>
-            {store.answers.map((answer) => (
+            {answers.map((answer) => (
               <li key={answer.id} className={styles.answerItem}>
                 <div className={styles.answerHeader}>
                   <span className={styles.answerDate}>{formatShortDate(answer.date)}</span>

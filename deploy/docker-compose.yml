@@ -78,6 +78,9 @@ services:
       SESSION_TTL: ${SESSION_TTL:-720h}
       MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN}
       MERCADOPAGO_WEBHOOK_SECRET: ${MERCADOPAGO_WEBHOOK_SECRET}
+      # Master key for the encrypted Herramientas entries (ADR 0006). Empty
+      # disables account storage; losing it makes saved entries unreadable.
+      PERSONAL_DATA_KEY: ${PERSONAL_DATA_KEY:-}
       # Driven from .env, not derived from APP_DOMAIN like GOOGLE_REDIRECT_URL
       # above — config.go requires all three Mercado Pago variables empty or
       # all three set (unlike Google's, whose validation tolerates the

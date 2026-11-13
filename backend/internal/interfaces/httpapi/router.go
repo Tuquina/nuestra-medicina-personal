@@ -25,6 +25,7 @@ type Dependencies struct {
 	Manuscripts              ManuscriptService
 	Backoffice               BackofficeService
 	Settings                 SettingsService
+	ToolEntries              ToolEntriesService
 	IntegrationStatus        IntegrationStatus
 	WebhookValidator         MercadoPagoWebhookValidator
 	Database                 DatabaseHealth
@@ -58,6 +59,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	manuscriptHandler := NewManuscriptHandler(dependencies.Manuscripts, dependencies.Logger, dependencies.ManuscriptMaxUploadBytes)
 	backofficeHandler := NewBackofficeHandler(dependencies.Backoffice, dependencies.Logger)
 	settingsHandler := NewSettingsHandler(dependencies.Settings, dependencies.Logger, dependencies.IntegrationStatus)
+	toolEntriesHandler := NewToolEntriesHandler(dependencies.ToolEntries, dependencies.Logger, dependencies.LocalDebugAuth)
 	rateLimiter := NewRateLimiter(dependencies.RateLimits)
 
 	// wrapAdmin/wrapUser choose once, here, between the real session check
@@ -112,6 +114,15 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.Handle("GET /api/v1/me/newsletter", wrapUser(http.HandlerFunc(newsletterHandler.GetPreference)))
 	userNewsletterPreference := wrapUser(http.HandlerFunc(newsletterHandler.SetPreference))
 	root.Handle("PUT /api/v1/me/newsletter", requireSameOrigin(dependencies.BaseURL, userNewsletterPreference))
+	// The person's own Herramientas entries (ADR 0006). Writes are same-origin
+	// and rate limited; nothing here is reachable from /api/v1/admin.
+	personalWrites := func(next http.HandlerFunc) http.Handler {
+		return requireSameOrigin(dependencies.BaseURL, wrapUser(rateLimiter.PersonalWrites(next)))
+	}
+	root.Handle("GET /api/v1/me/tools/{tool}/entries", wrapUser(http.HandlerFunc(toolEntriesHandler.List)))
+	root.Handle("DELETE /api/v1/me/tools/{tool}/entries", personalWrites(toolEntriesHandler.DeleteAll))
+	root.Handle("PUT /api/v1/me/tools/{tool}/entries/{kind}/{key}", personalWrites(toolEntriesHandler.Put))
+	root.Handle("DELETE /api/v1/me/tools/{tool}/entries/{kind}/{key}", personalWrites(toolEntriesHandler.Delete))
 	root.HandleFunc("POST /api/v1/webhooks/mercadopago", orderHandler.MercadoPagoWebhook)
 
 	admin := http.NewServeMux()

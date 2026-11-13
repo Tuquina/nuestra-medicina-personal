@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nuestra-medicina-personal/backend/internal/infrastructure/crypto"
 )
 
 type Config struct {
@@ -60,9 +62,15 @@ type Config struct {
 	RateLimitOrderRequests    int
 	RateLimitDownloadRequests int
 	RateLimitAdminWrites      int
-	TrustProxyHeaders         bool
-	MaxHeaderBytes            int
-	MaxRequestURIBytes        int
+	// RateLimitPersonalWrites bounds Herramientas autosaves per user and window.
+	RateLimitPersonalWrites int
+	// PersonalDataKey is the base64 master key (PERSONAL_DATA_KEY) that wraps
+	// every user's data key for the Herramientas entries (ADR 0006). Empty
+	// disables account storage; never log or print it.
+	PersonalDataKey    string
+	TrustProxyHeaders  bool
+	MaxHeaderBytes     int
+	MaxRequestURIBytes int
 	// LocalAdminBypass is the raw LOCAL_ADMIN_BYPASS value — read this
 	// through LocalDebugAuth() below, never directly, since that method
 	// also enforces Environment != "production".
@@ -75,6 +83,7 @@ func Load() (Config, error) {
 	rateLimitOrders, rateLimitOrdersErr := strictIntOrDefault("RATE_LIMIT_ORDER_REQUESTS", 5)
 	rateLimitDownloads, rateLimitDownloadsErr := strictIntOrDefault("RATE_LIMIT_DOWNLOAD_REQUESTS", 30)
 	rateLimitAdmin, rateLimitAdminErr := strictIntOrDefault("RATE_LIMIT_ADMIN_WRITE_REQUESTS", 60)
+	rateLimitPersonal, rateLimitPersonalErr := strictIntOrDefault("RATE_LIMIT_PERSONAL_WRITE_REQUESTS", 240)
 	trustProxyHeaders, trustProxyErr := strictBoolOrDefault("TRUST_PROXY_HEADERS", false)
 	localAdminBypass, localAdminBypassErr := strictBoolOrDefault("LOCAL_ADMIN_BYPASS", false)
 	maxHeaderBytes, maxHeaderBytesErr := strictIntOrDefault("HTTP_MAX_HEADER_BYTES", 32<<10)
@@ -118,6 +127,8 @@ func Load() (Config, error) {
 		RateLimitOrderRequests:    rateLimitOrders,
 		RateLimitDownloadRequests: rateLimitDownloads,
 		RateLimitAdminWrites:      rateLimitAdmin,
+		RateLimitPersonalWrites:   rateLimitPersonal,
+		PersonalDataKey:           os.Getenv("PERSONAL_DATA_KEY"),
 		TrustProxyHeaders:         trustProxyHeaders,
 		MaxHeaderBytes:            maxHeaderBytes,
 		MaxRequestURIBytes:        maxRequestURIBytes,
@@ -126,7 +137,7 @@ func Load() (Config, error) {
 
 	validationErrors := compactErrors([]error{
 		rateLimitWindowErr, rateLimitAuthErr, rateLimitOrdersErr, rateLimitDownloadsErr,
-		rateLimitAdminErr, trustProxyErr, maxHeaderBytesErr, maxRequestURIErr, localAdminBypassErr,
+		rateLimitAdminErr, rateLimitPersonalErr, trustProxyErr, maxHeaderBytesErr, maxRequestURIErr, localAdminBypassErr,
 	})
 	if cfg.DatabaseURL == "" {
 		validationErrors = append(validationErrors, errors.New("DATABASE_URL is required"))
@@ -138,13 +149,19 @@ func Load() (Config, error) {
 		validationErrors = append(validationErrors, errors.New("RATE_LIMIT_WINDOW must be between 1s and 1h"))
 	}
 	for name, value := range map[string]int{
-		"RATE_LIMIT_AUTH_REQUESTS":        cfg.RateLimitAuthRequests,
-		"RATE_LIMIT_ORDER_REQUESTS":       cfg.RateLimitOrderRequests,
-		"RATE_LIMIT_DOWNLOAD_REQUESTS":    cfg.RateLimitDownloadRequests,
-		"RATE_LIMIT_ADMIN_WRITE_REQUESTS": cfg.RateLimitAdminWrites,
+		"RATE_LIMIT_AUTH_REQUESTS":           cfg.RateLimitAuthRequests,
+		"RATE_LIMIT_ORDER_REQUESTS":          cfg.RateLimitOrderRequests,
+		"RATE_LIMIT_DOWNLOAD_REQUESTS":       cfg.RateLimitDownloadRequests,
+		"RATE_LIMIT_ADMIN_WRITE_REQUESTS":    cfg.RateLimitAdminWrites,
+		"RATE_LIMIT_PERSONAL_WRITE_REQUESTS": cfg.RateLimitPersonalWrites,
 	} {
 		if value < 1 || value > 10_000 {
 			validationErrors = append(validationErrors, fmt.Errorf("%s must be between 1 and 10000", name))
+		}
+	}
+	if cfg.PersonalDataKey != "" {
+		if _, err := crypto.ParseMasterKey(cfg.PersonalDataKey); err != nil {
+			validationErrors = append(validationErrors, fmt.Errorf("PERSONAL_DATA_KEY is invalid: %w", err))
 		}
 	}
 	if cfg.MaxHeaderBytes < 8<<10 || cfg.MaxHeaderBytes > 1<<20 {

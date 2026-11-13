@@ -46,6 +46,8 @@ services:
       GOOGLE_REDIRECT_URL: http://localhost:8080/api/v1/auth/google/callback
       MERCADOPAGO_ACCESS_TOKEN: e2e-fake-token
       MERCADOPAGO_WEBHOOK_SECRET: e2e-fake-webhook-secret
+      # Fixed, public test-only key (base64 of "nmp-e2e-only-key-not-for-prod!!!").
+      PERSONAL_DATA_KEY: bm1wLWUyZS1vbmx5LWtleS1ub3QtZm9yLXByb2QhISE=
       # config.go requires this to be a real absolute HTTPS URL; it's only
       # ever embedded in the back_urls/notification_url sent *to* mp-fake,
       # which ignores the host and substitutes its own PUBLIC_BASE_URL
