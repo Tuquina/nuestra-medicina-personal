@@ -122,6 +122,15 @@ func (r *AuthRepository) DeleteAccount(ctx context.Context, userID string, now t
 		WHERE user_id = $1::uuid AND revoked_at IS NULL`, userID, now); err != nil {
 		return fmt.Errorf("revoke sessions on account deletion: %w", err)
 	}
+	// Unlike orders, what the person wrote in the Herramientas tools has no
+	// reason to outlive the account: delete it, and its data key, so even
+	// an old backup of those rows can no longer be decrypted (ADR 0006).
+	if _, err := tx.Exec(ctx, `DELETE FROM tool_entries WHERE user_id = $1::uuid`, userID); err != nil {
+		return fmt.Errorf("delete tool entries on account deletion: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM user_data_keys WHERE user_id = $1::uuid`, userID); err != nil {
+		return fmt.Errorf("delete data key on account deletion: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit account deletion: %w", err)
 	}
