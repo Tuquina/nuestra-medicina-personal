@@ -70,6 +70,17 @@ type ValidationError struct{ Fields map[string]string }
 
 func (e *ValidationError) Error() string { return "tool entry is invalid" }
 
+// ValidateKind checks that tool is known and stores entries of kind.
+func ValidateKind(tool, kind string) error {
+	if err := ValidateTool(tool); err != nil {
+		return err
+	}
+	if !contains(kindsByTool[tool], kind) {
+		return &ValidationError{Fields: map[string]string{"kind": "is not stored by this tool"}}
+	}
+	return nil
+}
+
 // ValidateTool checks that tool is a known tool.
 func ValidateTool(tool string) error {
 	if _, ok := kindsByTool[tool]; !ok {

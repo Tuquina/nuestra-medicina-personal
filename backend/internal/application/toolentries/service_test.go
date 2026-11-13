@@ -98,9 +98,9 @@ func (r *memoryRepository) DeleteEntry(_ context.Context, userID string, ref too
 	return nil
 }
 
-func (r *memoryRepository) DeleteTool(_ context.Context, userID, tool string) error {
+func (r *memoryRepository) DeleteTool(_ context.Context, userID, tool, kind string) error {
 	for id, entry := range r.entries {
-		if entry.UserID == userID && entry.Tool == tool {
+		if entry.UserID == userID && entry.Tool == tool && (kind == "" || entry.Kind == kind) {
 			delete(r.entries, id)
 		}
 	}
@@ -131,7 +131,7 @@ func TestDisabledServiceRefusesEveryOperation(t *testing.T) {
 		func() error { _, err := service.List(ctx, "u", "preguntas", nil, 0); return err }(),
 		func() error { _, err := service.Put(ctx, "u", dayRef("2026-11-13"), json.RawMessage(`{}`)); return err }(),
 		service.Delete(ctx, "u", dayRef("2026-11-13")),
-		service.DeleteAll(ctx, "u", "preguntas"),
+		service.DeleteAll(ctx, "u", "preguntas", ""),
 	}
 	for _, err := range checks {
 		if !errors.Is(err, toolentry.ErrStorageUnavailable) {
@@ -284,7 +284,22 @@ func TestDeleteAndDeleteAll(t *testing.T) {
 		t.Fatalf("unexpected entries after delete: %+v", page.Entries)
 	}
 
-	if err := service.DeleteAll(ctx, "user-a", "preguntas"); err != nil {
+	if _, err := service.Put(ctx, "user-a", answer, json.RawMessage(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DeleteAll(ctx, "user-a", "preguntas", "answer"); err != nil {
+		t.Fatal(err)
+	}
+	page, _ = service.List(ctx, "user-a", "preguntas", nil, 0)
+	if len(page.Entries) != 1 || page.Entries[0].Kind != "favorites" {
+		t.Fatalf("deleting one kind must keep the others, got %+v", page.Entries)
+	}
+	var validation *toolentry.ValidationError
+	if err := service.DeleteAll(ctx, "user-a", "preguntas", "day"); !errors.As(err, &validation) {
+		t.Fatalf("expected a validation error for a kind the tool doesn't store, got %v", err)
+	}
+
+	if err := service.DeleteAll(ctx, "user-a", "preguntas", ""); err != nil {
 		t.Fatal(err)
 	}
 	page, _ = service.List(ctx, "user-a", "preguntas", nil, 0)

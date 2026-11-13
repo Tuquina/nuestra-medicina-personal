@@ -18,7 +18,7 @@ type ToolEntriesService interface {
 	List(ctx context.Context, userID, tool string, after *toolentry.Cursor, limit int) (toolentries.Page, error)
 	Put(ctx context.Context, userID string, ref toolentry.Ref, data json.RawMessage) (toolentry.Entry, error)
 	Delete(ctx context.Context, userID string, ref toolentry.Ref) error
-	DeleteAll(ctx context.Context, userID, tool string) error
+	DeleteAll(ctx context.Context, userID, tool, kind string) error
 }
 
 // ToolEntriesHandler serves /api/v1/me/tools/*: the signed-in person's own
@@ -122,7 +122,7 @@ func (h *ToolEntriesHandler) DeleteAll(w http.ResponseWriter, r *http.Request) {
 	if !h.ready(w) {
 		return
 	}
-	if err := h.service.DeleteAll(r.Context(), userID(r.Context()), r.PathValue("tool")); err != nil {
+	if err := h.service.DeleteAll(r.Context(), userID(r.Context()), r.PathValue("tool"), r.URL.Query().Get("kind")); err != nil {
 		h.fail(w, r, err)
 		return
 	}

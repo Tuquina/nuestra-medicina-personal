@@ -126,9 +126,9 @@ func (r *ToolEntriesRepository) DeleteEntry(ctx context.Context, userID string, 
 	return nil
 }
 
-func (r *ToolEntriesRepository) DeleteTool(ctx context.Context, userID, tool string) error {
+func (r *ToolEntriesRepository) DeleteTool(ctx context.Context, userID, tool, kind string) error {
 	if _, err := r.pool.Exec(ctx,
-		`DELETE FROM tool_entries WHERE user_id = $1::uuid AND tool = $2`, userID, tool); err != nil {
+		`DELETE FROM tool_entries WHERE user_id = $1::uuid AND tool = $2 AND ($3 = '' OR kind = $3)`, userID, tool, kind); err != nil {
 		return fmt.Errorf("delete tool entries: %w", err)
 	}
 	return nil

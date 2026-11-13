@@ -53,7 +53,8 @@ func (s *toolEntriesServiceStub) Delete(_ context.Context, userID string, ref to
 	return nil
 }
 
-func (s *toolEntriesServiceStub) DeleteAll(_ context.Context, userID, _ string) error {
+func (s *toolEntriesServiceStub) DeleteAll(_ context.Context, userID, _, kind string) error {
+	s.lastRef.Kind = kind
 	s.lastUser = userID
 	return nil
 }
@@ -147,7 +148,7 @@ func TestToolEntriesWritesRequireSameOrigin(t *testing.T) {
 		t.Fatalf("unexpected call %+v", service)
 	}
 
-	for _, target := range []string{"/api/v1/me/tools/escritura-diaria/entries/day/2026-11-13", "/api/v1/me/tools/escritura-diaria/entries"} {
+	for _, target := range []string{"/api/v1/me/tools/escritura-diaria/entries/day/2026-11-13", "/api/v1/me/tools/escritura-diaria/entries?kind=day"} {
 		recorder = httptest.NewRecorder()
 		router.ServeHTTP(recorder, toolRequest(http.MethodDelete, target, "", true, true))
 		if recorder.Code != http.StatusNoContent {

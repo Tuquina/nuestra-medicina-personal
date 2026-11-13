@@ -50,7 +50,8 @@ type Repository interface {
 	// original CreatedAt on replace, and returns what was stored.
 	UpsertEntry(ctx context.Context, entry StoredEntry) (StoredEntry, error)
 	DeleteEntry(ctx context.Context, userID string, ref toolentry.Ref) error
-	DeleteTool(ctx context.Context, userID, tool string) error
+	// DeleteTool removes the user's entries of one tool; kind narrows it when not empty.
+	DeleteTool(ctx context.Context, userID, tool, kind string) error
 }
 
 // Encryptor is implemented by infrastructure/crypto.Envelope.
@@ -180,15 +181,21 @@ func (s *Service) Delete(ctx context.Context, userID string, ref toolentry.Ref) 
 	return nil
 }
 
-// DeleteAll removes every entry the user has in one tool.
-func (s *Service) DeleteAll(ctx context.Context, userID, tool string) error {
+// DeleteAll removes every entry the user has in one tool, or only those
+// of one kind when kind is not empty.
+func (s *Service) DeleteAll(ctx context.Context, userID, tool, kind string) error {
 	if !s.Enabled() {
 		return toolentry.ErrStorageUnavailable
 	}
 	if err := toolentry.ValidateTool(tool); err != nil {
 		return err
 	}
-	if err := s.repository.DeleteTool(ctx, userID, tool); err != nil {
+	if kind != "" {
+		if err := toolentry.ValidateKind(tool, kind); err != nil {
+			return err
+		}
+	}
+	if err := s.repository.DeleteTool(ctx, userID, tool, kind); err != nil {
 		return fmt.Errorf("delete tool entries: %w", err)
 	}
 	return nil
