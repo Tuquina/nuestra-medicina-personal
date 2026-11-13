@@ -2,40 +2,40 @@ import { useRef, useState } from 'react';
 import { ToolLayout } from '../../components/ToolLayout/ToolLayout';
 import { ToolPanel } from '../../components/ToolPanel/ToolPanel';
 import { ChoiceChips } from '../../components/ChoiceChips/ChoiceChips';
+import { SaveStatus } from '../../components/SaveStatus/SaveStatus';
 import { Button } from '../../../shared/components/Button/Button';
 import { Dialog } from '../../../shared/components/Dialog/Dialog';
-import { useLocalStorageState } from '../../../shared/hooks/useLocalStorageState';
 import { downloadTextFile } from '../../../shared/utils/downloadText';
 import { dayNumber, formatLongDate, formatShortDate, isDateKey, localDateKey } from '../../../shared/utils/localDate';
+import { useToolEntries } from '../../hooks/useToolEntries';
 import { MOODS, WRITING_PROMPTS, promptForDay } from '../../data/herramientas/writingPrompts';
 import { GentleTimer } from './GentleTimer';
 import styles from './EscrituraDiariaPage.module.css';
 
-const STORAGE_KEY = 'nmp.herramientas.escritura-diaria.v1';
+/** One written day is one entry of kind "day", keyed by its local date. */
+const DAY = 'day';
+/** Typing is saved in one request after a short pause, not per keystroke. */
+const TYPING_DEBOUNCE_MS = 800;
 
-interface JournalEntry {
-  date: string;
+interface DayData {
   prompt: string;
   mood: string | null;
   text: string;
+}
+
+interface JournalEntry extends DayData {
+  date: string;
   updatedAt: string;
 }
 
-type Journal = Record<string, JournalEntry>;
-
-function isJournal(value: unknown): value is Journal {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  return Object.entries(value).every(([key, raw]) => {
-    if (!isDateKey(key) || typeof raw !== 'object' || raw === null) return false;
-    const entry = raw as Record<string, unknown>;
-    return (
-      entry.date === key &&
-      typeof entry.prompt === 'string' &&
-      (entry.mood === null || typeof entry.mood === 'string') &&
-      typeof entry.text === 'string' &&
-      typeof entry.updatedAt === 'string'
-    );
-  });
+function isDayData(value: unknown): value is DayData {
+  if (typeof value !== 'object' || value === null) return false;
+  const data = value as Record<string, unknown>;
+  return (
+    typeof data.prompt === 'string' &&
+    (data.mood === null || typeof data.mood === 'string') &&
+    typeof data.text === 'string'
+  );
 }
 
 const MOOD_OPTIONS = MOODS.map((mood) => ({ value: mood, label: mood }));
@@ -46,10 +46,6 @@ function hasContent(entry: JournalEntry): boolean {
 
 function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
-}
-
-function savedTimeLabel(iso: string): string {
-  return new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
 }
 
 function journalAsText(entries: JournalEntry[]): string {
@@ -70,12 +66,19 @@ function journalAsText(entries: JournalEntry[]): string {
 /** `/herramientas/escritura-diaria` */
 export function EscrituraDiariaPage() {
   const [today] = useState(() => localDateKey(new Date()));
-  const [journal, setJournal, { persisted }] = useLocalStorageState<Journal>(STORAGE_KEY, {}, isJournal);
+  const store = useToolEntries('escritura-diaria');
   const [selectedDate, setSelectedDate] = useState(today);
   const [pendingDelete, setPendingDelete] = useState<string | 'all' | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  const entry: JournalEntry = journal[selectedDate] ?? {
+  const journal = new Map<string, JournalEntry>();
+  for (const [date, stored] of Object.entries(store.entries[DAY] ?? {})) {
+    if (isDateKey(date) && isDayData(stored.data)) {
+      journal.set(date, { ...stored.data, date, updatedAt: stored.updatedAt });
+    }
+  }
+
+  const entry: JournalEntry = journal.get(selectedDate) ?? {
     date: selectedDate,
     prompt: WRITING_PROMPTS[promptForDay(dayNumber(selectedDate))],
     mood: null,
@@ -83,11 +86,9 @@ export function EscrituraDiariaPage() {
     updatedAt: '',
   };
 
-  const updateEntry = (patch: Partial<Pick<JournalEntry, 'prompt' | 'mood' | 'text'>>) => {
-    setJournal((previous) => {
-      const current = previous[selectedDate] ?? entry;
-      return { ...previous, [selectedDate]: { ...current, ...patch, updatedAt: new Date().toISOString() } };
-    });
+  const updateEntry = (patch: Partial<DayData>, debounceMs = 0) => {
+    const next: DayData = { prompt: entry.prompt, mood: entry.mood, text: entry.text, ...patch };
+    store.save(DAY, selectedDate, { ...next }, { debounceMs });
   };
 
   const nextPrompt = () => {
@@ -100,20 +101,14 @@ export function EscrituraDiariaPage() {
     editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const pastEntries = Object.values(journal)
-    .filter(hasContent)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const pastEntries = [...journal.values()].filter(hasContent).sort((a, b) => b.date.localeCompare(a.date));
 
   const confirmDelete = () => {
     if (pendingDelete === 'all') {
-      setJournal({});
+      store.removeAll();
       setSelectedDate(today);
     } else if (pendingDelete) {
-      setJournal((previous) => {
-        const next = { ...previous };
-        delete next[pendingDelete];
-        return next;
-      });
+      store.remove(DAY, pendingDelete);
     }
     setPendingDelete(null);
   };
@@ -124,7 +119,7 @@ export function EscrituraDiariaPage() {
   return (
     <ToolLayout
       tool="escritura-diaria"
-      persisted={persisted}
+      store={store}
       title="Registro de escritura diaria"
       intro="Unos minutos para vos. Escribí sin corregir y sin juzgar: lo que aparezca está bien. Podés volver cada día y ver el camino recorrido."
     >
@@ -168,7 +163,7 @@ export function EscrituraDiariaPage() {
             id="journal-text"
             className={styles.paper}
             value={entry.text}
-            onChange={(event) => updateEntry({ text: event.target.value })}
+            onChange={(event) => updateEntry({ text: event.target.value }, TYPING_DEBOUNCE_MS)}
             placeholder="Empezá por donde quieras…"
             rows={12}
             spellCheck
@@ -179,11 +174,7 @@ export function EscrituraDiariaPage() {
               {words} {words === 1 ? 'palabra' : 'palabras'}
             </span>
             <span aria-live="polite">
-              {!entry.updatedAt
-                ? ''
-                : persisted
-                  ? `Guardado en este navegador a las ${savedTimeLabel(entry.updatedAt)}`
-                  : 'Sin guardar: descargalo antes de cerrar la página'}
+              <SaveStatus store={store} at={entry.updatedAt || undefined} />
             </span>
           </div>
         </ToolPanel>
