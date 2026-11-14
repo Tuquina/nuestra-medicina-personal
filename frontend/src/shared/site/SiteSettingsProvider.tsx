@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { apiRequest } from '../api/client';
 import { SITE_SETTINGS_URL } from '../config/api';
-import { DEFAULT_SITE_SETTINGS, SiteSettingsContext, type SiteSettings } from './siteSettings';
+import { DEFAULT_SITE_SETTINGS, SiteSettingsContext, publicSiteSettings, type SiteSettings } from './siteSettings';
 
 /** Sets (or removes) a `<meta name=…>` tag in the document head. */
 function setMeta(name: string, content: string | null) {
@@ -42,5 +42,9 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setMeta('robots', settings.seoIndexable ? null : 'noindex, nofollow');
   }, [settings]);
 
-  return <SiteSettingsContext.Provider value={settings}>{children}</SiteSettingsContext.Provider>;
+  const value = useMemo(
+    () => ({ settings, update: (next: SiteSettings) => setSettings(publicSiteSettings(next)) }),
+    [settings],
+  );
+  return <SiteSettingsContext.Provider value={value}>{children}</SiteSettingsContext.Provider>;
 }

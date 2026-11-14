@@ -25,8 +25,28 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   seoIndexable: true,
 };
 
-export const SiteSettingsContext = createContext<SiteSettings>(DEFAULT_SITE_SETTINGS);
+interface SiteSettingsContextValue {
+  settings: SiteSettings;
+  /** Replaces the loaded settings, e.g. right after Configuración saves them. */
+  update: (settings: SiteSettings) => void;
+}
+
+export const SiteSettingsContext = createContext<SiteSettingsContextValue>({
+  settings: DEFAULT_SITE_SETTINGS,
+  update: () => undefined,
+});
 
 export function useSiteSettings(): SiteSettings {
-  return useContext(SiteSettingsContext);
+  return useContext(SiteSettingsContext).settings;
+}
+
+/** Lets the admin's Configuración push freshly saved values to the whole app. */
+export function useUpdateSiteSettings(): (settings: SiteSettings) => void {
+  return useContext(SiteSettingsContext).update;
+}
+
+/** Keeps only the public fields of a settings object (e.g. the admin's full response). */
+export function publicSiteSettings(settings: SiteSettings): SiteSettings {
+  const { siteName, siteDescription, supportEmail, seoTitle, seoDescription, seoIndexable } = settings;
+  return { siteName, siteDescription, supportEmail, seoTitle, seoDescription, seoIndexable };
 }

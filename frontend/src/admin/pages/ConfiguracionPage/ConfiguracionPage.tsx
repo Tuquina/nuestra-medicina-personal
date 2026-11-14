@@ -6,6 +6,7 @@ import { StatusBadge } from '../../../shared/components/StatusBadge/StatusBadge'
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
 import { apiRequest, ApiError } from '../../../shared/api/client';
 import { ADMIN_SETTINGS_URL } from '../../../shared/config/api';
+import { useUpdateSiteSettings } from '../../../shared/site/siteSettings';
 import type { EditableSiteSettings, SiteSettings } from '../../backoffice/types';
 import f from '../../../shared/components/FormField/FormField.module.css';
 import styles from './ConfiguracionPage.module.css';
@@ -24,6 +25,7 @@ function editableFields(settings: SiteSettings): EditableSiteSettings {
 
 export function ConfiguracionPage() {
   useDocumentTitle('Configuración · Admin · Nuestra Medicina Personal');
+  const updateSiteSettings = useUpdateSiteSettings();
   const [section, setSection] = useState<SectionId>('general');
   const [state, setState] = useState<SettingsState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
@@ -60,6 +62,8 @@ export function ConfiguracionPage() {
         response,
         draft: current.draft === submittedDraft ? editableFields(response) : current.draft,
       } : current);
+      // The public pages read these from a shared context: refresh it now.
+      updateSiteSettings(response);
       setMessage('Cambios guardados.');
     } catch (error: unknown) {
       setMessage(error instanceof ApiError && error.status === 422 ? 'Revisá los campos: hay valores inválidos.' : error instanceof ApiError && error.status === 429 ? 'Alcanzaste el límite de cambios. Esperá un minuto y reintentá.' : 'No pudimos guardar los cambios. Intentá nuevamente.');

@@ -76,6 +76,11 @@ test.describe('navegación del admin', () => {
       await page.getByRole('button', { name: 'Guardar' }).click();
       await expect(page.getByText('Cambios guardados.')).toBeVisible();
 
+      // Same tab, client-side navigation: the site already shows the saved values.
+      await page.getByRole('link', { name: 'Ver sitio →' }).click();
+      await expect(page.getByRole('link', { name: 'ayuda-e2e@example.com' })).toBeVisible();
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
+
       const visitor = await browser.newPage();
       await visitor.goto('/meditaciones');
       await expect(visitor.getByRole('link', { name: 'ayuda-e2e@example.com' })).toBeVisible();
