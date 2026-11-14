@@ -57,7 +57,7 @@ export function VentasPage() {
 
   const page = state.status === 'ready' ? state.page : null;
   return (
-    <AdminLayout title="Ventas">
+    <AdminLayout title="Ventas" readOnly>
       <div className={styles.panel}>
         <form className={styles.toolbar} onSubmit={applySearch}>
           <input type="search" placeholder="Buscar por cliente, correo o libro..." value={queryInput} onChange={(event) => setQueryInput(event.target.value)} className={styles.search} aria-label="Buscar por cliente, correo o libro" />
@@ -90,7 +90,7 @@ export function VentasPage() {
 
 function SaleDetail({ sale, onBack }: { sale: AdminSale; onBack: () => void }) {
   const label = SALE_STATUS_LABELS[sale.displayStatus];
-  return <AdminLayout title="Ventas"><button type="button" className={styles.backButton} onClick={onBack}>← Volver a ventas</button><div className={styles.detailCard}>
+  return <AdminLayout title="Ventas" readOnly><button type="button" className={styles.backButton} onClick={onBack}>← Volver a ventas</button><div className={styles.detailCard}>
     <div className={styles.detailHeader}><h2 className={styles.detailHeading}>Venta #{sale.id}</h2><StatusBadge tone={toneForStatus(label)}>{label}</StatusBadge></div>
     <div className={styles.detailRows}>
       <Detail label="Fecha" value={formatAdminDate(sale.createdAt)} /><Detail label="Fecha de pago" value={formatAdminDate(sale.paidAt)} /><Detail label="Cliente" value={sale.customerName} /><Detail label="Correo" value={sale.customerEmail} /><Detail label="Libro" value={sale.bookTitle} /><Detail label="Precio histórico" value={formatPrice(sale.amountMinorUnits, sale.currency)} />
