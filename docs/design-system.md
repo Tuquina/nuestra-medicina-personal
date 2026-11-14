@@ -273,3 +273,14 @@ Per architecture.md §61: semantic HTML first, visible focus, `alt` text
 on every meaningful image, labels on every input, ARIA only when
 semantic HTML can't express the relationship. Every page implemented so
 far uses `<header>` / `<main>` / `<footer>` landmarks and a real `<h1>`.
+
+### Motion
+
+Motion is slow, rare and optional: only `opacity` and `transform` animate
+(compositor-friendly), and every animation sits inside
+`@media (prefers-reduced-motion: no-preference)`. On the home page the hero
+text and image rise in once on load, the warm glows "breathe" over 14–22s,
+and the sections below the hero fade in once as they scroll into view
+(`shared/components/Reveal`, one IntersectionObserver each, disconnected
+after it fires). The Page Builder canvas renders sections without `Reveal`,
+so editing stays static.
