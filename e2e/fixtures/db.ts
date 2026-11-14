@@ -314,3 +314,9 @@ export async function storedToolEntries(userId: string): Promise<{ tool: string;
   );
   return result.rows;
 }
+
+/** The id of a CMS page by slug (for `cleanup({ pageIds })`), or undefined. */
+export async function pageIdBySlug(slug: string): Promise<string | undefined> {
+  const result = await db().query<{ id: string }>(`SELECT id::text FROM pages WHERE slug = $1`, [slug]);
+  return result.rows[0]?.id;
+}
