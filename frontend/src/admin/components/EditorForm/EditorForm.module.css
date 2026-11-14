@@ -127,3 +127,20 @@
 .mono {
   font-family: ui-monospace, monospace;
 }
+
+/* A short explanatory note at the top of an editor page. */
+.pageIntro {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--color-admin-row-hover);
+  border: 1px solid var(--color-admin-border);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--color-admin-text-muted);
+}
+
+.pageIntro a {
+  color: var(--color-deep-blue);
+  font-weight: 600;
+}

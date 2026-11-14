@@ -8,7 +8,7 @@ export function HerramientasEditorPage() {
       pageType="HERRAMIENTAS"
       slug={HERRAMIENTAS_SLUG}
       seed={buildHerramientasSeedContent}
-      heading="Caja de herramientas"
+      heading="Portada de Herramientas"
       publicPath="/herramientas"
       allowTools
     />
