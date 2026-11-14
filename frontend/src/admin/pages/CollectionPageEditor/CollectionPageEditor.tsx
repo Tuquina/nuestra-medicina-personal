@@ -1,3 +1,4 @@
+import { MediaPicker } from '../../components/MediaPicker/MediaPicker';
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
 import { FormField } from '../../../shared/components/FormField/FormField';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
@@ -170,6 +171,7 @@ function CardsEditor({
             />
           </FormField>
 
+          <MediaPicker value={card.imageId} onChange={(imageId) => updateCard(card.id, { imageId })} />
           <FormField label="Descripción de la imagen" htmlFor={`cardImage-${card.id}`}>
             <input
               id={`cardImage-${card.id}`}

@@ -16,6 +16,7 @@ interface CollectionCardData {
   imageAccent: string;
   imageBase?: string;
   imageCaption: string;
+  imageId?: string;
   /** When set, the card opens that interactive tool instead of showing "Próximamente". */
   tool?: ToolSlug;
 }
@@ -88,7 +89,7 @@ export function ComingSoonCollectionPage({
           {leadingCards}
           {cards.map(({ tool, ...card }) =>
             tool ? (
-              <ToolCard key={card.title} title={card.title} description={card.description} tool={tool} />
+              <ToolCard key={card.title} title={card.title} description={card.description} tool={tool} imageId={card.imageId} imageCaption={card.imageCaption} />
             ) : (
               <ComingSoonCard key={card.title} {...card} />
             ),

@@ -16,10 +16,12 @@ export interface HeroProps {
   secondaryCtaLabel: string;
   secondaryCtaTo: string;
   imageCaption: string;
+  imageId?: string;
 }
 
 export interface GalleryProps {
   captions: string[];
+  imageIds?: string[];
 }
 
 export interface ManifestoProps {
@@ -40,6 +42,7 @@ export interface CollectionTeaserProps {
   ctaLabel: string;
   ctaTo: string;
   imageCaption: string;
+  imageId?: string;
   reverse: boolean;
   accent: 'sky' | 'amber';
 }
@@ -49,6 +52,7 @@ export interface AboutProps {
   title: string;
   bio: string;
   imageCaption: string;
+  imageId?: string;
 }
 
 export interface NewsletterProps {
@@ -67,6 +71,7 @@ export interface TextBlockProps {
   text: string;
 }
 export interface ImageBlockProps {
+  imageId?: string;
   caption: string;
 }
 export interface QuoteBlockProps {

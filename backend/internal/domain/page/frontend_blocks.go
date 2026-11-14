@@ -8,6 +8,7 @@ import (
 )
 
 type homeHeroProps struct {
+	ImageID           string `json:"imageId,omitempty"`
 	Eyebrow           string `json:"eyebrow"`
 	HeadingLine1      string `json:"headingLine1"`
 	HeadingLine2      string `json:"headingLine2"`
@@ -20,6 +21,7 @@ type homeHeroProps struct {
 }
 
 type galleryProps struct {
+	ImageIDs []string `json:"imageIds,omitempty"`
 	Captions []string `json:"captions"`
 }
 
@@ -35,6 +37,7 @@ type featuredBooksProps struct {
 }
 
 type collectionTeaserProps struct {
+	ImageID      string `json:"imageId,omitempty"`
 	Eyebrow      string `json:"eyebrow"`
 	Title        string `json:"title"`
 	Description  string `json:"description"`
@@ -46,6 +49,7 @@ type collectionTeaserProps struct {
 }
 
 type aboutProps struct {
+	ImageID      string `json:"imageId,omitempty"`
 	Eyebrow      string `json:"eyebrow"`
 	Title        string `json:"title"`
 	Bio          string `json:"bio"`
@@ -65,6 +69,7 @@ type textProps struct {
 }
 
 type imageProps struct {
+	ImageID string `json:"imageId,omitempty"`
 	Caption string `json:"caption"`
 }
 
@@ -102,6 +107,7 @@ type middleSectionType struct {
 }
 
 type imageTextLandingSection struct {
+	ImageID      string `json:"imageId,omitempty"`
 	Type         string `json:"type"`
 	Heading      string `json:"heading"`
 	Text         string `json:"text"`
@@ -123,6 +129,9 @@ type benefitItem struct {
 func validateHomeHero(raw json.RawMessage) error {
 	var props homeHeroProps
 	if err := strictDecode(raw, &props); err != nil {
+		return err
+	}
+	if err := validateOptionalImageID(props.ImageID); err != nil {
 		return err
 	}
 	checks := []struct {
@@ -155,6 +164,14 @@ func validateGallery(raw json.RawMessage) error {
 	}
 	if len(props.Captions) < 1 || len(props.Captions) > 20 {
 		return errors.New("captions must contain between 1 and 20 entries")
+	}
+	if len(props.ImageIDs) > len(props.Captions) {
+		return errors.New("imageIds cannot outnumber captions")
+	}
+	for _, id := range props.ImageIDs {
+		if err := validateOptionalImageID(id); err != nil {
+			return err
+		}
 	}
 	for _, caption := range props.Captions {
 		if err := requiredText("caption", caption, 300); err != nil {
@@ -194,6 +211,9 @@ func validateCollectionTeaser(raw json.RawMessage) error {
 	if err := strictDecode(raw, &props); err != nil {
 		return err
 	}
+	if err := validateOptionalImageID(props.ImageID); err != nil {
+		return err
+	}
 	if err := optionalText("eyebrow", props.Eyebrow, 200); err != nil {
 		return err
 	}
@@ -221,6 +241,9 @@ func validateCollectionTeaser(raw json.RawMessage) error {
 func validateAbout(raw json.RawMessage) error {
 	var props aboutProps
 	if err := strictDecode(raw, &props); err != nil {
+		return err
+	}
+	if err := validateOptionalImageID(props.ImageID); err != nil {
 		return err
 	}
 	if err := optionalText("eyebrow", props.Eyebrow, 200); err != nil {
@@ -256,6 +279,9 @@ func validateSimpleHomeBlock(blockType string, raw json.RawMessage) error {
 	if blockType == "image" {
 		var props imageProps
 		if err := strictDecode(raw, &props); err != nil {
+			return err
+		}
+		if err := validateOptionalImageID(props.ImageID); err != nil {
 			return err
 		}
 		return requiredText("caption", props.Caption, 300)
@@ -368,6 +394,9 @@ func validateMiddleSection(raw json.RawMessage) error {
 		if err := validateControlledColor(section.ImageAccent); err != nil {
 			return fmt.Errorf("imageAccent: %w", err)
 		}
+		if err := validateOptionalImageID(section.ImageID); err != nil {
+			return err
+		}
 		return optionalText("imageCaption", section.ImageCaption, 300)
 	case "benefits":
 		var section benefitsLandingSection
@@ -430,4 +459,12 @@ func validSlug(value string) bool {
 		}
 	}
 	return true
+}
+
+// CMS images reference managed media, never arbitrary URLs or file paths.
+func validateOptionalImageID(id string) error {
+	if id != "" && !validUUID(id) {
+		return errors.New("imageId must be a media UUID")
+	}
+	return nil
 }

@@ -225,6 +225,7 @@ type collectionProps struct {
 }
 
 type collectionCard struct {
+	ImageID      string `json:"imageId,omitempty"`
 	ID           string `json:"id"`
 	Title        string `json:"title"`
 	Description  string `json:"description"`
@@ -517,6 +518,9 @@ func validateCollection(props collectionProps) error {
 			return err
 		}
 		if err := optionalText("card imageCaption", card.ImageCaption, 300); err != nil {
+			return err
+		}
+		if err := validateOptionalImageID(card.ImageID); err != nil {
 			return err
 		}
 		if card.Tool != "" && !collectionTools[card.Tool] {

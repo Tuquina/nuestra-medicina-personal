@@ -106,6 +106,7 @@ function BookLandingContent({ book, slug }: { book: Book; slug: string }) {
           text={landing.middleSection.text}
           imageAccent={landing.middleSection.imageAccent}
           imageCaption={landing.middleSection.imageCaption}
+          imageId={landing.middleSection.imageId}
         />
       ) : (
         <FeatureGrid heading={landing.middleSection.heading} items={landing.middleSection.items} />

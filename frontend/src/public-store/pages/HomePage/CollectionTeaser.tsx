@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { SectionIntro } from '../../../shared/components/SectionIntro/SectionIntro';
-import { ImagePlaceholder } from '../../../shared/components/ImagePlaceholder/ImagePlaceholder';
+import { CmsImage } from '../../../shared/components/CmsImage/CmsImage';
 import type { CollectionTeaserProps } from '../../../shared/cms/homeContent';
 import styles from './CollectionTeaser.module.css';
 
@@ -32,6 +32,7 @@ export function CollectionTeaser({
   ctaLabel,
   ctaTo,
   imageCaption,
+  imageId,
   reverse,
   accent,
 }: CollectionTeaserProps) {
@@ -52,9 +53,9 @@ export function CollectionTeaser({
           {ctaLabel} →
         </Link>
       </div>
-      <div className={styles.imgCol}>
-        <ImagePlaceholder accent={colors.imageAccent} caption={imageCaption} aspectRatio="16 / 11" />
-      </div>
+      <Link to={ctaTo} className={styles.imgCol} aria-label={ctaLabel}>
+        <CmsImage imageId={imageId} accent={colors.imageAccent} caption={imageCaption} aspectRatio="16 / 11" />
+      </Link>
     </div>
   );
 }

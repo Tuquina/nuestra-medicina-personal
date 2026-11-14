@@ -1,4 +1,4 @@
-import { ImagePlaceholder } from '../../../shared/components/ImagePlaceholder/ImagePlaceholder';
+import { CmsImage } from '../../../shared/components/CmsImage/CmsImage';
 import type {
   DividerBlockProps,
   ImageBlockProps,
@@ -21,10 +21,10 @@ export function TextBlock({ text }: TextBlockProps) {
   return <p className={styles.text}>{text}</p>;
 }
 
-export function ImageBlock({ caption }: ImageBlockProps) {
+export function ImageBlock({ caption, imageId }: ImageBlockProps) {
   return (
     <div className={styles.imageWrap}>
-      <ImagePlaceholder accent="var(--color-sky-pale)" caption={caption} aspectRatio="16 / 9" borderRadius="8px" />
+      <CmsImage imageId={imageId} accent="var(--color-sky-pale)" caption={caption} aspectRatio="16 / 9" borderRadius="8px" />
     </div>
   );
 }

@@ -86,6 +86,22 @@ is unaffected — only this frontend path differs.
 
 ## Post-launch content & admin extensions
 
+### CMS editorial images
+
+Home hero, gallery, collection teasers, About and generic Image blocks now
+render managed media selected in the Page Builder. The same picker is available
+in Sobre el proyecto, collection cards and book landing image/text sections.
+It supports existing library images, direct JPEG/PNG uploads, removal, search,
+loading/errors and keyboard navigation. Gallery controls add/remove/reorder
+image/description pairs. The two Home collection images also link to their
+respective routes. Existing content without media IDs keeps its placeholder;
+About copy and portrait are not seeded or replaced automatically.
+
+Content remains API-backed, with explicit draft/save/publish/version semantics.
+Generated editorial photography is uploaded through Multimedia as environment
+content, not bundled or hardcoded into the frontend. Validation and OpenAPI
+accept only optional UUIDs; no schema migration or new dependency is needed.
+
 Added after the 17-mockup handoff was fully implemented. These pages were
 initially built against a local adapter and now use the real CMS draft,
 publication, preview and version endpoints. Two kinds of follow-up work:

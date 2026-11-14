@@ -1,14 +1,20 @@
 import type { Section } from '../../../shared/cms/types';
+import type { GalleryProps } from '../../../shared/cms/homeContent';
+import { MediaPicker } from '../../components/MediaPicker/MediaPicker';
+import { GalleryImageEditor } from '../../components/GalleryImageEditor/GalleryImageEditor';
 import { SECTION_SCHEMAS, type FieldDef } from './sectionSchemas';
 import styles from './PageBuilderPage.module.css';
 
 interface InspectorProps {
   section: Section | undefined;
-  onChangeProp: (key: string, value: unknown) => void;
+  onChangeProps: (patch: Record<string, unknown>) => void;
   onToggleHidden: () => void;
 }
 
 function Field({ field, value, onChange }: { field: FieldDef; value: unknown; onChange: (value: unknown) => void }) {
+  if (field.kind === 'image') {
+    return <MediaPicker label={field.label} value={typeof value === 'string' ? value : ''} onChange={onChange} />;
+  }
   if (field.kind === 'note') {
     return <p className={styles.fieldNote}>{field.hint}</p>;
   }
@@ -84,7 +90,7 @@ function Field({ field, value, onChange }: { field: FieldDef; value: unknown; on
  * — every field here edits an actual prop the public Home page renders,
  * so there's no gap between "what you configure" and "what visitors see".
  */
-export function Inspector({ section, onChangeProp, onToggleHidden }: InspectorProps) {
+export function Inspector({ section, onChangeProps, onToggleHidden }: InspectorProps) {
   if (!section) {
     return (
       <aside className={styles.inspector}>
@@ -108,12 +114,14 @@ export function Inspector({ section, onChangeProp, onToggleHidden }: InspectorPr
       {schema && schema.fields.length > 0 && (
         <>
           <p className={[styles.inspectorSectionTitle, styles.inspectorSectionTitleSpaced].join(' ')}>Contenido</p>
-          {schema.fields.map((field) => (
+          {section.type === 'gallery' ? (
+            <GalleryImageEditor {...section.props as unknown as GalleryProps} onChange={onChangeProps} />
+          ) : schema.fields.map((field) => (
             <Field
               key={field.key}
               field={field}
               value={(section.props as Record<string, unknown>)[field.key]}
-              onChange={(value) => onChangeProp(field.key, value)}
+              onChange={(value) => onChangeProps({ [field.key]: value })}
             />
           ))}
         </>

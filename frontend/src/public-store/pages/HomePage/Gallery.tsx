@@ -1,4 +1,4 @@
-import { ImagePlaceholder } from '../../../shared/components/ImagePlaceholder/ImagePlaceholder';
+import { CmsImage } from '../../../shared/components/CmsImage/CmsImage';
 import type { GalleryProps } from '../../../shared/cms/homeContent';
 import styles from './Gallery.module.css';
 
@@ -14,14 +14,15 @@ const PALETTE = [
 ];
 
 /** The "vida cotidiana" photo collage introduced in architecture.md §1.3. */
-export function Gallery({ captions }: GalleryProps) {
+export function Gallery({ captions, imageIds }: GalleryProps) {
   return (
     <section className={styles.section} aria-label="Galería de naturaleza y vida">
       <div className={styles.grid}>
         {captions.map((caption, i) => {
           const tile = PALETTE[i % PALETTE.length];
           return (
-            <ImagePlaceholder
+            <CmsImage
+              imageId={imageIds?.[i]}
               key={`${caption}-${i}`}
               className={styles.tile}
               accent={tile.accent}
