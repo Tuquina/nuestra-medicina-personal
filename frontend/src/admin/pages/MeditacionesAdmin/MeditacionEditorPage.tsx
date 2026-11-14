@@ -20,7 +20,7 @@ import f from '../../../shared/components/FormField/FormField.module.css';
 import editor from '../../components/EditorForm/EditorForm.module.css';
 import styles from './MeditacionesAdmin.module.css';
 
-/** `/admin/meditaciones/:slug` — edits one meditation page (draft → publish, versions, preview). */
+/** `/admin/meditaciones/:slug/editar` — edits one meditation page (draft → publish, versions, preview). */
 export function MeditacionEditorPage() {
   const { slug = '' } = useParams();
   const seed = useCallback(() => buildMeditationSeedContent('Nueva meditación'), []);
@@ -52,6 +52,17 @@ export function MeditacionEditorPage() {
 function MeditationForm({ meditation, onChange }: { meditation: MeditationProps; onChange: (props: MeditationProps) => void }) {
   const [videoInput, setVideoInput] = useState(meditation.video ? youTubeWatchUrl(meditation.video.videoId) : '');
   const update = (patch: Partial<MeditationProps>) => onChange({ ...meditation, ...patch });
+
+  // When the video changes from outside this field (restoring a version,
+  // discarding changes), show that video instead of the stale link.
+  const currentVideoId = meditation.video?.videoId ?? null;
+  const [syncedVideoId, setSyncedVideoId] = useState(currentVideoId);
+  if (currentVideoId !== syncedVideoId) {
+    setSyncedVideoId(currentVideoId);
+    if (parseYouTubeId(videoInput) !== currentVideoId) {
+      setVideoInput(currentVideoId ? youTubeWatchUrl(currentVideoId) : '');
+    }
+  }
 
   const videoId = parseYouTubeId(videoInput);
   const videoInvalid = videoInput.trim() !== '' && !videoId;
