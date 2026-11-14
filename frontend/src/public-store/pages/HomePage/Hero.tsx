@@ -43,7 +43,7 @@ export function Hero(props: HeroProps) {
           <Eyebrow>{eyebrow}</Eyebrow>
 
           <h1 className={styles.heading}>
-            <span className={styles.headingLine1}>{headingLine1}</span>
+            <span className={styles.headingLine1}>{headingLine1}</span>{' '}
             <span className={`${styles.headingLine2} gradient-text`}>{headingLine2}</span>
           </h1>
 
