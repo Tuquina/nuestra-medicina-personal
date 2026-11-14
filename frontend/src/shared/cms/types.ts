@@ -15,7 +15,8 @@
 
 /**
  * Mirrors the backend and the expanded database constraint in migration 006.
- * Only `BOOK` carries `bookId`; the remaining values are singleton pages.
+ * Only `BOOK` carries `bookId`. `BOOK` and `MEDITACION` pages repeat (one per
+ * book / meditation, migration 016); the remaining values are singleton pages.
  */
 export type PageType =
   | 'HOME'
@@ -26,7 +27,8 @@ export type PageType =
   | 'SOPORTE'
   | 'FAQ'
   | 'TERMINOS'
-  | 'PRIVACIDAD';
+  | 'PRIVACIDAD'
+  | 'MEDITACION';
 export type PageStatus = 'DRAFT' | 'PUBLISHED';
 
 /** A single content block. `props` is intentionally untyped here — each

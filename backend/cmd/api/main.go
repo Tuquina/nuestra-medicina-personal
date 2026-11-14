@@ -90,6 +90,7 @@ func run(logger *slog.Logger) error {
 	manuscriptService := manuscripts.NewService(manuscriptRepository, bookService)
 	pageRepository := postgres.NewPageRepository(pool)
 	pageService := pages.NewService(pageRepository)
+	pageListingService := pages.NewListingService(pageRepository)
 	mediaStorage, err := storage.NewLocalMediaStorage(cfg.MediaStoragePath)
 	if err != nil {
 		return err
@@ -125,7 +126,7 @@ func run(logger *slog.Logger) error {
 	}
 	webhookValidator := mercadopago.NewWebhookValidator(cfg.MercadoPagoWebhookSecret)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Newsletter: newsletterService, Authentication: authService, Orders: orderService, Library: libraryService, Manuscripts: manuscriptService, Pages: pageService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService, ToolEntries: toolEntriesService,
+		Logger: logger, Books: bookService, Coupons: couponService, Reviews: reviewService, Newsletter: newsletterService, Authentication: authService, Orders: orderService, Library: libraryService, Manuscripts: manuscriptService, Pages: pageService, PageListing: pageListingService, Media: mediaService, Backoffice: backofficeService, Settings: settingsService, ToolEntries: toolEntriesService,
 		IntegrationStatus: httpapi.IntegrationStatus{
 			GoogleConfigured:      cfg.GoogleClientID != "" && cfg.GoogleSecret != "" && cfg.GoogleRedirect != "",
 			MercadoPagoConfigured: cfg.MercadoPagoToken != "" && cfg.MercadoPagoWebhookSecret != "" && cfg.MercadoPagoPublicBaseURL != "",

@@ -161,3 +161,11 @@ export function adminPageVersionsUrl(identifier: string): string {
 export function adminPageRestoreUrl(identifier: string, versionId: string): string {
   return `${adminPageVersionsUrl(identifier)}/${encodeURIComponent(versionId)}/restore`;
 }
+
+/** Published meditations, as cards for `/meditaciones` (public). */
+export const MEDITATIONS_URL = `${API_PREFIX}/meditations`;
+
+/** Backoffice list of repeatable pages of one type (today `MEDITACION`), drafts included. */
+export function adminPagesByTypeUrl(type: string): string {
+  return `${API_PREFIX}/admin/pages?type=${encodeURIComponent(type)}`;
+}

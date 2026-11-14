@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { GradientTopBar } from '../../../shared/components/GradientTopBar/GradientTopBar';
 import { SiteHeader } from '../../../shared/components/SiteHeader/SiteHeader';
 import { MinimalFooter } from '../../../shared/components/MinimalFooter/MinimalFooter';
@@ -32,6 +33,8 @@ interface ComingSoonCollectionPageProps {
   eyebrowColor: string;
   glowColor: string;
   cards: CollectionCardData[];
+  /** Real items shown before the CMS cards (e.g. published meditations). */
+  leadingCards?: ReactNode;
   /** Overrides the default "te avisamos cuando estén disponibles" signup copy. */
   newsletter?: NewsletterCopy;
   /** True when rendering an admin's "Vista previa" of unpublished changes. */
@@ -57,6 +60,7 @@ export function ComingSoonCollectionPage({
   eyebrowColor,
   glowColor,
   cards,
+  leadingCards,
   newsletter = COMING_SOON_NEWSLETTER,
   preview = false,
 }: ComingSoonCollectionPageProps) {
@@ -82,6 +86,7 @@ export function ComingSoonCollectionPage({
 
       <section className={styles.gridSection}>
         <div className={styles.grid}>
+          {leadingCards}
           {cards.map(({ tool, ...card }) =>
             tool ? (
               <ToolCard key={card.title} title={card.title} description={card.description} tool={tool} imageId={card.imageId} imageCaption={card.imageCaption} />
