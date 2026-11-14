@@ -39,7 +39,19 @@ import { PreguntasFrecuentesPage } from '../public-store/pages/PreguntasFrecuent
 import { NotFoundPage } from '../public-store/pages/NotFoundPage/NotFoundPage';
 import { CatalogProvider } from '../public-store/catalog/CatalogProvider';
 
-// Interactive tools are loaded on demand so the rest of the site doesn't ship their code.
+// Interactive tools and meditation pages are loaded on demand so the rest of the site doesn't ship their code.
+const MeditacionPage = lazy(() =>
+  import('../public-store/pages/MeditacionPage/MeditacionPage').then((m) => ({ default: m.MeditacionPage })),
+);
+const MeditacionesListPage = lazy(() =>
+  import('../admin/pages/MeditacionesAdmin/MeditacionesListPage').then((m) => ({ default: m.MeditacionesListPage })),
+);
+const NuevaMeditacionPage = lazy(() =>
+  import('../admin/pages/MeditacionesAdmin/NuevaMeditacionPage').then((m) => ({ default: m.NuevaMeditacionPage })),
+);
+const MeditacionEditorPage = lazy(() =>
+  import('../admin/pages/MeditacionesAdmin/MeditacionEditorPage').then((m) => ({ default: m.MeditacionEditorPage })),
+);
 const EscrituraDiariaPage = lazy(() =>
   import('../public-store/pages/EscrituraDiariaPage/EscrituraDiariaPage').then((m) => ({ default: m.EscrituraDiariaPage })),
 );
@@ -71,6 +83,7 @@ export function App() {
           <Route path="/libros" element={<CatalogoPage />} />
           <Route path="/libros/:slug" element={<BookLandingPage />} />
           <Route path="/meditaciones" element={<MeditacionesPage />} />
+          <Route path="/meditaciones/:slug" element={<Suspense fallback={null}><MeditacionPage /></Suspense>} />
           <Route path="/herramientas" element={<HerramientasPage />} />
           <Route path="/herramientas/escritura-diaria" element={<Suspense fallback={null}><EscrituraDiariaPage /></Suspense>} />
           <Route path="/herramientas/preguntas" element={<Suspense fallback={null}><PreguntasPage /></Suspense>} />
@@ -93,6 +106,9 @@ export function App() {
             <Route path="configuracion" element={<ConfiguracionPage />} />
             <Route path="paginas" element={<PageBuilderPage />} />
             <Route path="paginas/meditaciones" element={<MeditacionesEditorPage />} />
+            <Route path="meditaciones" element={<Suspense fallback={null}><MeditacionesListPage /></Suspense>} />
+            <Route path="meditaciones/nueva" element={<Suspense fallback={null}><NuevaMeditacionPage /></Suspense>} />
+            <Route path="meditaciones/:slug" element={<Suspense fallback={null}><MeditacionEditorPage /></Suspense>} />
             <Route path="paginas/herramientas" element={<HerramientasEditorPage />} />
             <Route path="sobre-el-proyecto" element={<SobreElProyectoPage />} />
             <Route path="cupones" element={<CuponesPage />} />
