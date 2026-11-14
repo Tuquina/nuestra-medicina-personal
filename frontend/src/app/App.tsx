@@ -108,7 +108,7 @@ export function App() {
             <Route path="paginas/meditaciones" element={<MeditacionesEditorPage />} />
             <Route path="meditaciones" element={<Suspense fallback={null}><MeditacionesListPage /></Suspense>} />
             <Route path="meditaciones/nueva" element={<Suspense fallback={null}><NuevaMeditacionPage /></Suspense>} />
-            <Route path="meditaciones/:slug" element={<Suspense fallback={null}><MeditacionEditorPage /></Suspense>} />
+            <Route path="meditaciones/:slug/editar" element={<Suspense fallback={null}><MeditacionEditorPage /></Suspense>} />
             <Route path="paginas/herramientas" element={<HerramientasEditorPage />} />
             <Route path="sobre-el-proyecto" element={<SobreElProyectoPage />} />
             <Route path="cupones" element={<CuponesPage />} />

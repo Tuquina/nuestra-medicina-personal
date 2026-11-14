@@ -36,7 +36,7 @@ export function NuevaMeditacionPage() {
         title: trimmed,
         content: buildMeditationSeedContent(trimmed),
       });
-      navigate(`/admin/meditaciones/${effectiveSlug}`);
+      navigate(`/admin/meditaciones/${effectiveSlug}/editar`);
     } catch (caught: unknown) {
       setError(
         caught instanceof ApiError && caught.status === 409

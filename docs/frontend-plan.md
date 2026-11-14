@@ -29,7 +29,7 @@ verifiable steps rather than "build the whole app").
 | `Checkout.dc.html` | `/checkout/:slug` | `public-store/pages/CheckoutPage` | P1 | ✅ Done |
 | `Meditaciones.dc.html` | `/meditaciones` | `public-store/pages/MeditacionesPage` | P1 | ✅ Done |
 | — (no mockup; Meditaciones visual language) | `/meditaciones/:slug` | `public-store/pages/MeditacionPage` | P2 | ✅ Done |
-| — | `/admin/meditaciones`, `/admin/meditaciones/nueva`, `/admin/meditaciones/:slug` | `admin/pages/MeditacionesAdmin` | P2 | ✅ Done |
+| — | `/admin/meditaciones`, `/admin/meditaciones/nueva`, `/admin/meditaciones/:slug/editar` | `admin/pages/MeditacionesAdmin` | P2 | ✅ Done |
 | `Herramientas.dc.html` | `/herramientas` | `public-store/pages/HerramientasPage` | P1 | ✅ Done |
 | — (no mockup; built on the Herramientas visual language) | `/herramientas/escritura-diaria` | `public-store/pages/EscrituraDiariaPage` | P2 | ✅ Done |
 | — | `/herramientas/preguntas` | `public-store/pages/PreguntasPage` | P2 | ✅ Done |

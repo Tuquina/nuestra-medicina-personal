@@ -48,7 +48,7 @@ test.describe('meditaciones', () => {
       await page.getByLabel('Título').fill('Volver al cuerpo E2E');
       await page.getByLabel('Dirección').fill(slug);
       await page.getByRole('button', { name: 'Crear y editar' }).click();
-      await expect(page).toHaveURL(new RegExp(`/admin/meditaciones/${slug}$`));
+      await expect(page).toHaveURL(new RegExp(`/admin/meditaciones/${slug}/editar$`));
 
       await page.getByLabel('Descripción', { exact: true }).fill('Un ejercicio simple de atención para momentos de tensión.');
       const upload = page.waitForResponse((response) => response.url().endsWith('/api/v1/admin/media') && response.request().method() === 'POST');

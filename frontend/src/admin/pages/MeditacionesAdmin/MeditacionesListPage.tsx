@@ -104,7 +104,7 @@ export function MeditacionesListPage() {
                       </td>
                       <td className={styles.dateCell}>{relativeDaysEs(item.updatedAt, new Date())}</td>
                       <td className={styles.actions}>
-                        <Link to={`/admin/meditaciones/${item.slug}`} className={styles.editLink}>
+                        <Link to={`/admin/meditaciones/${item.slug}/editar`} className={styles.editLink}>
                           Editar
                         </Link>
                         {item.status === 'PUBLISHED' && (
