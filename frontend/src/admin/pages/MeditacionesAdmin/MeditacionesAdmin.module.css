@@ -1,0 +1,158 @@
+/* Shared by the meditation list, "new meditation" form and editor. */
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-admin-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.intro {
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-admin-border);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--color-admin-text-muted);
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px;
+  color: var(--color-admin-text-faint);
+  font-weight: 600;
+  font-size: 12.5px;
+  background: var(--color-admin-row-hover);
+  border-bottom: 1px solid var(--color-admin-border);
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 20px;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 20px;
+  text-align: right;
+}
+
+.table td {
+  padding: 12px;
+  color: var(--color-ink);
+  border-bottom: 1px solid var(--color-admin-border-subtle);
+  vertical-align: middle;
+}
+
+.titleCell {
+  font-weight: 500;
+}
+
+.slugCell {
+  color: var(--color-admin-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+
+.dateCell {
+  color: var(--color-admin-text-muted);
+  white-space: nowrap;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.editLink {
+  color: var(--color-deep-blue);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.secondaryLink {
+  color: var(--color-admin-text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  margin-left: 14px;
+}
+
+.emptyState {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--color-admin-text-muted);
+  font-size: 14px;
+}
+
+.emptyState p {
+  margin: 0 0 16px;
+}
+
+/* "Nueva meditación" form */
+.form {
+  max-width: 560px;
+  padding: 24px;
+}
+
+.hint {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--color-admin-text-faint);
+}
+
+.error {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--color-status-danger-bg);
+  color: var(--color-status-danger-icon);
+  font-size: 13.5px;
+}
+
+.formActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Editor */
+.videoPreview {
+  margin-top: 12px;
+  max-width: 480px;
+}
+
+.videoFrame {
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-footer-bg-start);
+}
+
+.videoFrame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.fieldError {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--color-status-danger-icon);
+}
+
+.fieldOk {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--color-status-success-icon);
+}
