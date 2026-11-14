@@ -98,6 +98,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.HandleFunc("GET /api/v1/books/{slug}/reviews", reviewsHandler.ListApproved)
 	root.HandleFunc("GET /api/v1/pages/{slug}", pageHandler.GetPublished)
 	root.HandleFunc("GET /api/v1/meditations", meditationsHandler.ListPublished)
+	root.HandleFunc("GET /api/v1/site", settingsHandler.GetPublic)
 	root.HandleFunc("GET /api/v1/media/{id}", mediaHandler.Get)
 	root.Handle("GET /api/v1/auth/google", rateLimiter.Auth(http.HandlerFunc(authHandler.Start)))
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)

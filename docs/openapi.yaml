@@ -192,6 +192,26 @@ paths:
                 required: [items]
                 properties:
                   items: {type: array, items: {$ref: '#/components/schemas/MeditationSummary'}}
+  /api/v1/site:
+    get:
+      tags: [Pages]
+      operationId: getPublicSiteSettings
+      description: Lo público de Configuración (nombre, descripción, correo de soporte y SEO por defecto). Cache de 5 minutos.
+      responses:
+        '200':
+          description: Configuración pública del sitio.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [siteName, siteDescription, supportEmail, seoTitle, seoDescription, seoIndexable]
+                properties:
+                  siteName: {type: string}
+                  siteDescription: {type: string}
+                  supportEmail: {type: string, format: email}
+                  seoTitle: {type: string}
+                  seoDescription: {type: string}
+                  seoIndexable: {type: boolean}
   /api/v1/media/{id}:
     get:
       tags: [Media]
