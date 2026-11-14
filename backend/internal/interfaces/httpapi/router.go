@@ -21,6 +21,7 @@ type Dependencies struct {
 	Orders                   OrderService
 	Library                  LibraryService
 	Pages                    PageService
+	PageListing              PageListingService
 	Media                    MediaService
 	Manuscripts              ManuscriptService
 	Backoffice               BackofficeService
@@ -55,6 +56,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	orderHandler := NewOrderHandler(dependencies.Orders, dependencies.WebhookValidator, dependencies.Logger)
 	libraryHandler := NewLibraryHandler(dependencies.Library, dependencies.Logger, dependencies.EbookInternalPrefix, dependencies.EbookMaxUploadBytes)
 	pageHandler := NewPageHandler(dependencies.Pages, dependencies.Logger)
+	meditationsHandler := NewMeditationsHandler(dependencies.PageListing, dependencies.Logger)
 	mediaHandler := NewMediaHandler(dependencies.Media, dependencies.Logger, dependencies.MediaMaxUploadBytes)
 	manuscriptHandler := NewManuscriptHandler(dependencies.Manuscripts, dependencies.Logger, dependencies.ManuscriptMaxUploadBytes)
 	backofficeHandler := NewBackofficeHandler(dependencies.Backoffice, dependencies.Logger)
@@ -95,6 +97,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	root.HandleFunc("GET /api/v1/books/{slug}", booksHandler.GetPublished)
 	root.HandleFunc("GET /api/v1/books/{slug}/reviews", reviewsHandler.ListApproved)
 	root.HandleFunc("GET /api/v1/pages/{slug}", pageHandler.GetPublished)
+	root.HandleFunc("GET /api/v1/meditations", meditationsHandler.ListPublished)
 	root.HandleFunc("GET /api/v1/media/{id}", mediaHandler.Get)
 	root.Handle("GET /api/v1/auth/google", rateLimiter.Auth(http.HandlerFunc(authHandler.Start)))
 	root.HandleFunc("GET /api/v1/auth/google/callback", authHandler.Callback)
@@ -136,6 +139,7 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/manuscript", manuscriptHandler.Save)
 	admin.HandleFunc("PUT /api/v1/admin/books/{identifier}/manuscript/import", manuscriptHandler.Import)
 	admin.HandleFunc("GET /api/v1/admin/books/{identifier}/manuscript/export", manuscriptHandler.Export)
+	admin.HandleFunc("GET /api/v1/admin/pages", meditationsHandler.ListAdmin)
 	admin.HandleFunc("POST /api/v1/admin/pages", pageHandler.Create)
 	admin.HandleFunc("GET /api/v1/admin/pages/{identifier}", pageHandler.GetAdmin)
 	admin.HandleFunc("PUT /api/v1/admin/pages/{identifier}/draft", pageHandler.SaveDraft)

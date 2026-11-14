@@ -177,6 +177,21 @@ paths:
           description: Página publicada.
           content: {application/json: {schema: {$ref: '#/components/schemas/PublishedPage'}}}
         '404': {$ref: '#/components/responses/PageNotFound'}
+  /api/v1/meditations:
+    get:
+      tags: [Pages]
+      operationId: listPublishedMeditations
+      description: Tarjetas de las meditaciones publicadas, leídas de su contenido publicado (nunca del borrador).
+      responses:
+        '200':
+          description: Meditaciones publicadas, de la más antigua a la más nueva.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/MeditationSummary'}}
   /api/v1/media/{id}:
     get:
       tags: [Media]
@@ -618,6 +633,26 @@ paths:
         '404': {$ref: '#/components/responses/BookNotFound'}
         '429': {$ref: '#/components/responses/RateLimitExceeded'}
   /api/v1/admin/pages:
+    get:
+      tags: [Admin pages]
+      operationId: listPagesByType
+      description: Lista las páginas repetibles de un tipo (hoy, `MEDITACION`), borradores incluidos.
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: type, in: query, required: true, schema: {type: string, enum: [MEDITACION]}}
+      responses:
+        '200':
+          description: Páginas del tipo pedido.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/PageListItem'}}
+        '401': {$ref: '#/components/responses/AuthenticationRequired'}
+        '403': {$ref: '#/components/responses/AdminRequired'}
+        '422': {$ref: '#/components/responses/PageValidationFailed'}
     post:
       tags: [Admin pages]
       operationId: createPage
@@ -1073,6 +1108,49 @@ components:
       in: query
       schema: {type: integer, minimum: 0, default: 0}
   schemas:
+    MeditationProps:
+      type: object
+      additionalProperties: false
+      required: [title, description, imageId, imageAlt, video, durationMinutes, guidance]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        description: {type: string, minLength: 1, maxLength: 600}
+        imageId: {type: [string, 'null'], format: uuid}
+        imageAlt: {type: string, maxLength: 300}
+        video:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [provider, videoId]
+              properties:
+                provider: {type: string, enum: [youtube]}
+                videoId: {type: string, pattern: '^[A-Za-z0-9_-]{11}$', description: 'Sólo el id del video; el frontend arma la URL de embed.'}
+        durationMinutes: {type: [integer, 'null'], minimum: 1, maximum: 180}
+        guidance: {type: string, maxLength: 6000, description: 'Texto plano; una línea en blanco separa párrafos.'}
+    MeditationSummary:
+      type: object
+      required: [slug, title, description, imageId, imageAlt, durationMinutes, hasVideo]
+      properties:
+        slug: {type: string}
+        title: {type: string}
+        description: {type: string}
+        imageId: {type: [string, 'null'], format: uuid}
+        imageAlt: {type: string}
+        durationMinutes: {type: [integer, 'null']}
+        hasVideo: {type: boolean}
+    PageListItem:
+      type: object
+      required: [id, type, slug, title, status, hasUnpublishedChanges, updatedAt, publishedAt]
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string}
+        slug: {type: string}
+        title: {type: string}
+        status: {type: string, enum: [DRAFT, PUBLISHED]}
+        hasUnpublishedChanges: {type: boolean}
+        updatedAt: {type: string, format: date-time}
+        publishedAt: {type: [string, 'null'], format: date-time}
     ToolEntry:
       type: object
       required: [kind, key, data, createdAt, updatedAt]
@@ -1390,7 +1468,7 @@ components:
         configured: {type: boolean, readOnly: true}
     PageType:
       type: string
-      enum: [HOME, BOOK, MEDITACIONES, HERRAMIENTAS, CONTACTO, SOPORTE, FAQ, TERMINOS, PRIVACIDAD]
+      enum: [HOME, BOOK, MEDITACIONES, HERRAMIENTAS, CONTACTO, SOPORTE, FAQ, TERMINOS, PRIVACIDAD, MEDITACION]
     PageContent:
       type: object
       additionalProperties: false
@@ -1407,7 +1485,7 @@ components:
       required: [id, type, props]
       properties:
         id: {type: string, minLength: 1, maxLength: 100}
-        type: {type: string, enum: [hero, richText, imageText, features, faq, cta, buyButton, collection, contacto, soporte, legal-doc, gallery, manifesto, featured-books, collection-teaser, about, newsletter, title, text, image, quote, divider, spacer, book-landing]}
+        type: {type: string, enum: [hero, richText, imageText, features, faq, cta, buyButton, collection, contacto, soporte, legal-doc, gallery, manifesto, featured-books, collection-teaser, about, newsletter, title, text, image, quote, divider, spacer, book-landing, meditation]}
         hidden: {type: boolean, default: false}
         props:
           oneOf:
@@ -1435,6 +1513,7 @@ components:
             - $ref: '#/components/schemas/DividerBlockProps'
             - $ref: '#/components/schemas/SpacerBlockProps'
             - $ref: '#/components/schemas/BookLandingProps'
+            - $ref: '#/components/schemas/MeditationProps'
     SafeLink:
       type: object
       additionalProperties: false

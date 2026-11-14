@@ -63,6 +63,14 @@ export function AdminLayout({ title, titleSlot, headerActions, hideAvatar = fals
             Nuevo libro
           </NavLink>
 
+          <p className={styles.sectionLabel}>Meditaciones</p>
+          <NavLink to="/admin/meditaciones" end className={navLinkClass}>
+            Todas las meditaciones
+          </NavLink>
+          <NavLink to="/admin/meditaciones/nueva" className={navLinkClass}>
+            Nueva meditación
+          </NavLink>
+
           <p className={styles.sectionLabel}>Páginas</p>
           <NavLink to="/admin/paginas" end className={navLinkClass}>
             Inicio

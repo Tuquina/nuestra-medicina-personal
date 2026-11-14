@@ -119,7 +119,7 @@ func (value Page) Validate() error {
 
 func validPageType(value string) bool {
 	switch Type(value) {
-	case TypeHome, TypeBook, TypeMeditations, TypeTools, TypeContact, TypeSupport, TypeFAQ, TypeTerms, TypePrivacy:
+	case TypeHome, TypeBook, TypeMeditations, TypeTools, TypeContact, TypeSupport, TypeFAQ, TypeTerms, TypePrivacy, TypeMeditation:
 		return true
 	default:
 		return false
@@ -469,6 +469,8 @@ func validateBlock(block Block) error {
 		return validateDivider(block.Props)
 	case "spacer":
 		return validateSpacer(block.Props)
+	case MeditationBlockType:
+		return validateMeditation(block.Props)
 	case "book-landing":
 		return validateBookLanding(block.Props)
 	case "cta":
