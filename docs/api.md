@@ -203,6 +203,19 @@ hubieran quedado publicados antes de incorporar esta regla.
 
 ## Biblioteca multimedia
 
+Los bloques editoriales del CMS aceptan `imageId` opcional (UUID de Multimedia
+o cadena vacía): hero de Inicio, colección destacada, biografía, bloque Imagen,
+tarjetas de colecciones y sección imagen/texto de una landing de libro. La
+galería conserva `captions` y agrega `imageIds` opcional, en el mismo orden;
+no admite más IDs que descripciones. No se aceptan URLs o rutas arbitrarias.
+Los documentos anteriores siguen siendo válidos y muestran el placeholder
+hasta que se elija una imagen. No requiere migración de esquema.
+
+El selector de los editores reutiliza los endpoints de Multimedia: una carga
+crea el archivo inmediatamente, pero elegirlo o quitarlo modifica sólo el
+borrador. Publicar mantiene el flujo existente de versiones. Las descripciones
+se usan como texto alternativo de las fotos, sin la etiqueta del placeholder.
+
 `POST /api/v1/admin/media` acepta `multipart/form-data` y guarda únicamente
 JPEG o PNG cuyo MIME declarado, firma real y decodificación coincidan. El límite
 predeterminado es 10 MiB y ninguna dimensión puede superar 8000 píxeles. El

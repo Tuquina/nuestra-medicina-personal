@@ -1,3 +1,4 @@
+import { MediaPicker } from '../../components/MediaPicker/MediaPicker';
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
 import { FormField } from '../../../shared/components/FormField/FormField';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
@@ -93,6 +94,7 @@ export function SobreElProyectoPage() {
             />
           </FormField>
 
+          <MediaPicker label="Foto de la persona" value={about.imageId} onChange={(imageId) => update({ imageId })} />
           <FormField label="Descripción de la imagen" htmlFor="aboutImageCaption">
             <input
               id="aboutImageCaption"

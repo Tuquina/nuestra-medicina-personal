@@ -1,3 +1,4 @@
+import { MediaPicker } from '../../components/MediaPicker/MediaPicker';
 import { useCallback, useEffect, useState } from 'react';
 import { FormField } from '../../../shared/components/FormField/FormField';
 import f from '../../../shared/components/FormField/FormField.module.css';
@@ -319,6 +320,7 @@ function ImageTextFields({ middle, onChange }: { middle: ImageTextSection; onCha
           onChange={(e) => onChange({ ...middle, text: e.target.value })}
         />
       </FormField>
+      <MediaPicker value={middle.imageId} onChange={(imageId) => onChange({ ...middle, imageId })} />
       <FormField label="Descripción de la imagen" htmlFor="middleImageCaption">
         <input
           id="middleImageCaption"

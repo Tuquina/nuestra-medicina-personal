@@ -202,8 +202,8 @@ export function PageBuilderPage() {
 
         <Inspector
           section={selected}
-          onChangeProp={(key, value) =>
-            selectedId && mutateSection(selectedId, (section) => ({ ...section, props: { ...section.props, [key]: value } }))
+          onChangeProps={(patch) =>
+            selectedId && mutateSection(selectedId, (section) => ({ ...section, props: { ...section.props, ...patch } }))
           }
           onToggleHidden={() =>
             selectedId && mutateSection(selectedId, (section) => ({ ...section, hidden: !section.hidden }))

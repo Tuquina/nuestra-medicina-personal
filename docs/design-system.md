@@ -23,6 +23,15 @@ don't mix in hex/rgb.
 
 ## Token categories
 
+CMS photography uses `shared/components/CmsImage`: the same responsive frame
+as the original placeholders, an image cropped with `object-fit: cover`, and
+the editorial caption as alternative text. Missing/unavailable images retain
+the existing placeholder. Only the Home hero loads eagerly; the rest load
+lazily. Collection teaser images are keyboard-accessible navigation links.
+`admin/components/MediaPicker` uses a native modal dialog for focus containment
+and Escape handling, with upload, filename search and explicit selection.
+`GalleryImageEditor` moves each image and its description together.
+
 All tokens live in `frontend/src/design-system/tokens.css` as CSS custom
 properties on `:root`. Never hardcode a raw `oklch(...)` value in a
 component's CSS Module — add or reuse a token instead.

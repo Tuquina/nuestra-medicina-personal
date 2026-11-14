@@ -38,6 +38,7 @@ export interface CollectionCard {
   title: string;
   description: string;
   imageCaption: string;
+  imageId?: string;
   /** Set on Herramientas cards that open an interactive tool; omitted means "Próximamente". */
   tool?: ToolSlug;
 }

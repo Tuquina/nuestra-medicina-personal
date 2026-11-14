@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Eyebrow } from '../../../shared/components/Eyebrow/Eyebrow';
-import { ImagePlaceholder } from '../../../shared/components/ImagePlaceholder/ImagePlaceholder';
+import { CmsImage } from '../../../shared/components/CmsImage/CmsImage';
 import type { HeroProps } from '../../../shared/cms/homeContent';
 import styles from './Hero.module.css';
 
@@ -31,6 +31,7 @@ export function Hero(props: HeroProps) {
     secondaryCtaLabel,
     secondaryCtaTo,
     imageCaption,
+    imageId,
   } = props;
 
   return (
@@ -59,7 +60,9 @@ export function Hero(props: HeroProps) {
         </div>
 
         <div className={styles.imgCol}>
-          <ImagePlaceholder
+          <CmsImage
+            imageId={imageId}
+            priority
             accent="var(--color-sky-pale)"
             caption={imageCaption}
             aspectRatio="4 / 5"

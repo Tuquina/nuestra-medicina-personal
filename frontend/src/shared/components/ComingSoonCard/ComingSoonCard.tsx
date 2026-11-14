@@ -1,4 +1,4 @@
-import { ImagePlaceholder } from '../ImagePlaceholder/ImagePlaceholder';
+import { CmsImage } from '../CmsImage/CmsImage';
 import styles from './ComingSoonCard.module.css';
 
 interface ComingSoonCardProps {
@@ -7,13 +7,14 @@ interface ComingSoonCardProps {
   imageAccent: string;
   imageBase?: string;
   imageCaption: string;
+  imageId?: string;
 }
 
 /** A single "content coming soon" preview card (Meditaciones/Herramientas grids). */
-export function ComingSoonCard({ title, description, imageAccent, imageBase, imageCaption }: ComingSoonCardProps) {
+export function ComingSoonCard({ title, description, imageAccent, imageBase, imageCaption, imageId }: ComingSoonCardProps) {
   return (
     <article className={styles.card}>
-      <ImagePlaceholder
+      <CmsImage imageId={imageId}
         className={styles.cover}
         accent={imageAccent}
         base={imageBase}

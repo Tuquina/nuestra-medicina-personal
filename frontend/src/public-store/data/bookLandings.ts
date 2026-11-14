@@ -18,6 +18,7 @@ export interface ImageTextSection {
   text: string;
   imageAccent: string;
   imageCaption: string;
+  imageId?: string;
 }
 
 export interface BenefitsSection {

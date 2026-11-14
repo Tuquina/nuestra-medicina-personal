@@ -1,15 +1,16 @@
 import { SectionIntro } from '../../../shared/components/SectionIntro/SectionIntro';
-import { ImagePlaceholder } from '../../../shared/components/ImagePlaceholder/ImagePlaceholder';
+import { CmsImage } from '../../../shared/components/CmsImage/CmsImage';
 import type { AboutProps } from '../../../shared/cms/homeContent';
 import styles from './About.module.css';
 
-export function About({ eyebrow, title, bio, imageCaption }: AboutProps) {
+export function About({ eyebrow, title, bio, imageCaption, imageId }: AboutProps) {
   return (
     <section id="sobre-el-proyecto" className={styles.section}>
       <div className={styles.row}>
         <div className={styles.imgCol}>
           <div className={styles.glow} aria-hidden="true" />
-          <ImagePlaceholder
+          <CmsImage
+            imageId={imageId}
             className={styles.photo}
             accent="color-mix(in oklch, var(--color-accent-gold) 50%, transparent)"
             caption={imageCaption}

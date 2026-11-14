@@ -6,7 +6,7 @@
  * every field an admin can touch actually changes real content on the
  * public Home page (shared/cms/homeContent.ts is the shared prop shape).
  */
-export type FieldKind = 'text' | 'textarea' | 'select' | 'checkbox' | 'lines' | 'note';
+export type FieldKind = 'text' | 'textarea' | 'select' | 'checkbox' | 'lines' | 'note' | 'image';
 
 export interface FieldDef {
   key: string;
@@ -38,6 +38,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'primaryCtaTo', label: 'Botón principal — enlace', kind: 'text' },
       { key: 'secondaryCtaLabel', label: 'Enlace secundario — texto', kind: 'text' },
       { key: 'secondaryCtaTo', label: 'Enlace secundario — destino', kind: 'text' },
+      { key: 'imageId', label: 'Imagen', kind: 'image' },
       { key: 'imageCaption', label: 'Descripción de la imagen', kind: 'text' },
     ],
   },
@@ -73,6 +74,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'description', label: 'Descripción', kind: 'textarea' },
       { key: 'ctaLabel', label: 'Botón — texto', kind: 'text' },
       { key: 'ctaTo', label: 'Botón — enlace', kind: 'text' },
+      { key: 'imageId', label: 'Imagen', kind: 'image' },
       { key: 'imageCaption', label: 'Descripción de la imagen', kind: 'text' },
       {
         key: 'accent',
@@ -93,6 +95,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
       { key: 'eyebrow', label: 'Texto superior', kind: 'text' },
       { key: 'title', label: 'Título', kind: 'text' },
       { key: 'bio', label: 'Biografía', kind: 'textarea' },
+      { key: 'imageId', label: 'Imagen', kind: 'image' },
       { key: 'imageCaption', label: 'Descripción de la imagen', kind: 'text' },
     ],
   },
@@ -120,7 +123,7 @@ export const SECTION_SCHEMAS: Record<string, SectionSchema> = {
   image: {
     label: 'Imagen',
     kind: 'generic',
-    fields: [{ key: 'caption', label: 'Descripción de la imagen', kind: 'text' }],
+    fields: [{ key: 'imageId', label: 'Imagen', kind: 'image' }, { key: 'caption', label: 'Descripción de la imagen', kind: 'text' }],
   },
   quote: {
     label: 'Cita',
