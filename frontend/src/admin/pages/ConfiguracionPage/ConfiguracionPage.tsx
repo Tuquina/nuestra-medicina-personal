@@ -11,8 +11,8 @@ import f from '../../../shared/components/FormField/FormField.module.css';
 import styles from './ConfiguracionPage.module.css';
 
 const SECTIONS = [
-  { id: 'general', label: 'General' }, { id: 'contacto', label: 'Contacto' },
-  { id: 'seo', label: 'SEO' }, { id: 'integraciones', label: 'Integraciones' },
+  { id: 'general', label: 'General' }, { id: 'seo', label: 'SEO' },
+  { id: 'integraciones', label: 'Integraciones (estado)' },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]['id'];
 type SettingsState = { status: 'loading' } | { status: 'ready'; response: SiteSettings; draft: EditableSiteSettings } | { status: 'error' };
@@ -73,18 +73,19 @@ export function ConfiguracionPage() {
         <div className={styles.content}>
           {section === 'general' && <SettingsCard title="General" onSave={save} saving={saving} message={message}>
             <FormField label="Nombre del sitio" htmlFor="siteName"><input id="siteName" className={[f.control, styles.narrow].join(' ')} value={state.draft.siteName} onChange={(event) => update('siteName', event.target.value)} /></FormField>
+            <p className={styles.fieldHint}>Se muestra en el pie de página del sitio.</p>
             <FormField label="Descripción breve" htmlFor="siteDescription"><textarea id="siteDescription" rows={2} className={[f.control, styles.wide].join(' ')} value={state.draft.siteDescription} onChange={(event) => update('siteDescription', event.target.value)} /></FormField>
+            <p className={styles.fieldHint}>Aparece en el pie de página y, si la descripción de SEO está vacía, en los buscadores.</p>
             <FormField label="Correo de soporte" htmlFor="supportEmail"><input id="supportEmail" type="email" className={[f.control, styles.narrow].join(' ')} value={state.draft.supportEmail} onChange={(event) => update('supportEmail', event.target.value)} /></FormField>
-          </SettingsCard>}
-          {section === 'contacto' && <SettingsCard title="Contacto" onSave={save} saving={saving} message={message}>
-            <FormField label="Correo de soporte" htmlFor="supportEmail2"><input id="supportEmail2" type="email" className={[f.control, styles.narrow].join(' ')} value={state.draft.supportEmail} onChange={(event) => update('supportEmail', event.target.value)} /></FormField>
-            <FormField label="Correo de novedades" htmlFor="newsletterEmail"><input id="newsletterEmail" type="email" className={[f.control, styles.narrow].join(' ')} value={state.draft.newsletterEmail} onChange={(event) => update('newsletterEmail', event.target.value)} /></FormField>
-            <FormField label="Nombre del remitente" htmlFor="senderName"><input id="senderName" className={[f.control, styles.narrow].join(' ')} value={state.draft.senderName} onChange={(event) => update('senderName', event.target.value)} /></FormField>
+            <p className={styles.fieldHint}>Se muestra en el pie de página para que te escriban.</p>
           </SettingsCard>}
           {section === 'seo' && <SettingsCard title="SEO general" onSave={save} saving={saving} message={message}>
             <FormField label="Título SEO por defecto" htmlFor="seoTitle"><input id="seoTitle" className={[f.control, styles.medium].join(' ')} value={state.draft.seoTitle} onChange={(event) => update('seoTitle', event.target.value)} /></FormField>
+            <p className={styles.fieldHint}>Título de la pestaña del navegador y de los buscadores en la página de inicio.</p>
             <FormField label="Descripción SEO por defecto" htmlFor="seoDescription"><textarea id="seoDescription" rows={2} className={[f.control, styles.wide].join(' ')} value={state.draft.seoDescription} onChange={(event) => update('seoDescription', event.target.value)} /></FormField>
+            <p className={styles.fieldHint}>El texto que muestran los buscadores debajo del título.</p>
             <div className={styles.checkboxRow}><input type="checkbox" id="seoIndexable" checked={state.draft.seoIndexable} onChange={(event) => update('seoIndexable', event.target.checked)} /><label htmlFor="seoIndexable" className={styles.checkboxLabel}>Permitir indexación general del sitio</label></div>
+            <p className={styles.fieldHint}>Si lo desactivás, se les pide a los buscadores que no muestren el sitio (útil mientras está en preparación).</p>
           </SettingsCard>}
           {section === 'integraciones' && <Integrations settings={state.response} />}
         </div>

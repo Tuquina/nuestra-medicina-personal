@@ -3,6 +3,7 @@ import { GradientTopBar } from '../../../shared/components/GradientTopBar/Gradie
 import { SiteHeader } from '../../../shared/components/SiteHeader/SiteHeader';
 import { SiteFooter } from '../../../shared/components/SiteFooter/SiteFooter';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
+import { useSiteSettings } from '../../../shared/site/siteSettings';
 import { usePublishedContent } from '../../../shared/cms/usePublishedContent';
 import { CmsPageState } from '../../../shared/cms/CmsPageState';
 import { HOME_SLUG } from '../../../shared/cms/types';
@@ -13,7 +14,8 @@ import styles from './HomePage.module.css';
  * order and visibility come from the admin's Page Builder (see
  * shared/cms) — this component just renders whatever's published. */
 export function HomePage() {
-  useDocumentTitle('Nuestra Medicina Personal');
+  const site = useSiteSettings();
+  useDocumentTitle(site.seoTitle || site.siteName);
   const [searchParams] = useSearchParams();
   const preview = searchParams.get('preview') === '1';
   const page = usePublishedContent('HOME', HOME_SLUG, preview);

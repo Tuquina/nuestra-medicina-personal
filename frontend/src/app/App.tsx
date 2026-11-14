@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../shared/auth/AuthContext';
+import { SiteSettingsProvider } from '../shared/site/SiteSettingsProvider';
 import { RequireAuth } from '../shared/auth/RequireAuth';
 import { RequireAdmin } from '../shared/auth/RequireAdmin';
 import { HomePage } from '../public-store/pages/HomePage/HomePage';
@@ -76,60 +77,62 @@ const CierreSemanalPage = lazy(() =>
  */
 export function App() {
   return (
-    <AuthProvider>
-      <CatalogProvider>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/libros" element={<CatalogoPage />} />
-          <Route path="/libros/:slug" element={<BookLandingPage />} />
-          <Route path="/meditaciones" element={<MeditacionesPage />} />
-          <Route path="/meditaciones/:slug" element={<Suspense fallback={null}><MeditacionPage /></Suspense>} />
-          <Route path="/herramientas" element={<HerramientasPage />} />
-          <Route path="/herramientas/escritura-diaria" element={<Suspense fallback={null}><EscrituraDiariaPage /></Suspense>} />
-          <Route path="/herramientas/preguntas" element={<Suspense fallback={null}><PreguntasPage /></Suspense>} />
-          <Route path="/herramientas/cierre-semanal" element={<Suspense fallback={null}><CierreSemanalPage /></Suspense>} />
-          <Route path="/checkout/:slug" element={<CheckoutPage />} />
-
-          <Route element={<RequireAuth />}>
-            <Route path="/cuenta" element={<MiCuentaPage />} />
-            <Route path="/biblioteca" element={<BibliotecaPage />} />
-          </Route>
-
-          <Route path="/admin" element={<RequireAdmin />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="libros" element={<LibrosListPage />} />
-            <Route path="libros/nuevo" element={<LibroFormPage />} />
-            <Route path="libros/:slug/editar" element={<LibroFormPage />} />
-            <Route path="ventas" element={<VentasPage />} />
-            <Route path="clientes" element={<ClientesPage />} />
-            <Route path="multimedia" element={<MultimediaPage />} />
-            <Route path="configuracion" element={<ConfiguracionPage />} />
-            <Route path="paginas" element={<PageBuilderPage />} />
-            <Route path="paginas/meditaciones" element={<MeditacionesEditorPage />} />
-            <Route path="meditaciones" element={<Suspense fallback={null}><MeditacionesListPage /></Suspense>} />
-            <Route path="meditaciones/nueva" element={<Suspense fallback={null}><NuevaMeditacionPage /></Suspense>} />
-            <Route path="meditaciones/:slug/editar" element={<Suspense fallback={null}><MeditacionEditorPage /></Suspense>} />
-            <Route path="paginas/herramientas" element={<HerramientasEditorPage />} />
-            <Route path="sobre-el-proyecto" element={<SobreElProyectoPage />} />
-            <Route path="cupones" element={<CuponesPage />} />
-            <Route path="resenas" element={<ResenasPage />} />
-            <Route path="analitica" element={<AnaliticaPage />} />
-            <Route path="legal/terminos" element={<TerminosEditorPage />} />
-            <Route path="legal/privacidad" element={<PrivacidadEditorPage />} />
-            <Route path="ayuda/contacto" element={<ContactoEditorPage />} />
-            <Route path="ayuda/soporte" element={<SoporteEditorPage />} />
-            <Route path="ayuda/preguntas-frecuentes" element={<FaqEditorPage />} />
-          </Route>
-
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/terminos" element={<TerminosPage />} />
-          <Route path="/privacidad" element={<PrivacidadPage />} />
-          <Route path="/contacto" element={<ContactoPage />} />
-          <Route path="/soporte" element={<SoportePage />} />
-          <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentesPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </CatalogProvider>
-    </AuthProvider>
+    <SiteSettingsProvider>
+      <AuthProvider>
+        <CatalogProvider>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/libros" element={<CatalogoPage />} />
+            <Route path="/libros/:slug" element={<BookLandingPage />} />
+            <Route path="/meditaciones" element={<MeditacionesPage />} />
+            <Route path="/meditaciones/:slug" element={<Suspense fallback={null}><MeditacionPage /></Suspense>} />
+            <Route path="/herramientas" element={<HerramientasPage />} />
+            <Route path="/herramientas/escritura-diaria" element={<Suspense fallback={null}><EscrituraDiariaPage /></Suspense>} />
+            <Route path="/herramientas/preguntas" element={<Suspense fallback={null}><PreguntasPage /></Suspense>} />
+            <Route path="/herramientas/cierre-semanal" element={<Suspense fallback={null}><CierreSemanalPage /></Suspense>} />
+            <Route path="/checkout/:slug" element={<CheckoutPage />} />
+  
+            <Route element={<RequireAuth />}>
+              <Route path="/cuenta" element={<MiCuentaPage />} />
+              <Route path="/biblioteca" element={<BibliotecaPage />} />
+            </Route>
+  
+            <Route path="/admin" element={<RequireAdmin />}>
+              <Route index element={<DashboardPage />} />
+              <Route path="libros" element={<LibrosListPage />} />
+              <Route path="libros/nuevo" element={<LibroFormPage />} />
+              <Route path="libros/:slug/editar" element={<LibroFormPage />} />
+              <Route path="ventas" element={<VentasPage />} />
+              <Route path="clientes" element={<ClientesPage />} />
+              <Route path="multimedia" element={<MultimediaPage />} />
+              <Route path="configuracion" element={<ConfiguracionPage />} />
+              <Route path="paginas" element={<PageBuilderPage />} />
+              <Route path="paginas/meditaciones" element={<MeditacionesEditorPage />} />
+              <Route path="meditaciones" element={<Suspense fallback={null}><MeditacionesListPage /></Suspense>} />
+              <Route path="meditaciones/nueva" element={<Suspense fallback={null}><NuevaMeditacionPage /></Suspense>} />
+              <Route path="meditaciones/:slug/editar" element={<Suspense fallback={null}><MeditacionEditorPage /></Suspense>} />
+              <Route path="paginas/herramientas" element={<HerramientasEditorPage />} />
+              <Route path="sobre-el-proyecto" element={<SobreElProyectoPage />} />
+              <Route path="cupones" element={<CuponesPage />} />
+              <Route path="resenas" element={<ResenasPage />} />
+              <Route path="analitica" element={<AnaliticaPage />} />
+              <Route path="legal/terminos" element={<TerminosEditorPage />} />
+              <Route path="legal/privacidad" element={<PrivacidadEditorPage />} />
+              <Route path="ayuda/contacto" element={<ContactoEditorPage />} />
+              <Route path="ayuda/soporte" element={<SoporteEditorPage />} />
+              <Route path="ayuda/preguntas-frecuentes" element={<FaqEditorPage />} />
+            </Route>
+  
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/terminos" element={<TerminosPage />} />
+            <Route path="/privacidad" element={<PrivacidadPage />} />
+            <Route path="/contacto" element={<ContactoPage />} />
+            <Route path="/soporte" element={<SoportePage />} />
+            <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentesPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </CatalogProvider>
+      </AuthProvider>
+    </SiteSettingsProvider>
   );
 }
