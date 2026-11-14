@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
 import { Button } from '../../../shared/components/Button/Button';
 import { Tabs, type TabItem } from '../../../shared/components/Tabs/Tabs';
@@ -172,7 +172,12 @@ function LibroFormContent({ initialBook }: { initialBook: AdminBook | null }) {
   const [form, setForm] = useState<LibroFormState>(() =>
     initialBook ? formFromBook(initialBook) : { ...BLANK_FORM },
   );
-  const [activeTab, setActiveTab] = useState('info');
+  // `?tab=page` (etc.) opens a specific tab, e.g. from the books list's "Página de venta" link.
+  const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() =>
+    TABS.some((tab) => tab.id === requestedTab) ? (requestedTab as string) : 'info',
+  );
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(initialBook ? 'Guardado' : 'Sin guardar');
   const [saveError, setSaveError] = useState<string | null>(null);

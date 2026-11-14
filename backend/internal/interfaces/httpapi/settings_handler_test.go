@@ -59,3 +59,25 @@ func TestSettingsRouteRequiresAdmin(t *testing.T) {
 		t.Fatalf("expected 401, got %d: %s", recorder.Code, recorder.Body.String())
 	}
 }
+
+func TestPublicSiteSettingsExposeOnlyPublicFields(t *testing.T) {
+	t.Parallel()
+	handler := NewSettingsHandler(&settingsServiceStub{value: settingsdomain.Settings{
+		SiteName: "Nuestra Medicina Personal", SupportEmail: "soporte@example.com", SenderName: "Interno",
+		NewsletterEmail: "novedades@example.com", SEODescription: "Descripción", SEOIndexable: false,
+	}}, slog.New(slog.NewTextHandler(io.Discard, nil)), IntegrationStatus{GoogleConfigured: true})
+	recorder := httptest.NewRecorder()
+	handler.GetPublic(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/site", nil))
+	body := recorder.Body.String()
+	if recorder.Code != http.StatusOK || !strings.Contains(body, `"supportEmail":"soporte@example.com"`) || !strings.Contains(body, `"seoIndexable":false`) {
+		t.Fatalf("unexpected public settings: %d %s", recorder.Code, body)
+	}
+	for _, private := range []string{"Interno", "novedades@example.com", "integrations", "google"} {
+		if strings.Contains(body, private) {
+			t.Fatalf("public settings must not expose %q: %s", private, body)
+		}
+	}
+	if recorder.Header().Get("Cache-Control") != "public, max-age=300" {
+		t.Fatalf("unexpected cache header %q", recorder.Header().Get("Cache-Control"))
+	}
+}

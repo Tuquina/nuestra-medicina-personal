@@ -27,7 +27,7 @@ type DashboardState =
   | { status: 'error'; books: AdminBook[] };
 
 export function DashboardPage() {
-  useDocumentTitle('Dashboard · Admin · Nuestra Medicina Personal');
+  useDocumentTitle('Resumen · Admin · Nuestra Medicina Personal');
   const [period, setPeriod] = useState<ReportingRange>('year');
   const [bookSlug, setBookSlug] = useState('all');
   const [attempt, setAttempt] = useState(0);
@@ -70,7 +70,7 @@ export function DashboardPage() {
   const periodLabel = PERIOD_LABELS[period];
 
   return (
-    <AdminLayout title="Dashboard" headerActions={<Button variant="primary" to="/admin/libros/nuevo">Nuevo libro</Button>}>
+    <AdminLayout title="Resumen" headerActions={<Button variant="primary" to="/admin/libros/nuevo">Nuevo libro</Button>}>
       <div className={[styles.panel, styles.filterBar].join(' ')}>
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>Período</span>

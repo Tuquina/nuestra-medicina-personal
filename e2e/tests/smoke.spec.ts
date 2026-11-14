@@ -8,7 +8,8 @@ import { seedBook, cleanup } from '../fixtures/db';
 test.describe('E2E infrastructure smoke test', () => {
   test('home page loads', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle('Nuestra Medicina Personal');
+    // The home title comes from Configuración → SEO (seeded as "Nuestra Medicina Personal — …").
+    await expect(page).toHaveTitle(/Nuestra Medicina Personal/);
   });
 
   test('a seeded published book appears in the public catalog', async ({ page }) => {

@@ -1,4 +1,5 @@
 import { MediaPicker } from '../../components/MediaPicker/MediaPicker';
+import type { ReactNode } from 'react';
 import { AdminLayout } from '../../components/AdminLayout/AdminLayout';
 import { FormField } from '../../../shared/components/FormField/FormField';
 import { useDocumentTitle } from '../../../shared/hooks/useDocumentTitle';
@@ -23,6 +24,8 @@ interface CollectionPageEditorProps {
   heading: string;
   /** When true, each card can be linked to an interactive tool (Herramientas). */
   allowTools?: boolean;
+  /** A short note above the form (e.g. where the items themselves are edited). */
+  intro?: ReactNode;
   /** The public route this content renders on, e.g. "/meditaciones". */
   publicPath: string;
 }
@@ -42,6 +45,7 @@ export function CollectionPageEditor({
   heading,
   publicPath,
   allowTools = false,
+  intro,
 }: CollectionPageEditorProps) {
   useDocumentTitle(`${heading} · Admin · Nuestra Medicina Personal`);
 
@@ -68,6 +72,7 @@ export function CollectionPageEditor({
   return (
     <AdminLayout title={heading}>
       <CmsEditorActions editor={editor} content={content} publicPath={`${publicPath}?preview=1`} />
+      {intro && <p className={styles.pageIntro}>{intro}</p>}
 
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Presentación</h2>

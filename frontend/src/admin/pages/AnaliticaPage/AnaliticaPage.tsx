@@ -30,7 +30,7 @@ export function AnaliticaPage() {
   const changePeriod = (value: ReportingRange) => { setState({ status: 'loading' }); setPeriod(value); };
   const retry = () => { setState({ status: 'loading' }); setAttempt((value) => value + 1); };
 
-  return <AdminLayout title="Analítica"><div className={[dashboardStyles.panel, dashboardStyles.filterBar].join(' ')}><div className={dashboardStyles.filterGroup}><span className={dashboardStyles.filterLabel}>Período</span><div className={dashboardStyles.segmented}>{PERIOD_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => changePeriod(option.value)} className={[dashboardStyles.segmentButton, period === option.value ? dashboardStyles.segmentButtonActive : ''].join(' ')}>{option.label}</button>)}</div></div></div>
+  return <AdminLayout title="Analítica" readOnly><div className={[dashboardStyles.panel, dashboardStyles.filterBar].join(' ')}><div className={dashboardStyles.filterGroup}><span className={dashboardStyles.filterLabel}>Período</span><div className={dashboardStyles.segmented}>{PERIOD_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => changePeriod(option.value)} className={[dashboardStyles.segmentButton, period === option.value ? dashboardStyles.segmentButtonActive : ''].join(' ')}>{option.label}</button>)}</div></div></div>
     {state.status === 'loading' ? <div className={[dashboardStyles.panel, dashboardStyles.emptyRow].join(' ')}>Cargando analítica…</div> : state.status === 'error' || !state.data ? <div className={[dashboardStyles.panel, dashboardStyles.emptyRow].join(' ')}><p>No pudimos cargar la analítica.</p><Button variant="secondary" onClick={retry}>Reintentar</Button></div> : <AnalyticsContent data={state.data} />}
   </AdminLayout>;
 }

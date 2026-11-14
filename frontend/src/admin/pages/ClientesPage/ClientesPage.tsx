@@ -43,7 +43,7 @@ export function ClientesPage() {
   const applySearch = (event: FormEvent) => { event.preventDefault(); setState({ status: 'loading' }); setOffset(0); setSelected(null); setQuery(queryInput.trim()); setAttempt((value) => value + 1); };
   const page = state.status === 'ready' ? state.page : null;
 
-  return <AdminLayout title="Clientes"><div className={styles.layout}>
+  return <AdminLayout title="Clientes" readOnly><div className={styles.layout}>
     <div className={styles.panel}>
       <form className={styles.toolbar} onSubmit={applySearch}><input type="search" placeholder="Buscar por nombre o correo..." value={queryInput} onChange={(event) => setQueryInput(event.target.value)} className={styles.search} aria-label="Buscar clientes" /><Button variant="secondary" type="submit">Buscar</Button></form>
       {state.status === 'loading' ? <p className={styles.emptyState} role="status">Cargando clientes…</p> : state.status === 'error' ? (

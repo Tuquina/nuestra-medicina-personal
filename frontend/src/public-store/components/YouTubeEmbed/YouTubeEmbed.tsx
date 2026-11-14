@@ -23,7 +23,6 @@ export function YouTubeEmbed({ videoId, title }: YouTubeEmbedProps) {
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
           allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-          allowFullScreen
         />
       </div>
       <figcaption className={styles.caption}>

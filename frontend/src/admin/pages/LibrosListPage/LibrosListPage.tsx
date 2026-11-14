@@ -160,8 +160,10 @@ export function LibrosListPage() {
                     <td className={styles.dateCell}>{relativeDaysEs(book.updatedAt, new Date())}</td>
                     <td className={styles.actions}>
                       <Link to={`/admin/libros/${book.slug}/editar`} className={styles.editLink}>Editar</Link>
-                      {book.status === 'PUBLISHED' && (
-                        <Link to="/admin/paginas" className={styles.secondaryLink}>Editar página</Link>
+                      {book.status !== 'ARCHIVED' && (
+                        <Link to={`/admin/libros/${book.slug}/editar?tab=page`} className={styles.secondaryLink}>
+                          Página de venta
+                        </Link>
                       )}
                       {book.status !== 'ARCHIVED' && (
                         <button

@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { BrandMark } from '../BrandMark/BrandMark';
+import { useSiteSettings } from '../../site/siteSettings';
 import styles from './SiteFooter.module.css';
 
-const SUPPORT_EMAIL = 'soporte@nuestramedicinapersonal.com';
 
 const EXPLORE_LINKS = [
   { label: 'Inicio', to: '/' },
@@ -30,6 +30,7 @@ const LEGAL_LINKS = [
  */
 export function SiteFooter() {
   const year = new Date().getFullYear();
+  const site = useSiteSettings();
 
   return (
     <footer className={styles.footer}>
@@ -38,11 +39,10 @@ export function SiteFooter() {
           <div>
             <Link to="/" className={styles.brand}>
               <BrandMark />
-              Nuestra Medicina Personal
+              {site.siteName}
             </Link>
             <p className={styles.tagline}>
-              Escritura, reflexión y herramientas para procesos personales y
-              educativos.
+              {site.siteDescription || 'Escritura, reflexión y herramientas para procesos personales y educativos.'}
             </p>
           </div>
 
@@ -58,7 +58,7 @@ export function SiteFooter() {
             psicológica profesional.
           </p>
           <p className={styles.copyright}>
-            © {year} Nuestra Medicina Personal · {SUPPORT_EMAIL}
+            © {year} {site.siteName} · <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>
           </p>
         </div>
       </div>

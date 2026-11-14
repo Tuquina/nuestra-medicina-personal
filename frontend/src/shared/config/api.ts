@@ -169,3 +169,6 @@ export const MEDITATIONS_URL = `${API_PREFIX}/meditations`;
 export function adminPagesByTypeUrl(type: string): string {
   return `${API_PREFIX}/admin/pages?type=${encodeURIComponent(type)}`;
 }
+
+/** Public site settings from the admin's Configuración (name, support email, SEO defaults). */
+export const SITE_SETTINGS_URL = `${API_PREFIX}/site`;

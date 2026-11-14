@@ -57,3 +57,23 @@
   margin: 0;
   max-width: 460px;
 }
+
+/* A slow "breath" of the warm glow; skipped with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .glow {
+    animation: glowBreathe 18s ease-in-out infinite alternate;
+    will-change: transform, opacity;
+  }
+}
+
+@keyframes glowBreathe {
+  from {
+    transform: scale(1);
+    opacity: var(--glow-from, 0.5);
+  }
+
+  to {
+    transform: translate3d(12px, -8px, 0) scale(1.1);
+    opacity: var(--glow-to, 0.35);
+  }
+}

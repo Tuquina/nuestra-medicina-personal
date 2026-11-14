@@ -356,6 +356,14 @@ requiere sesión administrativa y `Origin` válido. El estado de las integracion
 es de sólo lectura: las credenciales continúan fuera de PostgreSQL y del
 repositorio.
 
+`GET /api/v1/site` (público, caché de 5 minutos) devuelve sólo lo que el sitio
+muestra: nombre, descripción, correo de soporte y SEO por defecto. El frontend lo
+usa en el pie de página, el título del Inicio, la meta descripción y, si la
+indexación está desactivada, en una etiqueta `robots` `noindex, nofollow`. El
+correo de novedades y el nombre del remitente se guardan pero todavía no tienen
+efecto (los emails usan el remitente del entorno), por eso no se muestran en el
+admin.
+
 ## Cupones y reseñas
 
 `GET/POST /api/v1/admin/coupons` y `PUT/DELETE
