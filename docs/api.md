@@ -201,6 +201,21 @@ cuya página de venta todavía no está disponible. Las consultas públicas de
 libros aplican la misma condición, cubriendo también registros heredados que
 hubieran quedado publicados antes de incorporar esta regla.
 
+### Páginas de meditación
+
+Cada meditación es una página CMS de tipo `MEDITACION` (repetible, como las de
+libros; migración 016) con un único bloque `meditation`: título, descripción,
+imagen opcional de la biblioteca multimedia (`imageId`), video opcional de
+YouTube guardado sólo como id validado (`{"provider":"youtube","videoId":"…"}`;
+nunca una URL libre ni HTML de embed), duración en minutos y una guía en texto
+plano. Se crea con `POST /api/v1/admin/pages` y usa el mismo ciclo de borrador,
+publicación, vista previa y versiones que el resto del CMS. `GET
+/api/v1/meditations` lista públicamente las publicadas (leídas de su contenido
+publicado) y `GET /api/v1/admin/pages?type=MEDITACION` lista todas, borradores
+incluidos, para el backoffice. El frontend embebe el video con
+`youtube-nocookie.com`. La migración 016 publica "Respirar y empezar" con un
+video de prueba: reemplazarlo o despublicarla antes de producción.
+
 ## Biblioteca multimedia
 
 `POST /api/v1/admin/media` acepta `multipart/form-data` y guarda únicamente
