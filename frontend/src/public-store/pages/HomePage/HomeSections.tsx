@@ -22,6 +22,7 @@ import { CollectionTeaser } from './CollectionTeaser';
 import { About } from './About';
 import { Newsletter } from './Newsletter';
 import { TitleBlock, TextBlock, ImageBlock, QuoteBlock, DividerBlock, SpacerBlock } from './GenericBlocks';
+import { Reveal } from '../../../shared/components/Reveal/Reveal';
 import styles from './HomePage.module.css';
 
 /** Each section's `props` is stored as a loosely-typed bag (see
@@ -81,8 +82,18 @@ export function HomeSectionContent({ section }: { section: Section }) {
   }
 }
 
-/** Public-facing wrapper: skips rendering entirely when hidden. */
+/**
+ * Public-facing wrapper: skips hidden sections, and lets every section
+ * below the hero fade in gently as it scrolls into view (the hero has its
+ * own load-in, see Hero.module.css). The Page Builder canvas renders
+ * `HomeSectionContent` directly, so editing stays static.
+ */
 export function HomeSection({ section }: { section: Section }) {
   if (section.hidden) return null;
-  return <HomeSectionContent section={section} />;
+  if (section.type === 'hero') return <HomeSectionContent section={section} />;
+  return (
+    <Reveal>
+      <HomeSectionContent section={section} />
+    </Reveal>
+  );
 }

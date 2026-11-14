@@ -60,3 +60,25 @@
   color: oklch(38% 0.03 255);
   margin: 0;
 }
+
+/* A slow "breath" of the warm glow; skipped with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .glow {
+    --glow-from: 0.4;
+    --glow-to: 0.28;
+    animation: glowBreathe 22s ease-in-out infinite alternate;
+    will-change: transform, opacity;
+  }
+}
+
+@keyframes glowBreathe {
+  from {
+    transform: scale(1);
+    opacity: var(--glow-from, 0.5);
+  }
+
+  to {
+    transform: translate3d(12px, -8px, 0) scale(1.1);
+    opacity: var(--glow-to, 0.35);
+  }
+}

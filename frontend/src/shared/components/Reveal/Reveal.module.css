@@ -1,0 +1,16 @@
+/* Only when the visitor hasn't asked for reduced motion; otherwise the
+   content is shown as is, with no transition at all. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+    transition:
+      opacity 1100ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      transform 1100ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  .visible {
+    opacity: 1;
+    transform: none;
+  }
+}
